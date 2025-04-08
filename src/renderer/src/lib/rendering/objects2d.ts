@@ -160,12 +160,16 @@ export const createRectangle = (
   return mesh
 }
 
-// Define interface extending Line2 with your custom method
-interface PaddedLine extends Line2 {
-  updatePositions: (newPoint1?: Vector3, newPoint2?: Vector3, newPadding?: number) => void
+// Define interface extending Line with your custom method
+interface PaddedLine extends THREE.Line {
+  updatePositions: (
+    newPoint1?: THREE.Vector3,
+    newPoint2?: THREE.Vector3,
+    newPadding?: number
+  ) => void
   userData: {
-    point1: Vector3
-    point2: Vector3
+    point1: THREE.Vector3
+    point2: THREE.Vector3
     padding: number
   }
 }
@@ -174,7 +178,7 @@ export const createLine = ({
   point1 = new THREE.Vector3(0, 0, 0),
   point2 = new THREE.Vector3(0, 0, 0),
   color = new THREE.Color(1, 1, 1),
-  width = 2,
+  width = 1,
   padding = 0
 }: {
   point1?: THREE.Vector3
@@ -184,18 +188,21 @@ export const createLine = ({
   padding?: number
 } = {}): PaddedLine => {
   // Create the line geometry
-  const geometry = new LineGeometry()
+  const geometry = new THREE.BufferGeometry()
+
+  // Set initial positions (will be updated immediately)
+  const positions = new Float32Array(6)
+  const posAttribute = new THREE.BufferAttribute(positions, 3)
+  geometry.setAttribute('position', posAttribute)
 
   // Create the line material
-  const material = new LineMaterial({
+  const material = new THREE.LineBasicMaterial({
     color: color,
-    linewidth: width,
-    worldUnits: true,
-    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
+    linewidth: width // Note: line width only works in WebGLRenderer with GL_LINES (limited browser support)
   })
 
   // Create the line
-  const line = new Line2(geometry, material as any) as PaddedLine
+  const line = new THREE.Line(geometry, material as any) as PaddedLine
 
   // Store the original points and padding as properties
   line.userData = {
@@ -231,11 +238,9 @@ const tempAdjusted1 = new THREE.Vector3()
 const tempAdjusted2 = new THREE.Vector3()
 const tempMidPoint = new THREE.Vector3()
 
-// Reusable array for setPositions
-const pointsArray = new Float32Array(6)
-
 function updateLinePositions(line: PaddedLine) {
   const { point1, point2, padding } = line.userData
+  const positions = line.geometry.attributes.position.array as Float32Array
 
   // Don't apply padding if points are too close
   const distance = point1.distanceTo(point2)
@@ -244,31 +249,28 @@ function updateLinePositions(line: PaddedLine) {
     // Points are too close for padding, use midpoint
     tempMidPoint.addVectors(point1, point2).multiplyScalar(0.5)
 
-    pointsArray[0] = pointsArray[3] = tempMidPoint.x
-    pointsArray[1] = pointsArray[4] = tempMidPoint.y
-    pointsArray[2] = pointsArray[5] = tempMidPoint.z
+    positions[0] = positions[3] = tempMidPoint.x
+    positions[1] = positions[4] = tempMidPoint.y
+    positions[2] = positions[5] = tempMidPoint.z
+  } else {
+    // Calculate direction vector
+    tempDir.subVectors(point2, point1).normalize()
 
-    line.geometry.setPositions(pointsArray)
-    return
+    // Create adjusted points with padding
+    tempAdjusted1.copy(point1).addScaledVector(tempDir, padding)
+    tempAdjusted2.copy(point2).addScaledVector(tempDir, -padding)
+
+    // Update the positions array
+    positions[0] = tempAdjusted1.x
+    positions[1] = tempAdjusted1.y
+    positions[2] = tempAdjusted1.z
+    positions[3] = tempAdjusted2.x
+    positions[4] = tempAdjusted2.y
+    positions[5] = tempAdjusted2.z
   }
 
-  // Calculate direction vector
-  tempDir.subVectors(point2, point1).normalize()
-
-  // Create adjusted points with padding
-  tempAdjusted1.copy(point1).addScaledVector(tempDir, padding)
-  tempAdjusted2.copy(point2).addScaledVector(tempDir, -padding)
-
-  // Update the points array
-  pointsArray[0] = tempAdjusted1.x
-  pointsArray[1] = tempAdjusted1.y
-  pointsArray[2] = tempAdjusted1.z
-  pointsArray[3] = tempAdjusted2.x
-  pointsArray[4] = tempAdjusted2.y
-  pointsArray[5] = tempAdjusted2.z
-
-  // Update the line geometry
-  line.geometry.setPositions(pointsArray)
+  // Mark the attribute as needing update
+  line.geometry.attributes.position.needsUpdate = true
 }
 
 type StrokePlacement = 'inside' | 'outside' | 'center'

@@ -19,19 +19,17 @@ import { createAnim } from '../lib/animation/protocols'
 import { createSimpleFunctionSurface, updateFunctionSurface } from '../lib/rendering/objects3d'
 import { addSceneLighting } from '../lib/rendering/lighting3d'
 
-export const fps = 120
+export const fps = 60
 export const animationFPSThrottle = 1
 
-export const entryScene: () => AnimatedScene = () => threeDimSceneTest()
+export const entryScene: () => AnimatedScene = () => manyDependenciesScene()
 
 const white = new THREE.Color(1, 1, 1)
 const darkWhite = new THREE.Color(0.2, 0.2, 0.2)
 
 export const manyDependenciesScene = (): AnimatedScene => {
   return new AnimatedScene(1000, 1000, false, undefined, async (scene) => {
-    console.log('RUNS FROM BEGINING')
-
-    const num = 20
+    const num = 50
     const elements = Array(num)
       .fill(0)
       .map(() => ({
@@ -41,7 +39,7 @@ export const manyDependenciesScene = (): AnimatedScene => {
         }),
         lines: Array(num - 1)
           .fill(0)
-          .map((_) => createLine({ width: 0.15 }))
+          .map((_) => createLine({ width: 0.15, padding: 0 }))
       }))
 
     // Insert instruction to add the elements to scene
@@ -55,9 +53,9 @@ export const manyDependenciesScene = (): AnimatedScene => {
       // for every tick (frame), change the position with a random velocity vector to create random movement
       elements.forEach((o) => {
         const randomVelocity = new THREE.Vector3(
-          (Math.random() - 0.5) * 1, // x: -1 to 1
-          (Math.random() - 0.5) * 1, // y: -1 to 1
-          (Math.random() - 0.5) * 1 // z: -1 to 1
+          (Math.random() - 0.5) * 2, // x: -1 to 1
+          (Math.random() - 0.5) * 2, // y: -1 to 1
+          (Math.random() - 0.5) * 2 // z: -1 to 1
         )
 
         o.circle.position.add(randomVelocity)
