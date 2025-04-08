@@ -1,4 +1,4 @@
-import { fps } from './helpers'
+import { fps } from '../../scenes/entry'
 
 const fs = require('fs')
 const { exec } = require('child_process')

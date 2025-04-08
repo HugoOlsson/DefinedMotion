@@ -8,7 +8,7 @@ import {
   createLine,
   createRectangle
 } from '../lib/rendering/objects2d'
-import { fadeIn, fadeOut, moveTo, zoomIn, zoomOut } from '../lib/animation/animations'
+import { fadeIn, fadeOut, zoomIn, zoomOut } from '../lib/animation/animations'
 import { concatInterpols, easeInOutQuad, posXSigmoid } from '../lib/animation/interpolations'
 import { AnimatedScene } from '../lib/scene/sceneClass'
 import { createAnim, UserAnimation } from '../lib/animation/protocols'
@@ -139,7 +139,7 @@ export const secondScene = (): AnimatedScene => {
 
   return scene
 }*/
-
+/*
 export const thirdScene = (): AnimatedScene => {
   return new AnimatedScene(1000, 1000, false, async (scene) => {
     const circles = Array(2)
@@ -157,6 +157,7 @@ export const thirdScene = (): AnimatedScene => {
 
     scene.addDependency(async (_) => {
       let value = circles[1].position.x - circles[0].position.x
+      // @ts-ignore
       circles[1].material.color.r = posXSigmoid(0.1 * value)
       await updateText(distanceText, (Math.round(value * 100) / 100).toString())
       placeNextTo(circles[0], distanceText, 'Y')
@@ -257,6 +258,7 @@ function positionAndRotateTextOnLine(textMesh, point1, point2) {
   textMesh.position.x += Math.sin(angle) * perpOffset
   textMesh.position.y -= Math.cos(angle) * perpOffset
 }
+  */
 /*
 export const basicScene = (container: HTMLElement): AnimatedScene => {
   const scene = new AnimatedScene(container, 1080, 1080, false)

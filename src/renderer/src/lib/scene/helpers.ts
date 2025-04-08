@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 export const placeNextTo = (
-  target: THREE.Object3D,
   objectToPlace: THREE.Object3D,
+  target: THREE.Object3D,
   axis: string = 'X',
   padding: number = 0 // New padding parameter
 ) => {

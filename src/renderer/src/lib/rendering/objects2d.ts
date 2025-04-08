@@ -7,6 +7,7 @@ import fontTroika from '../../assets/fonts/Montserrat-Medium.woff'
 import { Text } from 'troika-three-text'
 import { preloadFont, configureTextBuilder } from 'troika-three-text'
 import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
+import { Vector3 } from 'three'
 
 let hasLoadedFonts = false
 
@@ -150,31 +151,115 @@ export const createRectangle = (
   return mesh
 }
 
-export const createLine = (
-  point1: THREE.Vector3,
-  point2: THREE.Vector3,
-  color: THREE.Color = new THREE.Color(1, 1, 1),
-  width: number = 2
-) => {
-  // Create points array
-  const points = [point1.x, point1.y, point1.z, point2.x, point2.y, point2.z]
+// Define interface extending Line2 with your custom method
+interface PaddedLine extends Line2 {
+  updatePositions: (newPoint1?: Vector3, newPoint2?: Vector3, newPadding?: number) => void
+  userData: {
+    point1: Vector3
+    point2: Vector3
+    padding: number
+  }
+}
 
+export const createLine = ({
+  point1 = new THREE.Vector3(0, 0, 0),
+  point2 = new THREE.Vector3(0, 0, 0),
+  color = new THREE.Color(1, 1, 1),
+  width = 2,
+  padding = 0
+}: {
+  point1?: THREE.Vector3
+  point2?: THREE.Vector3
+  color?: THREE.Color
+  width?: number
+  padding?: number
+} = {}): PaddedLine => {
   // Create the line geometry
   const geometry = new LineGeometry()
-  geometry.setPositions(points)
 
   // Create the line material
   const material = new LineMaterial({
     color: color,
-    linewidth: width, // Width in world units - needs adjustment based on your scene scale
+    linewidth: width,
     worldUnits: true,
-    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight) // Important!
+    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
   })
 
   // Create the line
-  const line = new Line2(geometry, material as any)
+  const line = new Line2(geometry, material as any) as PaddedLine
+
+  // Store the original points and padding as properties
+  line.userData = {
+    point1: point1.clone(),
+    point2: point2.clone(),
+    padding: padding
+  }
+
+  // Initial position update
+  updateLinePositions(line)
+
+  // Add update method to the line
+  line.updatePositions = function (
+    newPoint1?: THREE.Vector3,
+    newPoint2?: THREE.Vector3,
+    newPadding?: number
+  ) {
+    // Update stored values if provided
+    if (newPoint1) this.userData.point1.copy(newPoint1)
+    if (newPoint2) this.userData.point2.copy(newPoint2)
+    if (newPadding !== undefined) this.userData.padding = newPadding
+
+    // Update the line geometry
+    updateLinePositions(this)
+  }
 
   return line
+}
+
+// Reusable vectors to avoid creating objects each time
+const tempDir = new THREE.Vector3()
+const tempAdjusted1 = new THREE.Vector3()
+const tempAdjusted2 = new THREE.Vector3()
+const tempMidPoint = new THREE.Vector3()
+
+// Reusable array for setPositions
+const pointsArray = new Float32Array(6)
+
+function updateLinePositions(line: PaddedLine) {
+  const { point1, point2, padding } = line.userData
+
+  // Don't apply padding if points are too close
+  const distance = point1.distanceTo(point2)
+
+  if (distance <= padding * 2) {
+    // Points are too close for padding, use midpoint
+    tempMidPoint.addVectors(point1, point2).multiplyScalar(0.5)
+
+    pointsArray[0] = pointsArray[3] = tempMidPoint.x
+    pointsArray[1] = pointsArray[4] = tempMidPoint.y
+    pointsArray[2] = pointsArray[5] = tempMidPoint.z
+
+    line.geometry.setPositions(pointsArray)
+    return
+  }
+
+  // Calculate direction vector
+  tempDir.subVectors(point2, point1).normalize()
+
+  // Create adjusted points with padding
+  tempAdjusted1.copy(point1).addScaledVector(tempDir, padding)
+  tempAdjusted2.copy(point2).addScaledVector(tempDir, -padding)
+
+  // Update the points array
+  pointsArray[0] = tempAdjusted1.x
+  pointsArray[1] = tempAdjusted1.y
+  pointsArray[2] = tempAdjusted1.z
+  pointsArray[3] = tempAdjusted2.x
+  pointsArray[4] = tempAdjusted2.y
+  pointsArray[5] = tempAdjusted2.z
+
+  // Update the line geometry
+  line.geometry.setPositions(pointsArray)
 }
 
 type StrokePlacement = 'inside' | 'outside' | 'center'
@@ -190,12 +275,12 @@ interface CircleOptions extends ObjectOptions {
 }
 
 export const createCircle = (radius: number = 10, options?: CircleOptions) => {
-  const geometry = new THREE.CircleGeometry(radius, 64)
+  const geometry = new THREE.CircleGeometry(radius, 100)
   const mesh = createMesh(geometry, options)
 
   if (options?.stroke) {
     const strokeParams = options.stroke
-    const placement = strokeParams.placement ?? 'outside'
+    const placement = strokeParams.placement ?? 'center'
     const strokeWidth = strokeParams.width ?? 0.1
 
     let strokeRadius = radius
@@ -213,7 +298,7 @@ export const createCircle = (radius: number = 10, options?: CircleOptions) => {
 
     const path = new THREE.Path()
     path.absarc(0, 0, strokeRadius, 0, Math.PI * 2)
-    const points = path.getPoints(64).map((p) => new THREE.Vector3(p.x, p.y, 0.001))
+    const points = path.getPoints(100).map((p) => new THREE.Vector3(p.x, p.y, 0.001))
 
     const lineGeometry = new LineGeometry()
     lineGeometry.setPositions(points.flatMap((p) => [p.x, p.y, p.z]))

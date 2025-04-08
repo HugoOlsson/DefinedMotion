@@ -2,13 +2,9 @@
   import './app.css'
   import { generateID, setStateInScene, updateStateInUrl } from './lib/general/helpers'
   import { onDestroy, onMount } from 'svelte'
-  import { forthScene } from './examples/exampleScenes'
-  import {
-    globalContainerRef,
-    setGlobalContainerRef,
-    type AnimatedScene
-  } from './lib/scene/sceneClass'
+  import { setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
   import { loadFonts } from './lib/rendering/objects2d'
+  import { entryScene } from './scenes/entry'
 
   //const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 
@@ -34,6 +30,7 @@
   }
 
   onMount(async () => {
+    if (!entryScene) return
     await loadFonts()
     const animationWindow = document.getElementById(animationWindowID)
     const sliderElement = document.getElementById('playerSliderID')
@@ -41,7 +38,7 @@
 
     setGlobalContainerRef(animationWindow)
 
-    scene = forthScene()
+    scene = entryScene()
 
     scene.playEffectFunction = () => {
       ;(sliderElement as any).value =

@@ -12,6 +12,7 @@ import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
+import { animationFPSThrottle } from '../../scenes/entry'
 
 type SceneInstruction = (tick: number) => any
 
@@ -22,8 +23,8 @@ export const setGlobalContainerRef = (ref: HTMLElement) => {
 }
 
 export class AnimatedScene {
-  private scene: THREE.Scene
-  private camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
+  scene: THREE.Scene
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
   private renderer: THREE.WebGLRenderer
   private controls: OrbitControls
   private container: HTMLElement
@@ -100,16 +101,15 @@ export class AnimatedScene {
     this.controls = controls
   }
 
-  add = (element: THREE.Mesh | THREE.Group | THREE.Object3D) => {
-    this.scene.add(element)
+  add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
+    elements.forEach((e) => this.scene.add(e))
   }
 
-  addInstruction(instruction: SceneInstruction) {
-    console.log('WILL ADD INSTRUCTION', this.sceneCalculationTick)
+  do(instruction: SceneInstruction) {
     this.appendInstruction(instruction, this.sceneCalculationTick)
   }
 
-  addAnimations(...animations: UserAnimation[]) {
+  addAnim(...animations: UserAnimation[]) {
     const longest = Math.max(...animations.map((a) => a.interpolation.length))
     for (const animation of animations) {
       this.appendAnimation(animation)
@@ -117,7 +117,7 @@ export class AnimatedScene {
     this.sceneCalculationTick += longest
   }
 
-  addDependency(updater: DependencyUpdater) {
+  onEachTick(updater: DependencyUpdater) {
     this.sceneDependencies.push(updater)
   }
 
@@ -126,7 +126,7 @@ export class AnimatedScene {
   }
 
   addWait(duration: number) {
-    this.addAnimations(createAnim(easeConstant(0, duration), () => {}))
+    this.addAnim(createAnim(easeConstant(0, duration), () => {}))
   }
 
   async jumpToFrameAtIndex(index: number, notSize: boolean = false) {
@@ -198,7 +198,7 @@ export class AnimatedScene {
     this.isPlaying = false
     this.syncControlsWithCamera()
     this.controls.enabled = true
-    this.startControls()
+    //this.startControls()
   }
 
   async render() {
@@ -264,17 +264,21 @@ export class AnimatedScene {
     await this.jumpToFrameAtIndex(fromFrame)
 
     let currentFrame = fromFrame
+    let numberCalledAnimate = 0
     const animate = async (trace: boolean) => {
       if (!this.isPlaying) return
       if (currentFrame <= toFrame) {
-        this.sceneRenderTick = currentFrame
-        //To not apply trace twice if we just jumped to startframe (and thus tranced it)
-        if (trace) {
-          await this.traceCurrentFrame(this.sceneRenderTick)
+        if (numberCalledAnimate % animationFPSThrottle === 0) {
+          this.sceneRenderTick = currentFrame
+          //To not apply trace twice if we just jumped to startframe (and thus tranced it)
+          if (trace) {
+            await this.traceCurrentFrame(this.sceneRenderTick)
+          }
+          this.renderCurrentFrame()
+          currentFrame++
+          await this.playEffectFunction()
         }
-        this.renderCurrentFrame()
-        currentFrame++
-        await this.playEffectFunction()
+        numberCalledAnimate++
         requestAnimationFrame(async () => await animate(true))
       } else {
         await this.jumpToFrameAtIndex(0)
@@ -290,10 +294,15 @@ export class AnimatedScene {
     this.renderer.render(this.scene, this.camera)
   }
 
+  private yieldToEventLoop(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0))
+  }
+
   private async traceToFrameIndex(index: number) {
     //Trace all actions
     for (let traceTick = 0; traceTick <= index; traceTick++) {
       await this.traceCurrentFrame(traceTick)
+      await this.yieldToEventLoop()
     }
   }
 
