@@ -6,13 +6,14 @@ import {
   type InternalAnimation,
   type UserAnimation
 } from '../animation/protocols'
-import { generateID } from '../general/helpers'
+import { generateID, setCameraPositionText } from '../general/helpers'
 import { sleep } from '../rendering/helpers'
 import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
 import { animationFPSThrottle } from '../../scenes/entry'
+import { addDestroyFunction } from '../general/onDestory'
 
 type SceneInstruction = (tick: number) => any
 
@@ -59,19 +60,26 @@ export class AnimatedScene {
     shadowMapEnabled: boolean
   }
 
-  private zoom = 100
+  private zoom = 30
 
   private buildFunction: (scene: this) => any
+
+  private traceFromStart: boolean
+
+  private controlsAnimationFrameId: number | null = null
+  private animationFrameId: number | null = null
 
   constructor(
     pixelsWidth: number,
     pixelsHeight: number,
     threeDim: boolean = true,
+    traceFromStart: boolean = true,
     buildFunctionGiven: (scene: AnimatedScene) => any
   ) {
     this.container = globalContainerRef
     this.pixelsHeight = pixelsHeight
     this.pixelsWidth = pixelsWidth
+    this.traceFromStart = traceFromStart
     const { scene, camera, renderer, controls } = createScene(
       globalContainerRef,
       pixelsWidth,
@@ -99,6 +107,15 @@ export class AnimatedScene {
     this.camera = camera
     this.renderer = renderer
     this.controls = controls
+
+    this.startControls()
+
+    addDestroyFunction(() => this.onDestroy())
+  }
+
+  onDestroy() {
+    this.stopControls()
+    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
   }
 
   add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
@@ -137,7 +154,16 @@ export class AnimatedScene {
       index = 0
     }
 
-    await this.traceToFrameIndex(index)
+    if (this.traceFromStart) {
+      await this.traceToFrameIndex(index)
+    } else {
+      const allInstructionUntilNow = this.getSceneInstructionsUpToIndex(index)
+      for (let i = 0; i < allInstructionUntilNow.length; i++) {
+        await allInstructionUntilNow[i].instruction(allInstructionUntilNow[i].key)
+      }
+      await this.traceCurrentFrame(index)
+    }
+
     this.renderCurrentFrame()
     this.sceneRenderTick = index
     await this.playEffectFunction()
@@ -150,27 +176,48 @@ export class AnimatedScene {
   }
 
   private syncControlsWithCamera() {
-    // Get the current camera direction
+    // Get the direction vector (works for both camera types)
     const direction = new THREE.Vector3(0, 0, -1)
-    direction.applyQuaternion(this.camera.quaternion)
 
-    // Calculate where the camera is looking
+    // Use the appropriate transformation based on camera type
+    if (this.camera.type === 'OrthographicCamera') {
+      direction.transformDirection(this.camera.matrixWorld)
+    } else {
+      direction.applyQuaternion(this.camera.quaternion)
+    }
+
+    // Calculate the new target (same for both camera types)
     const targetDistance = this.controls.target.distanceTo(this.controls.object.position)
     const newTarget = this.camera.position.clone().add(direction.multiplyScalar(targetDistance))
+    this.controls.target.copy(newTarget)
 
     // Reset the internal state
     this.controls.update()
   }
 
   private startControls() {
+    this.controls.enabled = true
+    let animateCounter = 0
     // Animation loop
     const animate = () => {
       if (this.isPlaying) return
-      requestAnimationFrame(animate)
+      this.controlsAnimationFrameId = requestAnimationFrame(animate)
       this.controls.update() // Always update controls
       this.renderCurrentFrame()
+      animateCounter++
+
+      if (animateCounter % 10 === 0) {
+        setCameraPositionText(this.camera.position, this.camera.rotation)
+      }
     }
     animate()
+  }
+
+  private stopControls() {
+    this.controls.enabled = false
+    if (this.controlsAnimationFrameId !== null) {
+      cancelAnimationFrame(this.controlsAnimationFrameId)
+    }
   }
 
   private attachScreenSizeListener(container: HTMLElement, threeDim: boolean) {
@@ -196,14 +243,16 @@ export class AnimatedScene {
 
   pause() {
     this.isPlaying = false
+    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
+
     this.syncControlsWithCamera()
-    this.controls.enabled = true
-    //this.startControls()
+
+    this.startControls()
   }
 
   async render() {
     this.isPlaying = true
-    this.controls.enabled = false
+    this.stopControls()
     const renderName = generateID(10)
 
     const cpu_free_time = 5
@@ -251,7 +300,7 @@ export class AnimatedScene {
     this.renderCurrentFrame()
 
     this.isPlaying = false
-    this.controls.enabled = true
+    this.startControls()
   }
 
   play() {
@@ -260,8 +309,9 @@ export class AnimatedScene {
 
   async playSequenceOfAnimation(fromFrame: number, toFrame: number) {
     this.isPlaying = true
-    this.controls.enabled = false
+    this.stopControls()
     await this.jumpToFrameAtIndex(fromFrame)
+    setCameraPositionText(this.camera.position, this.camera.rotation)
 
     let currentFrame = fromFrame
     let numberCalledAnimate = 0
@@ -279,30 +329,25 @@ export class AnimatedScene {
           await this.playEffectFunction()
         }
         numberCalledAnimate++
-        requestAnimationFrame(async () => await animate(true))
+        this.animationFrameId = requestAnimationFrame(async () => await animate(true))
       } else {
         await this.jumpToFrameAtIndex(0)
         currentFrame = 0
-        requestAnimationFrame(async () => await animate(false))
+        this.animationFrameId = requestAnimationFrame(async () => await animate(false))
       }
     }
 
-    requestAnimationFrame(() => animate(false))
+    this.animationFrameId = requestAnimationFrame(() => animate(false))
   }
 
   renderCurrentFrame() {
     this.renderer.render(this.scene, this.camera)
   }
 
-  private yieldToEventLoop(): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, 0))
-  }
-
   private async traceToFrameIndex(index: number) {
     //Trace all actions
     for (let traceTick = 0; traceTick <= index; traceTick++) {
       await this.traceCurrentFrame(traceTick)
-      await this.yieldToEventLoop()
     }
   }
 
@@ -434,5 +479,29 @@ export class AnimatedScene {
       this.initialRendererState.clearAlpha
     )
     this.renderer.shadowMap.enabled = this.initialRendererState.shadowMapEnabled
+  }
+
+  private getSceneInstructionsUpToIndex(
+    index: number
+  ): Array<{ key: number; instruction: SceneInstruction }> {
+    // Filter keys that are less than or equal to the provided index and sort them in ascending order.
+    const sortedKeys = Array.from(this.sceneInstructions.keys())
+      .filter((key) => key <= index)
+      .sort((a, b) => a - b)
+
+    // Create a result array to hold objects that couple each key with its corresponding instruction.
+    const coupledInstructions: Array<{ key: number; instruction: SceneInstruction }> = []
+
+    // For each key, retrieve its instructions and push an object for each instruction.
+    sortedKeys.forEach((key) => {
+      const instructions = this.sceneInstructions.get(key)
+      if (instructions) {
+        instructions.forEach((instruction) => {
+          coupledInstructions.push({ key, instruction })
+        })
+      }
+    })
+
+    return coupledInstructions
   }
 }

@@ -25,11 +25,11 @@ export const createScene = (
   if (threeDim) {
     // 3D configuration
     camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000)
-    camera.position.set(0, 0, 120)
+    camera.position.set(0, 0, zoom)
   } else {
     // 2D configuration
     camera = new THREE.OrthographicCamera(-zoom * aspect, zoom * aspect, zoom, -zoom, 1, 1000)
-    camera.position.set(0, 0, 100)
+    camera.position.set(0, 0, zoom)
   }
 
   // Add orbit controls

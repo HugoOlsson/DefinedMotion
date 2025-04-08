@@ -44,7 +44,16 @@ const loadFont = () => {
   loadedFont = loader.parse(fontJSON as any)
 }
 
-const createMesh = (geometry: THREE.BufferGeometry, options?: ObjectOptions) => {
+interface MeshWithColorMaterial extends THREE.Mesh {
+  material: {
+    color: THREE.Color
+  } & THREE.Material
+}
+
+const createMesh = (
+  geometry: THREE.BufferGeometry,
+  options?: ObjectOptions
+): MeshWithColorMaterial => {
   const meshMaterial = options?.material
     ? options.material
     : new THREE.MeshBasicMaterial({
@@ -52,7 +61,7 @@ const createMesh = (geometry: THREE.BufferGeometry, options?: ObjectOptions) => 
         transparent: true
       })
   const mesh = new THREE.Mesh(geometry, meshMaterial)
-  return mesh
+  return mesh as any
 }
 
 interface RectangleOptions extends ObjectOptions {

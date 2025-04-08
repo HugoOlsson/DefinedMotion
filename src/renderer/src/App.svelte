@@ -5,6 +5,7 @@
   import { setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
   import { loadFonts } from './lib/rendering/objects2d'
   import { entryScene } from './scenes/entry'
+  import { callAllDestroyFunctions } from './lib/general/onDestory'
 
   //const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 
@@ -65,6 +66,7 @@
 
   onDestroy(() => {
     clearInterval(urlUpdaterInterval)
+    callAllDestroyFunctions()
   })
 </script>
 
@@ -98,6 +100,8 @@
       id="playerSliderID"
     />
   </div>
+  <p id="cameraPositionTextID" class="mt-2"></p>
+  <p id="cameraRotationTextID" class="mt-2"></p>
 </div>
 
 <style>

@@ -16,44 +16,32 @@ import {
 } from '../lib/animation/animations'
 import { easeInOutQuad, posXSigmoid } from '../lib/animation/interpolations'
 import { createAnim } from '../lib/animation/protocols'
+import { createSimpleFunctionSurface, updateFunctionSurface } from '../lib/rendering/objects3d'
+import { addSceneLighting } from '../lib/rendering/lighting3d'
 
 export const fps = 120
-export const animationFPSThrottle = 2
+export const animationFPSThrottle = 1
 
-export const entryScene: () => AnimatedScene = () => manyDependenciesScene()
+export const entryScene: () => AnimatedScene = () => threeDimSceneTest()
 
 const white = new THREE.Color(1, 1, 1)
 const darkWhite = new THREE.Color(0.2, 0.2, 0.2)
 
-export const interpolateCircleScene = (): AnimatedScene => {
-  return new AnimatedScene(1000, 1000, false, async (scene) => {
-    const circle = createCircle(50)
-
-    scene.add(circle)
-    scene.onEachTick(() => {
-      circle.material.color = new THREE.Color().setHSL(posXSigmoid(circle.position.x / 400), 1, 0.5)
-    })
-
-    const anim = createAnim(easeInOutQuad(-50, 50, 500), (value) => (circle.position.x = value))
-    scene.addAnim(anim)
-    scene.addAnim(anim.copy().reverse())
-  })
-}
-
 export const manyDependenciesScene = (): AnimatedScene => {
-  return new AnimatedScene(1000, 1000, false, async (scene) => {
+  return new AnimatedScene(1000, 1000, false, undefined, async (scene) => {
     console.log('RUNS FROM BEGINING')
-    const num = 50
+
+    const num = 20
     const elements = Array(num)
       .fill(0)
       .map(() => ({
-        circle: createCircle(2, {
+        circle: createCircle(1, {
           color: darkWhite,
-          stroke: { color: white, width: 0.3 }
+          stroke: { color: white, width: 0.15 }
         }),
         lines: Array(num - 1)
           .fill(0)
-          .map((_) => createLine({ width: 0.2 }))
+          .map((_) => createLine({ width: 0.15 }))
       }))
 
     // Insert instruction to add the elements to scene
@@ -67,9 +55,9 @@ export const manyDependenciesScene = (): AnimatedScene => {
       // for every tick (frame), change the position with a random velocity vector to create random movement
       elements.forEach((o) => {
         const randomVelocity = new THREE.Vector3(
-          (Math.random() - 0.5) * 5, // x: -1 to 1
-          (Math.random() - 0.5) * 5, // y: -1 to 1
-          (Math.random() - 0.5) * 5 // z: -1 to 1
+          (Math.random() - 0.5) * 1, // x: -1 to 1
+          (Math.random() - 0.5) * 1, // y: -1 to 1
+          (Math.random() - 0.5) * 1 // z: -1 to 1
         )
 
         o.circle.position.add(randomVelocity)
@@ -89,15 +77,79 @@ export const manyDependenciesScene = (): AnimatedScene => {
   })
 }
 
+const sineTimeFunction = (time: number): ((a: number, b: number) => number) => {
+  return (a: number, b: number) => Math.sin(a + time) * Math.cos(b + time) + 3
+}
+
+export const threeDimSceneTest = (): AnimatedScene => {
+  return new AnimatedScene(2000, 2000, true, false, async (scene) => {
+    const funcMinMaxes: [number, number, number, number] = [-7, 7, -7, 7]
+    addSceneLighting(scene.scene)
+    const gridHelper = new THREE.GridHelper(20, 20)
+
+    const axesHelper = new THREE.AxesHelper(20)
+
+    const sineSurface = createSimpleFunctionSurface(sineTimeFunction(0), ...funcMinMaxes)
+    sineSurface.material = new THREE.MeshStandardMaterial({
+      color: 0x049ef4,
+      metalness: 0.5,
+      roughness: 0.2,
+      side: THREE.DoubleSide
+    }) as any
+
+    const geometry = new THREE.SphereGeometry(0.3, 32, 32)
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x000000,
+      emissive: 0xff0000,
+      emissiveIntensity: 200.0
+    })
+
+    const sphere = new THREE.Mesh(geometry, material)
+    const pointLight = new THREE.PointLight(0xff0000, 1000, 100) // color, intensity, distance
+    pointLight.position.copy(sphere.position)
+    const group = new THREE.Group()
+    group.add(sphere, pointLight)
+
+    scene.add(gridHelper, axesHelper, sineSurface, group)
+
+    scene.camera.position.set(3.889329, 7.895859, 10.51772)
+    scene.camera.rotation.set(-0.6027059, 0.3079325, 0.2056132)
+    // Initial position and target setup
+    const centerPoint = new THREE.Vector3(0, 0, 0)
+    const distance = scene.camera.position.distanceTo(centerPoint)
+    let angle = 0
+
+    scene.onEachTick((tick) => {
+      const func = sineTimeFunction(tick / 100)
+      updateFunctionSurface(sineSurface, func, ...funcMinMaxes)
+
+      group.position.y = func(0, 0) + 2
+      /*
+      // Increment angle
+      angle += 0.005
+
+      // Set camera position in circular orbit
+      scene.camera.position.x = (Math.sin(angle) * distance * (Math.sin(tick / 50) + 2)) / 2
+      scene.camera.position.z = (Math.cos(angle) * distance * (Math.sin(tick / 50) + 2)) / 2
+
+      */
+      // Make camera look at center
+      scene.camera.lookAt(centerPoint)
+    })
+
+    scene.addWait(10_000)
+  })
+}
+
 export const thirdScene = (): AnimatedScene => {
-  return new AnimatedScene(1000, 1000, false, async (scene) => {
+  return new AnimatedScene(1000, 1000, false, undefined, async (scene) => {
     const circles = Array(2)
       .fill(0)
-      .map((_) => createCircle(10))
+      .map((_) => createCircle(2))
 
-    const distanceText = await createFastText('HEJ', 20)
+    const distanceText = await createFastText('HEJ', 2)
 
-    circles[1].position.x = -40
+    circles[1].position.x = -10
 
     circles.forEach((c) => scene.add(c))
     scene.add(distanceText)
@@ -112,110 +164,50 @@ export const thirdScene = (): AnimatedScene => {
     })
 
     scene.addAnim(anim)
-    scene.addAnim(anim.copy().scaleLength(1.2).reverse().addNoise())
+    scene.addAnim(anim.copy().scaleLength(1.2).reverse())
   })
 }
 
-export const myScene = (): AnimatedScene => {
-  return new AnimatedScene(1080, 1920, false, (scene) => {
-    let currentY = 0
-    const spacing = 100
-
-    for (let i = 0; i < 10; i++) {
-      buildGroup(scene, currentY)
-      currentY += spacing
+/*
+function pointer<T>(initialValue: T): {
+  get: () => T
+  set: (newValue: T) => void
+  value: T
+} {
+  const ref = {
+    value: initialValue,
+    get: () => ref.value,
+    set: (newValue: T) => {
+      ref.value = newValue
     }
+  }
+  return ref
+}
+
+export const testPointerScene = (): AnimatedScene => {
+  return new AnimatedScene(1000, 1000, false, async (scene) => {
+    const yValueP = pointer(0)
+
+    for (let i = 0; i < 10; i++) {}
   })
 }
 
-const buildGroup = (scene: AnimatedScene, currentY: number) => {
-  const itemGroup = new THREE.Group()
-  itemGroup.position.set(0, currentY, 0)
+export const interpolateCircleScene = (): AnimatedScene => {
+  return new AnimatedScene(1000, 1000, false, async (scene) => {
+    const circle = createCircle(50)
 
-  const circle = setOpacity(
-    createCircle(10, {
-      color: new THREE.Color(0.2, 0.2, 0.2),
-      stroke: {
-        color: COLORS.white,
-        width: 0.8,
-        placement: 'inside'
-      }
-    }),
-    0
-  )
-
-  circle.scale.set(0.8, 0.8, 0.8)
-
-  const text = setOpacity(createText('Name to Show', 4), 0)
-
-  scene.do(() => {
-    scene.add(itemGroup)
-    itemGroup.add(circle)
-    itemGroup.add(text)
-  })
-
-  const circlesAround = Array(7)
-    .fill(0)
-    .map((_) => {
-      return {
-        circle: createCircle(6, {
-          color: new THREE.Color(0.2, 0.2, 0.2),
-          stroke: {
-            color: COLORS.white,
-            width: 0.4,
-            placement: 'inside'
-          }
-        }),
-        text: createText('Name to Show', 3),
-        line: createLine({ width: 0.5, color: new THREE.Color(0.1, 0.1, 0.1) })
-      }
+    scene.add(circle)
+    scene.onEachTick(() => {
+      ;(circle.material as any).color = new THREE.Color().setHSL(
+        posXSigmoid(circle.position.x / 400),
+        1,
+        0.5
+      )
     })
 
-  const radius = 40
-
-  circlesAround.forEach((o) => setOpacity(o.circle, 0))
-  circlesAround.forEach((o) => setOpacity(o.text, 0))
-
-  const positions = circlesAround.map((_, index) => {
-    // Calculate position on a circle
-    const angle = (index / circlesAround.length) * Math.PI * 2
-    const x = Math.cos(angle) * radius
-    const y = Math.sin(angle) * radius
-
-    return new THREE.Vector3(x, y + circle.position.y, 0)
-  })
-
-  scene.do(() => {
-    itemGroup.add(circle)
-    placeNextTo(text, circle, 'Y', 5)
-    itemGroup.add(text)
-    circlesAround.map((o) => {
-      itemGroup.add(o.circle)
-      itemGroup.add(o.text)
-      itemGroup.add(o.line)
-    })
-
-    console.log(positions)
-  })
-
-  scene.onEachTick(() => {
-    circlesAround.map((o) => {
-      o.line.updatePositions(o.circle.position, circle.position, 5)
-    })
-  })
-
-  scene.addAnim(moveCameraAnimation(scene.camera, itemGroup.position.clone()))
-  scene.addAnim(fadeIn(circle, 300), zoomIn(circle, 300))
-  scene.addAnim(fadeIn(text, 300), zoomIn(text, 300))
-  circlesAround.forEach((o, index) => {
-    const textPos = positions[index].clone().add(new THREE.Vector3(0, 6, 0))
-    scene.addAnim(
-      moveToAnimation(o.circle, positions[index], 200),
-      fadeInTowardsEnd(o.circle, 300),
-      zoomIn(o.circle, 300, 0.5),
-      moveToAnimation(o.text, textPos, 200),
-      fadeInTowardsEnd(o.text, 300),
-      zoomIn(o.text, 300, 1)
-    )
+    const anim = createAnim(easeInOutQuad(-50, 50, 500), (value) => (circle.position.x = value))
+    scene.addAnim(anim)
+    scene.addAnim(anim.copy().reverse())
   })
 }
+*/
