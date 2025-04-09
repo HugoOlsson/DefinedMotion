@@ -198,7 +198,8 @@ export const createLine = ({
   // Create the line material
   const material = new THREE.LineBasicMaterial({
     color: color,
-    linewidth: width // Note: line width only works in WebGLRenderer with GL_LINES (limited browser support)
+    linewidth: width,
+    transparent: true // Note: line width only works in WebGLRenderer with GL_LINES (limited browser support)
   })
 
   // Create the line

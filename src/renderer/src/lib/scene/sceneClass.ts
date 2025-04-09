@@ -12,7 +12,7 @@ import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
-import { animationFPSThrottle } from '../../scenes/entry'
+import { animationFPSThrottle, renderSkip } from '../../scenes/entry'
 import { addDestroyFunction } from '../general/onDestory'
 
 type SceneInstruction = (tick: number) => any
@@ -26,7 +26,7 @@ export const setGlobalContainerRef = (ref: HTMLElement) => {
 export class AnimatedScene {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
-  private renderer: THREE.WebGLRenderer
+  renderer: THREE.WebGLRenderer
   private controls: OrbitControls
   private container: HTMLElement
 
@@ -157,7 +157,7 @@ export class AnimatedScene {
     if (this.traceFromStart) {
       await this.traceToFrameIndex(index)
     } else {
-      const allInstructionUntilNow = this.getSceneInstructionsUpToIndex(index)
+      const allInstructionUntilNow = this.getSceneInstructionsUpToIndex(index - 1)
       for (let i = 0; i < allInstructionUntilNow.length; i++) {
         await allInstructionUntilNow[i].instruction(allInstructionUntilNow[i].key)
       }
@@ -277,8 +277,10 @@ export class AnimatedScene {
       if (i !== startFrame) {
         await this.traceCurrentFrame(this.sceneRenderTick)
       }
-      this.renderCurrentFrame()
-      captureCanvasFrame(i, renderName, this.renderer.domElement)
+      if (this.sceneRenderTick % renderSkip === 0) {
+        this.renderCurrentFrame()
+        captureCanvasFrame(Math.round(i / renderSkip), renderName, this.renderer.domElement)
+      }
       await this.playEffectFunction()
       if (i % 10 === 0) {
         await sleep(cpu_free_time)

@@ -41,18 +41,17 @@ export const interpolateCircleScene = (): AnimatedScene => {
 
 export const manyDependenciesScene = (): AnimatedScene => {
   return new AnimatedScene(1000, 1000, false, undefined, async (scene) => {
-    console.log('RUNS FROM BEGINING')
-    const num = 50
+    const num = 2
     const elements = Array(num)
       .fill(0)
       .map(() => ({
-        circle: createCircle(2, {
+        circle: createCircle(1, {
           color: darkWhite,
-          stroke: { color: white, width: 0.3 }
+          stroke: { color: white, width: 0.15 }
         }),
         lines: Array(num - 1)
           .fill(0)
-          .map((_) => createLine({ width: 0.2 }))
+          .map((_) => createLine({ width: 0.15, padding: 0 }))
       }))
 
     // Insert instruction to add the elements to scene
@@ -66,9 +65,9 @@ export const manyDependenciesScene = (): AnimatedScene => {
       // for every tick (frame), change the position with a random velocity vector to create random movement
       elements.forEach((o) => {
         const randomVelocity = new THREE.Vector3(
-          (Math.random() - 0.5) * 5, // x: -1 to 1
-          (Math.random() - 0.5) * 5, // y: -1 to 1
-          (Math.random() - 0.5) * 5 // z: -1 to 1
+          (Math.random() - 0.5) * 2, // x: -1 to 1
+          (Math.random() - 0.5) * 2, // y: -1 to 1
+          (Math.random() - 0.5) * 2 // z: -1 to 1
         )
 
         o.circle.position.add(randomVelocity)

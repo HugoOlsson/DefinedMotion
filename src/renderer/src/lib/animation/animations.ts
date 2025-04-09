@@ -2,14 +2,14 @@ import * as THREE from 'three'
 import { UserAnimation } from './protocols'
 import { easeConstant, easeInOutQuad } from './interpolations'
 
-export const setOpacity = (
-  object: THREE.Object3D,
+export const setOpacity = <T extends THREE.Object3D>(
+  object: T,
   opacity: number,
   enableTransparency: boolean = true
 ) => {
   // Apply opacity to the object and all its children recursively
-  object.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.material) {
+  object.traverse((child: any) => {
+    if (child.material) {
       const materials = child.material instanceof Array ? child.material : [child.material]
 
       materials.forEach((mat) => {
@@ -24,8 +24,8 @@ export const setOpacity = (
   return object
 }
 
-export const setScale = (
-  object: THREE.Object3D,
+export const setScale = <T extends THREE.Object3D>(
+  object: T,
   scale: number | { x?: number; y?: number; z?: number },
   relative: boolean = false
 ): THREE.Object3D => {

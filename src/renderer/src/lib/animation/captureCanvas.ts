@@ -1,4 +1,4 @@
-import { fps } from '../../scenes/entry'
+import { renderOutputFps } from '../../scenes/entry'
 
 const fs = require('fs')
 const { exec } = require('child_process')
@@ -42,12 +42,15 @@ export const captureCanvasFrame = async (
 }
 
 export const triggerEncoder = () => {
-  exec('./rust-media/target/release/rust-media ' + fps.toString(), (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing command: ${error}`)
-      return
+  exec(
+    './rust-media/target/release/rust-media ' + Math.round(renderOutputFps()).toString(),
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing command: ${error}`)
+        return
+      }
+      console.log(`stdout: ${stdout}`)
+      console.error(`stderr: ${stderr}`)
     }
-    console.log(`stdout: ${stdout}`)
-    console.error(`stderr: ${stderr}`)
-  })
+  )
 }

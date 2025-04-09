@@ -60,8 +60,8 @@ export function updateFunctionSurface(
   xMax: number,
   yMin: number,
   yMax: number,
-  xSegments: number = 100,
-  ySegments: number = 100
+  xSegments: number = 200,
+  ySegments: number = 200
 ) {
   const width = xMax - xMin
   const height = yMax - yMin
@@ -94,4 +94,4 @@ export const createSimpleFunctionSurface = (
   xMax: number,
   yMin: number,
   yMax: number
-) => createFunctionSurface(func, xMin, xMax, yMin, yMax, 100, 100)
+) => createFunctionSurface(func, xMin, xMax, yMin, yMax, 200, 200)
