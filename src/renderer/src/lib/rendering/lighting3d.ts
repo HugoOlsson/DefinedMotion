@@ -4,6 +4,11 @@ import _photoStudio1 from '../../assets/hdri/photo-studio1.hdr?url'
 import _photoStudio2 from '../../assets/hdri/photo-studio2.hdr?url'
 import _photoStudio3 from '../../assets/hdri/photo-studio3.hdr?url'
 import { AnimatedScene } from '../scene/sceneClass'
+import vert_blur_hdri from '../../shaders/hdri_blur/vert.glsl?raw'
+import frag_blur_hdri from '../../shaders/hdri_blur/frag.glsl?raw'
+
+import vert_background_gradient from '../../shaders/background_gradient/vert.glsl?raw'
+import frag_background_gradient from '../../shaders/background_gradient/frag.glsl?raw'
 import { COLORS } from './helpers'
 
 /**
@@ -279,64 +284,7 @@ export async function addHDRI({
 
         if (useAsBackground) {
           // Create background sphere
-          const geometry = new THREE.SphereGeometry(400, 32, 32)
-          const vertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-  }
-`
-
-          const fragmentShader = `
-varying vec2 vUv;
-uniform sampler2D uTexture;
-uniform float uBlurAmount;
-uniform vec2 uTextureSize;
-uniform float sigma; // Missing uniform declaration
-uniform float opacity;
-
-// Add these at the top before calculateWeight()
-const float PI = 3.141592653589793;
-
-
-float calculateWeight(float x) {
-  return exp(-(x*x) / (2.0*sigma*sigma)) / (sqrt(2.0*PI)*sigma);
-}
-
-void main() {
-  vec2 texelSize = (1.0 / uTextureSize) * uBlurAmount;
-  vec4 totalColor = vec4(0.0);
-  
-
-
-    // Generate weights
-    float weights[11];
-    float weightSum = 0.0;
-    
-    // Calculate raw weights
-    for(int i = 0; i < 11; i++) {
-        float x = float(i - 5);
-        weights[i] = calculateWeight(x);
-        weightSum += weights[i];
-    }
-    
-    // Normalize 1D weights
-    for(int i = 0; i < 11; i++) {
-        weights[i] /= weightSum;
-    }
-
-  for(int x = -5; x <= 5; x++) {
-  for(int y = -5; y <= 5; y++) {
-    vec2 offset = vec2(float(x), float(y)) * texelSize;
-    float weight = weights[x + 5] * weights[y + 5];
-    totalColor += texture2D(uTexture, vUv + offset) * weight;
-  }
-}
-
-  gl_FragColor = totalColor* opacity;
-}
-`
+          const geometry = new THREE.SphereGeometry(scene.farLimitRender / 2, 40, 40)
 
           const blurredMaterial = new THREE.ShaderMaterial({
             uniforms: {
@@ -348,8 +296,8 @@ void main() {
               sigma: { value: 3.0 }, // Add this uniform
               opacity: { value: backgroundOpacity }
             },
-            vertexShader,
-            fragmentShader,
+            vertexShader: vert_blur_hdri,
+            fragmentShader: frag_blur_hdri,
             side: THREE.BackSide,
             transparent: true
           })
@@ -381,4 +329,54 @@ void main() {
       }
     )
   })
+}
+
+export function addBackgroundGradient({
+  scene,
+  topColor = new THREE.Color(0x87ceeb), // Sky blue
+  bottomColor = new THREE.Color(0xffffff), // White
+  backgroundOpacity = 1.0,
+  lightingIntensity = 1.0,
+  addLighting = true
+}: {
+  scene: AnimatedScene
+  topColor?: THREE.ColorRepresentation
+  bottomColor?: THREE.ColorRepresentation
+  backgroundOpacity?: number
+  lightingIntensity?: number
+  radius?: number
+  addLighting?: boolean
+}): void {
+  // Convert ColorRepresentation to Color instances
+  const top = new THREE.Color(topColor)
+  const bottom = new THREE.Color(bottomColor)
+
+  const sphereRadius = scene.farLimitRender / 2
+
+  // Create background sphere
+  const geometry = new THREE.SphereGeometry(sphereRadius, 32, 32)
+  const gradientMaterial = new THREE.ShaderMaterial({
+    vertexShader: vert_background_gradient,
+    fragmentShader: frag_background_gradient,
+    uniforms: {
+      topColor: { value: top },
+      bottomColor: { value: bottom },
+      opacity: { value: backgroundOpacity }
+    },
+    side: THREE.BackSide,
+    transparent: backgroundOpacity < 1.0
+  })
+
+  const backgroundSphere = new THREE.Mesh(geometry, gradientMaterial)
+  backgroundSphere.renderOrder = -1
+  scene.scene.add(backgroundSphere)
+
+  // Add hemisphere lighting that matches the gradient colors
+  if (addLighting) {
+    const hemisphereLight = new THREE.HemisphereLight(top, bottom, lightingIntensity)
+
+    // Optional: Position the light if needed, though HemisphereLight works from everywhere
+    hemisphereLight.position.set(0, 1, 0)
+    scene.scene.add(hemisphereLight)
+  }
 }

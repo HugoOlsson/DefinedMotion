@@ -7,7 +7,8 @@ export const createScene = (
   pixelsWidth: number,
   pixelsHeight: number,
   threeDim: boolean,
-  zoom: number
+  zoom: number,
+  farLimit: number
 ): SceneComponents => {
   // Create the scene
   const scene: THREE.Scene = new THREE.Scene()
@@ -24,11 +25,11 @@ export const createScene = (
 
   if (threeDim) {
     // 3D configuration
-    camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000)
+    camera = new THREE.PerspectiveCamera(75, aspect, 0.1, farLimit)
     camera.position.set(0, 0, zoom)
   } else {
     // 2D configuration
-    camera = new THREE.OrthographicCamera(-zoom * aspect, zoom * aspect, zoom, -zoom, 1, 1000)
+    camera = new THREE.OrthographicCamera(-zoom * aspect, zoom * aspect, zoom, -zoom, 1, farLimit)
     camera.position.set(0, 0, zoom)
   }
 

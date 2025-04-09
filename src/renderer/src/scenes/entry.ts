@@ -17,10 +17,15 @@ import {
 import { easeInOutQuad, posXSigmoid } from '../lib/animation/interpolations'
 import { createAnim } from '../lib/animation/protocols'
 import { createSimpleFunctionSurface, updateFunctionSurface } from '../lib/rendering/objects3d'
-import { addHDRI, addSceneLighting, HDRIs } from '../lib/rendering/lighting3d'
+import {
+  addBackgroundGradient,
+  addHDRI,
+  addSceneLighting,
+  HDRIs
+} from '../lib/rendering/lighting3d'
 
 export const screenFps = 120 //Your screen fps
-export const renderSkip = 4 //Will divide your screenFps with this for render output fps
+export const renderSkip = 2 //Will divide your screenFps with this for render output fps
 export const animationFPSThrottle = 1 // Use to change preview fps, will divide your fps with this value
 
 export const renderOutputFps = () => screenFps / renderSkip
@@ -133,17 +138,24 @@ const sineTimeFunction = (time: number): ((a: number, b: number) => number) => {
 }
 
 export const threeDimSceneTest = (): AnimatedScene => {
-  return new AnimatedScene(1080, 1920, true, false, async (scene) => {
+  return new AnimatedScene(1080, 1080, true, false, async (scene) => {
     const funcMinMaxes: [number, number, number, number] = [-7, 7, -7, 7]
     //addSceneLighting(scene.scene)
-    await addHDRI({
+
+    addBackgroundGradient({
+      scene,
+      topColor: COLORS.blue,
+      bottomColor: COLORS.black,
+      lightingIntensity: 10
+    })
+    /*await addHDRI({
       scene,
       hdriPath: HDRIs.photoStudio3,
       lightingIntensity: 0.5,
       useAsBackground: true,
       backgroundOpacity: 1,
       blurAmount: 2
-    })
+    })*/
 
     const gridHelper = new THREE.GridHelper(20, 20)
 
@@ -152,7 +164,7 @@ export const threeDimSceneTest = (): AnimatedScene => {
     const sineSurface = createSimpleFunctionSurface(sineTimeFunction(0), ...funcMinMaxes)
     sineSurface.material = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      metalness: 1,
+      metalness: 0.8,
       roughness: 0.1,
       side: THREE.DoubleSide
     }) as any
@@ -165,7 +177,7 @@ export const threeDimSceneTest = (): AnimatedScene => {
     })
 
     const sphere = new THREE.Mesh(geometry, material)
-    const pointLight = new THREE.PointLight(0xffffff, 1000, 100) // color, intensity, distance
+    const pointLight = new THREE.PointLight(0xffffff, 50) // color, intensity, distance
     pointLight.position.copy(sphere.position)
     const group = new THREE.Group()
     group.add(sphere, pointLight)
@@ -195,7 +207,7 @@ export const threeDimSceneTest = (): AnimatedScene => {
       scene.camera.lookAt(centerPoint)
     })
 
-    scene.addWait(5000)
+    scene.addWait(20_000)
   })
 }
 

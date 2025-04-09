@@ -17,6 +17,9 @@
 		"strict": true,
 		"moduleResolution": "bundler",
 		"noUnusedLocals": false,
+		"types": [
+      "vite-plugin-glsl/ext"
+    ]
 	}
 
 

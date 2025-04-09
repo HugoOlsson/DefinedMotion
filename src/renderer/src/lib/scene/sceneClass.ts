@@ -61,6 +61,7 @@ export class AnimatedScene {
   }
 
   private zoom = 30
+  farLimitRender = 1000
 
   private buildFunction: (scene: this) => any
 
@@ -85,7 +86,8 @@ export class AnimatedScene {
       pixelsWidth,
       pixelsHeight,
       threeDim,
-      this.zoom
+      this.zoom,
+      this.farLimitRender
     )
 
     this.buildFunction = async () => {

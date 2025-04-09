@@ -1,6 +1,7 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
+import glsl from 'vite-plugin-glsl'
 
 export default defineConfig({
   main: {
@@ -10,7 +11,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
-    plugins: [tailwindcss(), svelte()],
+    plugins: [svelte(), tailwindcss(), glsl()],
     assetsInclude: ['**/*.hdr'],
     // Add Node.js built-in modules to the renderer process
     resolve: {
