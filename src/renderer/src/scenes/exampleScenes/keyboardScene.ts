@@ -13,6 +13,8 @@ import { moveCameraAnimation3D } from '../../lib/animation/animations'
 import { createAnim } from '../../lib/animation/protocols'
 import { easeLinear } from '../../lib/animation/interpolations'
 
+const strokeColor = '#ff0000'
+
 const keyPositions: { [key: string]: () => [[number, number, number], [number, number]] } = {
   //Number row
   '1': () => [
@@ -125,17 +127,28 @@ const nextKeyX = (
 }
 
 let lastStroke: undefined | THREE.Mesh
+let pointLight: undefined | THREE.PointLight
 
 const setPosition = (scene: THREE.Scene, letter: string) => {
   if (lastStroke !== undefined) {
     scene.remove(lastStroke)
   }
+  const position = keyPositions[letter]()[0]
   const keyStroke = keyStrokePlane(...keyPositions[letter]()[1])
-  keyStroke.position.set(...keyPositions[letter]()[0])
+  keyStroke.position.set(...position)
+
+  if (pointLight === undefined || !scene.children.includes(pointLight)) {
+    console.log('ADDINT POINTLIGHT')
+    pointLight = new THREE.PointLight(strokeColor, 40)
+    pointLight.castShadow = true
+    scene.add(pointLight)
+  }
+  position[1] += 2
+  pointLight.position.set(...position)
 
   scene.add(keyStroke)
   lastStroke = keyStroke
-  return keyStroke
+  return { keyStroke, pointLight }
 }
 
 function updatePlaneSize(geometry: THREE.PlaneGeometry, newWidth: number, newHeight: number) {
@@ -190,7 +203,7 @@ const keyStrokePlane = (width: number, height: number, bumpMap?: THREE.CanvasTex
   // Create a basic material
   // Use MeshBasicMaterial if you do not need lighting or effects – this is ideal for 2D shapes
   const material = new THREE.MeshBasicMaterial({
-    color: '#ff0000', // Green color
+    color: strokeColor, // Green color
     side: THREE.DoubleSide, // Render both sides
     transparent: true,
     opacity: 0.5
@@ -206,19 +219,23 @@ const keyStrokePlane = (width: number, height: number, bumpMap?: THREE.CanvasTex
 
 const typeAnimation = (scene: THREE.Scene, characters: string) => {
   let lastCharacter = ''
-  let keystroke: THREE.Mesh | undefined
+  let keyStroke: THREE.Mesh | undefined
+  let pointLight: THREE.PointLight | undefined
   const animation = createAnim(easeLinear(0, 1, characters.length * 100), (value, _, isLast) => {
     const character = characters[Math.round(value * (characters.length - 1))]
 
     if (character !== lastCharacter) {
       lastCharacter = character
-      keystroke = setPosition(scene, translateToKey(character))
+      ;({ keyStroke, pointLight } = setPosition(scene, translateToKey(character)))
     }
 
     if (isLast) {
       setTimeout(() => {
-        if (keystroke) {
-          scene.remove(keystroke)
+        if (keyStroke) {
+          scene.remove(keyStroke)
+        }
+        if (pointLight) {
+          scene.remove(pointLight)
         }
       }, 500)
     }
@@ -228,7 +245,7 @@ const typeAnimation = (scene: THREE.Scene, characters: string) => {
 }
 
 export const keyboardScene = (): AnimatedScene => {
-  return new AnimatedScene(1000, 1000, true, true, async (scene) => {
+  return new AnimatedScene(2000, 2000, true, true, async (scene) => {
     addSceneLighting(scene.scene, { intensity: 1, colorScheme: 'warm' })
 
     scene.renderer.shadowMap.enabled = true
