@@ -1,4 +1,3 @@
-import { build } from 'vite'
 import { captureCanvasFrame, triggerEncoder } from '../animation/captureCanvas'
 import {
   createAnim,
@@ -6,7 +5,7 @@ import {
   type InternalAnimation,
   type UserAnimation
 } from '../animation/protocols'
-import { generateID, setCameraPositionText } from '../general/helpers'
+import { generateID, logCameraState, setCameraPositionText } from '../general/helpers'
 import { sleep } from '../rendering/helpers'
 import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
@@ -14,6 +13,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
 import { animationFPSThrottle, renderSkip } from '../../scenes/entry'
 import { addDestroyFunction } from '../general/onDestory'
+import { ticksToMillis } from '../animation/helpers'
 
 type SceneInstruction = (tick: number) => any
 
@@ -200,16 +200,43 @@ export class AnimatedScene {
   private startControls() {
     this.controls.enabled = true
     let animateCounter = 0
+
+    let isInteracting = false
+
+    // Add these event listeners
+    this.controls.addEventListener('start', () => (isInteracting = true))
+    this.controls.addEventListener('end', () => (isInteracting = false))
     // Animation loop
     const animate = () => {
       if (this.isPlaying) return
       this.controlsAnimationFrameId = requestAnimationFrame(animate)
-      this.controls.update() // Always update controls
+
+      if (isInteracting) {
+        this.controls.update()
+      } else {
+        //Set current camera state to the controls so its correct when we later interact
+        // Get the camera's forward direction.
+        const camDirection = new THREE.Vector3()
+        this.camera.getWorldDirection(camDirection)
+
+        // Compute the current distance between camera and controls target.
+        const distance = this.controls.target.distanceTo(this.camera.position)
+
+        // Define the new target using the same distance.
+        const newTarget = new THREE.Vector3()
+          .copy(this.camera.position)
+          .add(camDirection.multiplyScalar(distance))
+
+        // Update the controls with the new target.
+        this.controls.target.copy(newTarget)
+        this.controls.update()
+      }
+
       this.renderCurrentFrame()
       animateCounter++
 
       if (animateCounter % 10 === 0) {
-        setCameraPositionText(this.camera.position, this.camera.rotation)
+        logCameraState(this.camera)
       }
     }
     animate()
@@ -315,7 +342,7 @@ export class AnimatedScene {
     this.isPlaying = true
     this.stopControls()
     await this.jumpToFrameAtIndex(fromFrame)
-    setCameraPositionText(this.camera.position, this.camera.rotation)
+    logCameraState(this.camera)
 
     let currentFrame = fromFrame
     let numberCalledAnimate = 0
@@ -345,6 +372,8 @@ export class AnimatedScene {
   }
 
   renderCurrentFrame() {
+    //ANALYZE THIS LINE
+    this.camera.updateProjectionMatrix()
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -368,12 +397,13 @@ export class AnimatedScene {
       const localInterpolationIndex = index - animationsForFrame[a].startTick
       await animationsForFrame[a].updater(
         animationsForFrame[a].interpolation[localInterpolationIndex],
-        index
+        index,
+        localInterpolationIndex === animationsForFrame[a].interpolation.length - 1
       )
     }
 
     for (let d = 0; d < this.sceneDependencies.length; d++) {
-      await this.sceneDependencies[d](index)
+      await this.sceneDependencies[d](index, ticksToMillis(index))
     }
   }
 
@@ -434,6 +464,8 @@ export class AnimatedScene {
       state.right = camera.right
       state.top = camera.top
       state.bottom = camera.bottom
+    } else if (camera instanceof THREE.PerspectiveCamera) {
+      state.zoom = camera.zoom
     }
 
     return state
@@ -470,6 +502,10 @@ export class AnimatedScene {
       cam.top = this.initialCameraState.top!
       cam.bottom = this.initialCameraState.bottom!
       cam.updateProjectionMatrix()
+    }
+
+    if (cam instanceof THREE.PerspectiveCamera) {
+      cam.zoom = this.initialCameraState.zoom!
     }
   }
 

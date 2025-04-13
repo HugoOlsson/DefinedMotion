@@ -74,6 +74,6 @@ export interface InternalAnimation {
   updater: UpdaterFunction
 }
 
-export type DependencyUpdater = (sceneTick: number) => any
+export type DependencyUpdater = (sceneTick: number, time: number) => any
 
-export type UpdaterFunction = (interpolation: number, sceneTick: number) => any
+export type UpdaterFunction = (interpolation: number, sceneTick: number, isLast: boolean) => any

@@ -87,3 +87,45 @@ export const setCameraPositionText = (
     rotRef.textContent = newRotText
   }
 }
+
+let lastStateText = ''
+
+export const logCameraState = (
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
+): void => {
+  // Clone all values to prevent reference-related issues
+  const position = camera.position.clone()
+  const rotation = camera.rotation.clone()
+  const quaternion = camera.quaternion.clone()
+
+  // Format numbers to 7 significant digits and create code-ready string
+  const stateCode = `
+
+scene.camera.position.set(
+  ${position.x.toPrecision(7)}, 
+  ${position.y.toPrecision(7)}, 
+  ${position.z.toPrecision(7)}
+);
+
+scene.camera.rotation.order = '${rotation.order}'; 
+scene.camera.rotation.set(
+  ${rotation.x.toPrecision(7)}, 
+  ${rotation.y.toPrecision(7)}, 
+  ${rotation.z.toPrecision(7)}
+);
+
+scene.camera.quaternion.set(
+  ${quaternion.x.toPrecision(7)}, 
+  ${quaternion.y.toPrecision(7)}, 
+  ${quaternion.z.toPrecision(7)}, 
+  ${quaternion.w.toPrecision(7)}
+);
+`
+
+  // Only update DOM if state changed
+  if (stateCode !== lastStateText) {
+    lastStateText = stateCode
+    const output = document.getElementById('cameraPositionTextID')
+    if (output) output.textContent = stateCode
+  }
+}
