@@ -4,11 +4,11 @@ import _photoStudio1 from '../../assets/hdri/photo-studio1.hdr?url'
 import _photoStudio2 from '../../assets/hdri/photo-studio2.hdr?url'
 import _photoStudio3 from '../../assets/hdri/photo-studio3.hdr?url'
 import { AnimatedScene } from '../scene/sceneClass'
-import vert_blur_hdri from '../../shaders/hdri_blur/vert.glsl?raw'
-import frag_blur_hdri from '../../shaders/hdri_blur/frag.glsl?raw'
+import vert_blur_hdri from '../shaders/hdri_blur/vert.glsl?raw'
+import frag_blur_hdri from '../shaders/hdri_blur/frag.glsl?raw'
 
-import vert_background_gradient from '../../shaders/background_gradient/vert.glsl?raw'
-import frag_background_gradient from '../../shaders/background_gradient/frag.glsl?raw'
+import vert_background_gradient from '../shaders/background_gradient/vert.glsl?raw'
+import frag_background_gradient from '../shaders/background_gradient/frag.glsl?raw'
 import { COLORS } from './helpers'
 
 /**
@@ -333,15 +333,15 @@ export async function addHDRI({
 
 export function addBackgroundGradient({
   scene,
-  topColor = new THREE.Color(0x87ceeb), // Sky blue
-  bottomColor = new THREE.Color(0xffffff), // White
+  topColor, // Sky blue
+  bottomColor, // White
   backgroundOpacity = 1.0,
   lightingIntensity = 1.0,
   addLighting = true
 }: {
   scene: AnimatedScene
-  topColor?: THREE.ColorRepresentation
-  bottomColor?: THREE.ColorRepresentation
+  topColor: THREE.ColorRepresentation
+  bottomColor: THREE.ColorRepresentation
   backgroundOpacity?: number
   lightingIntensity?: number
   radius?: number
@@ -351,10 +351,10 @@ export function addBackgroundGradient({
   const top = new THREE.Color(topColor)
   const bottom = new THREE.Color(bottomColor)
 
-  const sphereRadius = scene.farLimitRender / 2
+  const sphereRadius = scene.farLimitRender / 2.2
 
   // Create background sphere
-  const geometry = new THREE.SphereGeometry(sphereRadius, 32, 32)
+  const geometry = new THREE.SphereGeometry(sphereRadius, 40, 40)
   const gradientMaterial = new THREE.ShaderMaterial({
     vertexShader: vert_background_gradient,
     fragmentShader: frag_background_gradient,

@@ -1,16 +1,5 @@
 import * as THREE from 'three'
 
-export const hexColor = (hex: string): string => {
-  // Remove the '#' and convert to lowercase
-  const cleanHex = hex.replace(/^#/, '').toLowerCase()
-
-  // Expand shorthand hex (e.g., "f00" -> "ff0000")
-  const expandedHex = cleanHex.length === 3 ? cleanHex.replace(/./g, (c) => c + c) : cleanHex
-
-  // Return in "0x..." format
-  return `0x${expandedHex}`
-}
-
 export const COLORS = {
   red: 0xff0000,
   green: 0x00ff00,
@@ -39,4 +28,8 @@ export const COLORS = {
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export const hexColor = (hex: string): THREE.Color => {
+  return new THREE.Color(hex)
 }

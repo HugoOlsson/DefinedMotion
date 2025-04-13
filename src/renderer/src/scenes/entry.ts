@@ -2,7 +2,7 @@ import { Color } from 'three'
 import { createCircle, createFastText, createLine, updateText } from '../lib/rendering/objects2d'
 import { AnimatedScene } from '../lib/scene/sceneClass'
 import * as THREE from 'three'
-import { COLORS } from '../lib/rendering/helpers'
+import { COLORS, hexColor } from '../lib/rendering/helpers'
 import { createText } from 'three/examples/jsm/Addons.js'
 import { placeNextTo } from '../lib/scene/helpers'
 import {
@@ -14,7 +14,7 @@ import {
   setScale,
   zoomIn
 } from '../lib/animation/animations'
-import { easeInOutQuad, posXSigmoid } from '../lib/animation/interpolations'
+import { concatInterpols, easeInOutQuad, posXSigmoid } from '../lib/animation/interpolations'
 import { createAnim } from '../lib/animation/protocols'
 import { createSimpleFunctionSurface, updateFunctionSurface } from '../lib/rendering/objects3d'
 import {
@@ -23,13 +23,87 @@ import {
   addSceneLighting,
   HDRIs
 } from '../lib/rendering/lighting3d'
+import {
+  createSVGGroup5,
+  createSVGObject,
+  getLatexSVG,
+  getSVGInterpolator,
+  glyphsSVG,
+  latexOTest,
+  pathToSVG,
+  phpSVG,
+  redSign,
+  testSVGLatex,
+  testSVGLatex2,
+  tigerSVG
+} from '../lib/rendering/svgObjects'
+import { parseSVGString, vectorizeSVGStructure } from '../lib/rendering/svg/parsing'
+import { drawVectorizedNodes } from '../lib/rendering/svg/drawing'
 
 export const screenFps = 120 //Your screen fps
 export const renderSkip = 2 //Will divide your screenFps with this for render output fps
 export const animationFPSThrottle = 1 // Use to change preview fps, will divide your fps with this value
 
 export const renderOutputFps = () => screenFps / renderSkip
-export const entryScene: () => AnimatedScene = () => threeDimSceneTest()
+export const entryScene: () => AnimatedScene = () => svgTestingScene()
+
+export const svgTestingScene = (): AnimatedScene => {
+  return new AnimatedScene(1080, 1080, true, false, async (scene) => {
+    const circlePath = 'M50,10 a40,40 0 1,0 0,80 a40,40 0 1,0 0,-80'
+
+    const squarePath = 'M10,10 L90,10 L90,90 L10,90 L10,10 Z'
+    /*
+    const interpolator2 = getSVGInterpolator(circlePath, squarePath)
+
+    console.log('pathToSVG(interpolator2(0))', pathToSVG(interpolator2(0)))
+    scene.add(createSVGObject(pathToSVG(interpolator2(1)), 10))
+*/
+    scene.scene.background = new THREE.Color(0xb0b0b0)
+    const helper = new THREE.GridHelper(160, 10, 0x8d8d8d, 0xc1c1c1)
+    helper.rotation.x = Math.PI / 2
+    scene.add(helper)
+
+    //console.log('OUTPUT', await getLatexSVG('\\frac{1}{x^2-1}'))
+
+    // --- SVG Loading and Addition ---
+    const svgText = `
+<svg fill="#000000" version="1.1" baseProfile="tiny" id="Layer_1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:a="http://ns.adobe.com/AdobeSVGViewerExtensions/3.0/"
+	  width="800px" height="800px" viewBox="-0.5 0.5 42 42" xml:space="preserve">
+<path d="M40.5,12.5c0-1.48-0.311-2-1.872-2H11.726l-0.801-5c-0.109-1.46-0.85-2-2.421-2H2.501C1.02,3.5,0.5,3.99,0.5,5.5v1
+	c0,1.551,0.52,2,2.001,2h3.722l3.282,19c0.35,1.04,1.311,1.95,3.001,2h22.012c1.75,0,2.57-0.359,3.002-2L40.5,12.5z M33.477,24.5
+	H13.696l-1.471-9h22.951L33.477,24.5z M13.507,36.5c0,2.21,1.79,4,4.002,4c2.211,0,4.003-1.79,4.003-4s-1.792-4-4.003-4
+	C15.297,32.5,13.507,34.29,13.507,36.5z M26.514,36.5c0,2.21,1.791,4,4.002,4s4.002-1.79,4.002-4s-1.791-4-4.002-4
+	S26.514,34.29,26.514,36.5z"/>
+</svg>
+`
+
+    console.log('PARSE', vectorizeSVGStructure(parseSVGString(latexOTest)))
+    const group = drawVectorizedNodes(vectorizeSVGStructure(parseSVGString(latexOTest)), 10)
+
+    scene.add(group)
+    //const interpolator = getSVGInterpolator(circlePath, squarePath)
+
+    // Create the SVG group using our reusable function.
+    //const svgGroup = createSVGGroup5(pathToSVG(interpolator(1)), 10)
+
+    // Add the SVG group to the scene.
+    // scene.add(svgGroup)
+
+    //const interpolator = getSVGInterpolator(circlePath, squarePath)
+    /*
+    let objectRef: THREE.Group
+
+    scene.addAnim(
+      createAnim(concatInterpols(easeInOutQuad(0, 1, 1000), easeInOutQuad(1, 0, 1000)), (value) => {
+        scene.scene.remove(objectRef)
+        const svg = pathToSVG(interpolator(value), '#505050', '#ff0000')
+        objectRef = createSVGGroup5(svg, 10)
+        scene.add(objectRef)
+      })
+    )*/
+  })
+}
 
 const white = new THREE.Color(1, 1, 1)
 const darkWhite = new THREE.Color(0.2, 0.2, 0.2)
@@ -44,6 +118,13 @@ export const connectedSpheresWithLine3D = (): AnimatedScene => {
       useAsBackground: true,
       backgroundOpacity: 0.7,
       blurAmount: 3
+    })
+
+    addBackgroundGradient({
+      scene,
+      bottomColor: hexColor('#483924'),
+      topColor: hexColor('#aa9775'),
+      backgroundOpacity: 0.7
     })
 
     const numberOfSpheres = 50
@@ -68,8 +149,8 @@ export const connectedSpheresWithLine3D = (): AnimatedScene => {
 
     scene.add(...objects.map((o) => o.sphere), ...objects.flatMap((o) => o.lines))
 
-    scene.camera.position.set(3.889329, 7.895859, 10.51772)
-    scene.camera.rotation.set(-0.6027059, 0.3079325, 0.2056132)
+    scene.camera.position.set(20, 0, 0)
+
     // Initial position and target setup
     const centerPoint = new THREE.Vector3(0, 0, 0)
     const distance = scene.camera.position.distanceTo(centerPoint)
@@ -119,8 +200,8 @@ export const connectedSpheresWithLine3D = (): AnimatedScene => {
       angle += 0.01
 
       // Set camera position in circular orbit
-      scene.camera.position.x = (Math.sin(angle) * distance * (Math.sin(tick / 50) + 2)) / 2
-      scene.camera.position.z = (Math.cos(angle) * distance * (Math.sin(tick / 50) + 2)) / 2
+      scene.camera.position.x = Math.sin(angle) * distance
+      scene.camera.position.z = Math.cos(angle) * distance
 
       // Make camera look at center
       scene.camera.lookAt(centerPoint)
@@ -137,7 +218,7 @@ const sineTimeFunction = (time: number): ((a: number, b: number) => number) => {
     3
 }
 
-export const threeDimSceneTest = (): AnimatedScene => {
+export const threeDimAnimatedSinFunctionScene = (): AnimatedScene => {
   return new AnimatedScene(1080, 1080, true, false, async (scene) => {
     const funcMinMaxes: [number, number, number, number] = [-7, 7, -7, 7]
     //addSceneLighting(scene.scene)
