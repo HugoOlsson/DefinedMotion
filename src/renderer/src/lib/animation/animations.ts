@@ -173,6 +173,23 @@ export const moveCameraAnimation3D = (
     }
     camera.position.copy(startPosition.clone().add(posDelta.clone().multiplyScalar(progress)))
     camera.quaternion.copy(startRotation).slerp(rotationTarget, progress)
-    camera.updateMatrixWorld()
+  })
+}
+
+export const rotateCamera3D = (
+  camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+  rotationTarget: THREE.Quaternion,
+  duration: number = 800
+): UserAnimation => {
+  let startRotation: THREE.Quaternion
+
+  // Create animation with eased interpolation
+  return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
+    // On first frame, capture the current camera position
+    if (progress === 0) {
+      startRotation = camera.quaternion.clone()
+      // Calculate movement delta (only for x and y)
+    }
+    camera.quaternion.copy(startRotation).slerp(rotationTarget, progress)
   })
 }

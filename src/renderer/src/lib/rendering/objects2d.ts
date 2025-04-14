@@ -4,6 +4,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { FontLoader, LineGeometry, LineMaterial, ThreeMFLoader } from 'three/examples/jsm/Addons.js'
 import fontJSON from '../fonts/montserrat.json'
 import fontTroika from '../../assets/fonts/Montserrat-Medium.woff'
+
 import { Text } from 'troika-three-text'
 import { preloadFont, configureTextBuilder } from 'troika-three-text'
 import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
@@ -362,6 +363,7 @@ export const createFastText = async (text: string, size: number = 10, color: num
   textMesh.text = text
   textMesh.fontSize = size
   textMesh.color = color
+  textMesh.font = fontTroika
 
   // Center the text
   textMesh.anchorX = 'center'

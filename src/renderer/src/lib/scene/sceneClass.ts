@@ -136,6 +136,14 @@ export class AnimatedScene {
     this.sceneCalculationTick += longest
   }
 
+  addSequentialBackgroundAnims(...sequentialAnimations: UserAnimation[]) {
+    let padding = 0
+    for (const animation of sequentialAnimations) {
+      this.appendAnimation(animation, padding)
+      padding += animation.interpolation.length
+    }
+  }
+
   onEachTick(updater: DependencyUpdater) {
     this.sceneDependencies.push(updater)
   }
@@ -413,10 +421,10 @@ export class AnimatedScene {
     )
   }
 
-  private appendAnimation(userAnimation: UserAnimation) {
+  private appendAnimation(userAnimation: UserAnimation, paddedTick: number = 0) {
     const internalAnimation: InternalAnimation = {
-      startTick: this.sceneCalculationTick,
-      endTick: this.sceneCalculationTick + userAnimation.interpolation.length - 1,
+      startTick: paddedTick + this.sceneCalculationTick,
+      endTick: paddedTick + this.sceneCalculationTick + userAnimation.interpolation.length - 1,
       updater: userAnimation.updater,
       interpolation: userAnimation.interpolation
     }
