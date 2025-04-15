@@ -41,7 +41,21 @@ export const captureCanvasFrame = async (
   }
 }
 
-export const triggerEncoder = () => {
+export const triggerEncoder = async () => {
+  try {
+    // Call the exposed function via the 'api' object.
+    const response = await (window as any).api.startVideoRender({ fps: renderOutputFps() })
+    if (response.success) {
+      console.log('Video rendered successfully at:', response.outputFile)
+      // You can update the UI to show the output file path or provide a link to view it
+    } else {
+      console.error('Video render failed:', response.error)
+    }
+  } catch (error) {
+    console.error('Error calling render:', error)
+  }
+  /*
+  
   exec(
     './rust-media/target/release/rust-media ' + Math.round(renderOutputFps()).toString(),
     (error, stdout, stderr) => {
@@ -53,4 +67,5 @@ export const triggerEncoder = () => {
       console.error(`stderr: ${stderr}`)
     }
   )
+    */
 }

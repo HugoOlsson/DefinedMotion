@@ -1,8 +1,15 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { RenderOptions } from '../main/rendering'
+
+const customAPI = {
+  startVideoRender: (options: RenderOptions) => ipcRenderer.invoke('start-video-render', options)
+}
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  ...customAPI
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
@@ -20,3 +27,10 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
 }
+
+/*
+contextBridge.exposeInMainWorld('api', {
+  // Expose a method to start the video render
+  startVideoRender: (options: RenderOptions) => ipcRenderer.invoke('start-video-render', options)
+})
+*/

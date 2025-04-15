@@ -18,6 +18,7 @@ import { createText } from 'three/examples/jsm/Addons.js'
 import { placeNextTo } from '../../lib/scene/helpers'
 
 const strokeColor = '#ff0000'
+const backCharacter = 'Ď'
 
 const keyPositions: { [key: string]: () => [[number, number, number], [number, number]] } = {
   //Number row
@@ -88,6 +89,11 @@ const keyPositions: { [key: string]: () => [[number, number, number], [number, n
   Space: () => [
     [-1.64, 0.7, 1.4],
     [2.65, 0.35]
+  ],
+
+  [backCharacter]: () => [
+    [0.9, 0.93, -0.07],
+    [0.7, 0.35]
   ]
 }
 
@@ -117,14 +123,13 @@ const translateToKey = (char: string): string => {
     ' ': 'Space' // Add "Space" to keyPositions if needed
   }
 
+  if (char === backCharacter) return backCharacter
+
   // Handle letters (convert to uppercase)
   if (/^[a-z]$/i.test(char)) return char.toUpperCase()
   // Handle symbols
   return symbolToKey[char] || char // Fallback to the original char if no mapping
 }
-
-// Example frequency map, for instance, representing typed character frequencies.
-let frequencyMap: FrequencyMap = {}
 
 const nextKeyX = (
   current: [[number, number, number], [number, number]]
@@ -211,57 +216,59 @@ const keyStrokePlane = (width: number, height: number, bumpMap?: THREE.CanvasTex
 }
 
 const setText = async (textNode: any, addedCharacter: string) => {
-  // Ensure historyTextStore is initialized.
+  // Ensure historyTextStore is initialized
   if (!textNode.historyTextStore) {
     textNode.historyTextStore = ''
   }
 
   const numberVisible = 28
 
-  // If textNode.text starts with an ellipsis, remove it to recover the previously visible text.
-  // (This assumes that all truncated texts are prefixed with "...")
+  // Get visible text (without ellipsis if present)
   const visibleText = textNode.text.startsWith('...') ? textNode.text.slice(3) : textNode.text
 
-  // Reconstruct the full text using the stored history and the current visible text.
+  // Reconstruct full text from history and visible portion
   let fullText = textNode.historyTextStore + visibleText
 
-  // Append the new character.
-  fullText += addedCharacter
+  // Process the input character
+  if (addedCharacter === backCharacter) {
+    // Handle backspace: remove last character if exists
+    if (fullText.length > 0) {
+      fullText = fullText.slice(0, -1)
+    }
+  } else {
+    // Append new character normally
+    fullText += addedCharacter
+  }
 
+  // Update text storage and visible text
   if (fullText.length > numberVisible) {
-    // Calculate new visible portion:
+    // Split into new history and visible portions
     const newVisible = fullText.slice(-numberVisible)
-    // The removed part forms the new history.
     textNode.historyTextStore = fullText.slice(0, fullText.length - numberVisible)
-    // Set displayed text with an ellipsis to indicate there is more history.
     textNode.text = '...' + newVisible
   } else {
-    // If the text is not longer than numberVisible characters, update the text and clear the history.
+    // Show full text without ellipsis
     textNode.text = fullText
     textNode.historyTextStore = ''
   }
 
-  // Call updateText with the new text value.
+  // Update the text node
   await updateText(textNode, textNode.text)
 }
-const typeAnimation = (scene: THREE.Scene, characters: string, textNode: any) => {
-  let lastCharacter = ''
+const typeAnimation = (scene: THREE.Scene, characters: string, textNode: any, speed: number) => {
+  let lastIndex = -1
   let keyStroke: THREE.Mesh | undefined
   let pointLight: THREE.PointLight | undefined
   const animation = createAnim(
-    easeLinear(0, 1, characters.length * 50),
+    easeLinear(0, 1, characters.length * speed),
     async (value, _, isLast) => {
-      const character = characters[Math.round(value * (characters.length - 1))]
+      const index = Math.round(value * (characters.length - 1))
+      const character = characters[index]
 
-      if (character !== lastCharacter) {
-        lastCharacter = character
+      if (index !== lastIndex) {
+        lastIndex = index
         ;({ keyStroke, pointLight } = setPosition(scene, translateToKey(character)))
         await setText(textNode, character)
-        if (frequencyMap[character] === undefined) {
-          frequencyMap[character] = 1
-        } else {
-          frequencyMap[character] += 1
-        }
       }
 
       if (isLast) {
@@ -280,29 +287,8 @@ const typeAnimation = (scene: THREE.Scene, characters: string, textNode: any) =>
   return animation
 }
 
-function prettyPrintWithBreaks(obj, lineLength = 40) {
-  const sortedFrequencyMap = Object.keys(frequencyMap)
-    .sort((a, b) => frequencyMap[b] - frequencyMap[a])
-    .reduce((acc, key) => {
-      acc[key] = frequencyMap[key]
-      return acc
-    }, {})
-
-  // First, pretty-print the JSON normally with indentation.
-  const jsonStr = JSON.stringify(sortedFrequencyMap)
-
-  // Then, process the string to insert a line break every lineLength characters.
-  // This approach splits the entire string, which may break in the middle of tokens.
-  let result = ''
-  for (let i = 0; i < jsonStr.length; i += lineLength) {
-    result += jsonStr.slice(i, i + lineLength) + '\n'
-  }
-  return result
-}
-
 export const keyboardScene = (): AnimatedScene => {
   return new AnimatedScene(1080, 2160, true, true, async (scene) => {
-    frequencyMap = {}
     addSceneLighting(scene.scene, { intensity: 1, colorScheme: 'cool' })
 
     scene.renderer.shadowMap.enabled = true
@@ -384,49 +370,51 @@ export const keyboardScene = (): AnimatedScene => {
     const point1 = new THREE.Vector3(-5, 0.05, -3.4)
     const line = createLine({ point1, point2: point1.clone().add(new THREE.Vector3(6, 0, 0)) })
     scene.add(line)
+
+    const typeSpeed = 70
+    const deleteSpeed = 30
+
+    const line1 = 'Hello people!'
+    scene.addAnim(typeAnimation(scene.scene, line1, text, typeSpeed))
+    scene.addWait(1000)
+    scene.addAnim(
+      typeAnimation(scene.scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed)
+    )
     /*
-    const barChart = new BarChart(scene.scene, {
-      maxDisplayHeight: 2,
-      barWidth: 0.3,
-      spacing: 0.4,
-      textSize: 0.3,
-      position: new THREE.Vector3(-4, 0, 5)
-    })
-      */
+    scene.addWait(300)
+    const line2 = 'I am just testing my programmatic animation library!'
+    scene.addAnim(typeAnimation(scene.scene, line2, text, typeSpeed))
+    scene.addWait(1000)
+    scene.addAnim(
+      typeAnimation(scene.scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed)
+    )
 
-    const geometryBarsPlane = new THREE.PlaneGeometry(10, 3)
+    scene.addWait(300)
+    const line3 = `It is inspired by 3Blue1Brown's Manim and Motion Canvas. It is meant for technical and mathematical animations!`
+    scene.addAnim(typeAnimation(scene.scene, line3, text, typeSpeed))
+    scene.addWait(1000)
+    scene.addAnim(
+      typeAnimation(scene.scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed)
+    )
 
-    // Create a basic material
-    // Use MeshBasicMaterial if you do not need lighting or effects – this is ideal for 2D shapes
-    const materialBars = new THREE.MeshStandardMaterial({
-      color: '#ffffff', // Green color
-      side: THREE.DoubleSide, // Render both sides
-      bumpMap,
-      metalness: 0.8,
-      roughness: 0.1
-    })
+    scene.addWait(300)
+    const line4 =
+      'It features: Hot reload, Navigable Viewport, Advanced Rendering Primitives for 2D and 3D, Realtime development playback, Precise Animations, Typed objects and more!'
+    scene.addAnim(typeAnimation(scene.scene, line4, text, typeSpeed))
+    scene.addWait(1000)
+    scene.addAnim(
+      typeAnimation(scene.scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed)
+    )
 
-    // Combine the geometry and material into a mesh
-    const barsPlane = new THREE.Mesh(geometryBarsPlane, materialBars)
-    barsPlane.receiveShadow = true
-    barsPlane.rotateX(Math.PI / 2)
-    barsPlane.position.z = 4
-    barsPlane.position.y = 0.01
-    scene.add(barsPlane)
+    scene.addWait(300)
+    const line5 = `Use the project by visiting "Defined Motion" on GitHub, thanks!`
+    scene.addAnim(typeAnimation(scene.scene, line5, text, typeSpeed))
+    scene.addWait(1000)
+    scene.addAnim(
+      typeAnimation(scene.scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed)
+    )
 
-    const frequencyText = await createFastText('10', 0.25)
-    frequencyText.rotateX(-Math.PI / 2)
-    frequencyText.position.z = 3
-    frequencyText.position.x = -4.5
-    frequencyText.position.y = 0.02
-    frequencyText.anchorX = 'left'
-    frequencyText.anchorY = 'top'
-    frequencyText.outlineColor = '#19006a'
-    frequencyText.outlineWidth = 0.01
-    frequencyText.letterSpacing = 0.1
-    scene.add(frequencyText)
-
-    scene.addAnim(typeAnimation(scene.scene, entireProgram, text))
+    */
 
     const initialZoom = scene.camera.zoom
     scene.onEachTick(async (tick, time) => {
@@ -434,133 +422,7 @@ export const keyboardScene = (): AnimatedScene => {
       pointLight.position.x = lightX * (1 + Math.sin(time / 500) / 10)
       scene.camera.zoom = initialZoom * (1.3 + Math.sin(time / 1000) / 20)
       //await barChart.updateData(frequencyMap)
-      updateText(frequencyText, prettyPrintWithBreaks(frequencyMap))
     })
-    scene.addWait(6000)
+    scene.addWait(3000)
   })
 }
-
-// Type for the frequency map where each key is a character and each value is its frequency count.
-type FrequencyMap = { [char: string]: number }
-
-// Interface for a text mesh that is created by your text helper functions.
-interface FastTextMesh extends THREE.Mesh {
-  text: string
-  outlineColor?: string
-  outlineWidth?: number
-}
-
-class BarChart {
-  private scene: THREE.Scene
-  private maxDisplayHeight: number
-  private barWidth: number
-  private spacing: number
-  private textSize: number
-  private position: THREE.Vector3
-  private chartGroup: THREE.Group
-  private material: THREE.MeshStandardMaterial
-  private barMeshes: THREE.Mesh[] = []
-  private textMeshes: FastTextMesh[] = []
-
-  /**
-   * Creates an instance of BarChart.
-   *
-   * @param scene - The Three.js scene to which the chart will be added.
-   * @param options - Configuration options for the chart.
-   */
-  constructor(
-    scene: THREE.Scene,
-    options?: {
-      maxDisplayHeight?: number
-      barWidth?: number
-      spacing?: number
-      textSize?: number
-      position?: THREE.Vector3
-    }
-  ) {
-    this.scene = scene
-    this.maxDisplayHeight = options?.maxDisplayHeight ?? 2
-    this.barWidth = options?.barWidth ?? 0.3
-    this.spacing = options?.spacing ?? 0.4
-    this.textSize = options?.textSize ?? 0.3
-    this.position = options?.position ?? new THREE.Vector3(0, 0, 0)
-
-    // Create a group to contain all the bars; position and rotate it as needed.
-    this.chartGroup = new THREE.Group()
-
-    // Rotate so that the chart lays flat (optional based on your scene).
-    this.chartGroup.rotateX(-Math.PI / 2)
-    this.chartGroup.position.copy(this.position)
-    this.scene.add(this.chartGroup)
-
-    // Set up the material for the bars.
-    this.material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.8,
-      roughness: 0.2
-    })
-  }
-
-  /**
-   * Updates the bar chart with new data from a frequency map.
-   *
-   * @param frequencyMap - An object mapping characters to frequency counts.
-   */
-  async updateData(frequencyMap: FrequencyMap): Promise<void> {
-    // Remove previous bar meshes from the group.
-    this.barMeshes.forEach((bar) => this.chartGroup.remove(bar))
-    // Remove previous text meshes from the scene.
-    this.textMeshes.forEach((textMesh) => this.scene.remove(textMesh))
-    this.barMeshes = []
-    this.textMeshes = []
-
-    // Loop through each character in the map and create a corresponding bar and text label.
-    // 1. Sort keys in decreasing order based on frequency.
-    const keys = Object.keys(frequencyMap)
-      .filter((key) => key.trim() !== '')
-      .sort((a, b) => frequencyMap[b] - frequencyMap[a])
-    // Prepare an array of frequencies for later scaling.
-    const frequencies = keys.map((key) => frequencyMap[key])
-    // Ensure the maximum value is at least 1 to avoid division by zero.
-    const maxValue = Math.max(...frequencies, 1)
-
-    for (let index = 0; index < keys.length; index++) {
-      const char = keys[index]
-      const value = frequencyMap[char]
-
-      // Scale the bar height relative to maxDisplayHeight.
-      const scaledValue = (value / maxValue) * this.maxDisplayHeight
-
-      // Create the bar geometry and mesh.
-      const geometry = new THREE.BoxGeometry(this.barWidth, scaledValue, 0.5)
-      const bar = new THREE.Mesh(geometry, this.material)
-      bar.castShadow = true
-
-      // Begin building from the left, placing the first bar at x = 0.
-      bar.position.x = index * this.spacing
-      // Position y so the bar's base sits at 0.
-      bar.position.y = scaledValue / 2
-      this.chartGroup.add(bar)
-      this.barMeshes.push(bar)
-
-      // Create the text mesh for the character.
-      // Now the text displays the character instead of the frequency value.
-      const textMesh = await createFastText(char, this.textSize)
-      textMesh.outlineColor = '#012665'
-      textMesh.outlineWidth = 0.01
-      // Rotate text to match scene orientation.
-      textMesh.rotateX(-Math.PI / 2)
-      // Align the text with the bar and offset slightly.
-      textMesh.position.x = -4 + index * this.spacing
-      textMesh.position.y = 0.1
-      textMesh.position.z = this.chartGroup.position.z + 0.2
-      this.scene.add(textMesh)
-      this.textMeshes.push(textMesh)
-
-      // Update the text mesh using the provided asynchronous update function.
-      await updateText(textMesh, char)
-    }
-  }
-}
-
-const entireProgram = `At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat.`

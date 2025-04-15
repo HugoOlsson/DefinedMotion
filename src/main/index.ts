@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { renderVideo } from './rendering'
 
 let mainWindow: BrowserWindow
 
@@ -73,6 +74,15 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+ipcMain.handle('start-video-render', async (event, options) => {
+  try {
+    const outputFile = await renderVideo(options)
+    return { success: true, outputFile }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
