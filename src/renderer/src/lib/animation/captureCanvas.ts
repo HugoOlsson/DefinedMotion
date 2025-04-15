@@ -1,50 +1,58 @@
 import { renderOutputFps } from '../../scenes/entry'
+import * as THREE from 'three'
+import { AnimatedScene } from '../scene/sceneClass'
 
 const fs = require('fs')
-const { exec } = require('child_process')
+const path = require('path')
 
 export const captureCanvasFrame = async (
   currentFrameIndex: number,
   renderName: string,
-  canvas: HTMLCanvasElement
+  threeRenderer: THREE.WebGLRenderer
 ) => {
   try {
-    // Create the directory structure if it doesn't exist
-    const dirPath = 'image_renders' + '/' + `render_${renderName}`
+    const dirPath = path.join('image_renders', `render_${renderName}`)
 
-    // Use fs.mkdirSync with recursive option to create nested directories
+    // Create directory if needed
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true })
     }
 
-    // Generate filename with padded frame number (e.g., frame_00001.png)
+    // Generate filename with .rgb extension
     const paddedIndex = currentFrameIndex.toString().padStart(5, '0')
-    const filename = `frame_${paddedIndex}.png`
-    const filePath = dirPath + '/' + filename
+    const filename = `frame_${paddedIndex}.jpeg`
+    const filePath = path.join(dirPath, filename)
 
-    // Get the canvas data as a data URL (PNG format)
-    const dataURL = canvas.toDataURL('image/png')
+    // Get WebGL context and pixel data
+    const canvas = threeRenderer.domElement
 
-    // Convert the data URL to a buffer
-    // Remove the data URL header (data:image/png;base64,)
-    const base64Data = dataURL.replace(/^data:image\/png;base64,/, '')
-    const imageBuffer = Buffer.from(base64Data, 'base64')
+    // Use the canvas.toBlob method to capture a JPEG image.
+    // Note: The quality parameter is between 0 and 1.
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.85)
+    })
 
-    // Write the file
-    await fs.promises.writeFile(filePath, imageBuffer)
+    // Convert the blob to an ArrayBuffer then to a Node.js Buffer.
+    const arrayBuffer = await (blob as any).arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
 
-    console.log(`Saved frame ${currentFrameIndex} to ${filePath}`)
+    await fs.promises.writeFile(filePath, buffer)
+
+    console.log(`Saved RAW frame ${currentFrameIndex} to ${filePath}`)
     return filePath
   } catch (error) {
     console.error('Error saving canvas frame:', error)
     throw error
   }
 }
-
-export const triggerEncoder = async () => {
+export const triggerEncoder = async (width: number, height: number) => {
   try {
     // Call the exposed function via the 'api' object.
-    const response = await (window as any).api.startVideoRender({ fps: renderOutputFps() })
+    const response = await (window as any).api.startVideoRender({
+      fps: renderOutputFps(),
+      width,
+      height
+    })
     if (response.success) {
       console.log('Video rendered successfully at:', response.outputFile)
       // You can update the UI to show the output file path or provide a link to view it

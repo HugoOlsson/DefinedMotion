@@ -380,7 +380,7 @@ export const keyboardScene = (): AnimatedScene => {
     scene.addAnim(
       typeAnimation(scene.scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed)
     )
-    /*
+
     scene.addWait(300)
     const line2 = 'I am just testing my programmatic animation library!'
     scene.addAnim(typeAnimation(scene.scene, line2, text, typeSpeed))
@@ -413,8 +413,6 @@ export const keyboardScene = (): AnimatedScene => {
     scene.addAnim(
       typeAnimation(scene.scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed)
     )
-
-    */
 
     const initialZoom = scene.camera.zoom
     scene.onEachTick(async (tick, time) => {

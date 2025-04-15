@@ -3,7 +3,9 @@ import path from 'path'
 import { spawnSync } from 'child_process'
 
 export interface RenderOptions {
-  fps?: number
+  fps: number
+  width: number
+  height: number
 }
 
 /**
@@ -12,10 +14,10 @@ export interface RenderOptions {
  * @param options.fps - Frames per second to use (default is 30).
  * @returns A promise that resolves to the output file path.
  */
-export function renderVideo({ fps = 30 }: RenderOptions = {}): Promise<string> {
+export function renderVideo(options: RenderOptions): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      console.log(`Converting frames to video at ${fps} fps`)
+      console.log(`Converting frames to video at ${options.fps} fps`)
 
       // Define directories
       const rootDir = './image_renders'
@@ -32,14 +34,14 @@ export function renderVideo({ fps = 30 }: RenderOptions = {}): Promise<string> {
       console.log(`Processing directory: ${dirName}`)
 
       // Define the frame pattern and output file path.
-      const framePattern = path.join(latestDir, 'frame_%05d.png')
+      const framePattern = path.join(latestDir, 'frame_%05d.jpeg')
       const outputFile = path.join(outputDir, `${dirName}.mp4`)
 
       // Build FFmpeg command arguments.
       const ffmpegArgs = [
         '-y', // Overwrite output if it exists.
         '-framerate',
-        fps.toString(), // Set the frame rate.
+        options.fps.toString(), // Set the frame rate.
         '-i',
         framePattern, // Input frames.
         '-c:v',
@@ -47,7 +49,7 @@ export function renderVideo({ fps = 30 }: RenderOptions = {}): Promise<string> {
         '-pix_fmt',
         'yuv420p',
         '-preset',
-        'medium',
+        'fast',
         '-crf',
         '23', // Quality/size balance.
         outputFile

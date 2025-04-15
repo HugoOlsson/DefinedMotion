@@ -316,7 +316,7 @@ export class AnimatedScene {
       }
       if (this.sceneRenderTick % renderSkip === 0) {
         this.renderCurrentFrame()
-        captureCanvasFrame(Math.round(i / renderSkip), renderName, this.renderer.domElement)
+        await captureCanvasFrame(Math.round(i / renderSkip), renderName, this.renderer)
       }
       await this.playEffectFunction()
       if (i % 10 === 0) {
@@ -324,7 +324,7 @@ export class AnimatedScene {
       }
     }
 
-    triggerEncoder()
+    triggerEncoder(this.pixelsWidth, this.pixelsHeight)
 
     div.style.opacity = '1'
 
