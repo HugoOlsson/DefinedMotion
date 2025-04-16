@@ -1,6 +1,7 @@
 import { renderOutputFps } from '../../scenes/entry'
 import * as THREE from 'three'
 import { AnimatedScene } from '../scene/sceneClass'
+import { AudioInScene } from '../audio/loader'
 
 const fs = require('fs')
 const path = require('path')
@@ -45,13 +46,18 @@ export const captureCanvasFrame = async (
     throw error
   }
 }
-export const triggerEncoder = async (width: number, height: number) => {
+export const triggerEncoder = async (
+  width: number,
+  height: number,
+  renderingAudioGather: AudioInScene[]
+) => {
   try {
     // Call the exposed function via the 'api' object.
     const response = await (window as any).api.startVideoRender({
       fps: renderOutputFps(),
       width,
-      height
+      height,
+      renderingAudioGather
     })
     if (response.success) {
       console.log('Video rendered successfully at:', response.outputFile)

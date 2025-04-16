@@ -7,7 +7,7 @@ import { placeNextTo } from '../../lib/scene/helpers'
 import { moveToAnimation, setOpacity } from '../../lib/animation/animations'
 import { concatInterpols, easeInOutQuad, posXSigmoid } from '../../lib/animation/interpolations'
 import { createAnim } from '../../lib/animation/protocols'
-import { createSimpleFunctionSurface, updateFunctionSurface } from '../../lib/rendering/objects3d'
+import { createFunctionSurface, updateFunctionSurface } from '../../lib/rendering/objects3d'
 import { addBackgroundGradient, addHDRI, HDRIs } from '../../lib/rendering/lighting3d'
 import { latexOTest } from '../../lib/rendering/svgObjects'
 import { parseSVGString, vectorizeSVGStructure } from '../../lib/rendering/svg/parsing'
@@ -208,7 +208,7 @@ export const threeDimAnimatedSinFunctionScene = (): AnimatedScene => {
 
     const axesHelper = new THREE.AxesHelper(20)
 
-    const sineSurface = createSimpleFunctionSurface(sineTimeFunction(0), ...funcMinMaxes)
+    const sineSurface = createFunctionSurface(sineTimeFunction(0), ...funcMinMaxes)
     sineSurface.material = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       metalness: 0.8,

@@ -6,8 +6,8 @@ export function createFunctionSurface(
   xMax: number,
   yMin: number,
   yMax: number,
-  xSegments: number,
-  ySegments: number
+  xSegments: number = 200,
+  ySegments: number = 200
 ) {
   // Create a plane geometry
   const width = xMax - xMin
@@ -87,11 +87,3 @@ export function updateFunctionSurface(
   // Recompute normals for proper lighting
   mesh.geometry.computeVertexNormals()
 }
-
-export const createSimpleFunctionSurface = (
-  func: (a: number, b: number) => number,
-  xMin: number,
-  xMax: number,
-  yMin: number,
-  yMax: number
-) => createFunctionSurface(func, xMin, xMax, yMin, yMax, 200, 200)

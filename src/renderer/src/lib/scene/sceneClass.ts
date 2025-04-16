@@ -14,6 +14,7 @@ import { easeConstant } from '../animation/interpolations'
 import { animationFPSThrottle, renderSkip } from '../../scenes/entry'
 import { addDestroyFunction } from '../general/onDestory'
 import { ticksToMillis } from '../animation/helpers'
+import { AudioInScene, loadAllAudio, playAudio, registerAudio } from '../audio/loader'
 
 type SceneInstruction = (tick: number) => any
 
@@ -36,6 +37,7 @@ export class AnimatedScene {
   private sceneAnimations: InternalAnimation[] = []
   private sceneDependencies: DependencyUpdater[] = []
   private sceneInstructions: Map<number, SceneInstruction[]> = new Map()
+  private planedSounds: Map<number, AudioInScene[]> = new Map()
 
   private pixelsWidth
   private pixelsHeight
@@ -69,6 +71,11 @@ export class AnimatedScene {
 
   private controlsAnimationFrameId: number | null = null
   private animationFrameId: number | null = null
+
+  private isBuilding = false
+  private isRendering = false
+  private doNotPlayAudio = false
+  private renderingAudioGather: AudioInScene[] = []
 
   constructor(
     pixelsWidth: number,
@@ -152,26 +159,64 @@ export class AnimatedScene {
     this.totalSceneTicks = this.sceneCalculationTick + 1
   }
 
+  registerAudio(audioPath: string) {
+    registerAudio(audioPath)
+  }
+
+  playAudio(audioPath: string, volume: number = 1) {
+    if (this.isBuilding) {
+      const listForFrame = this.planedSounds.get(this.sceneCalculationTick)
+      if (!listForFrame) {
+        this.planedSounds.set(this.sceneCalculationTick, [
+          {
+            audioPath,
+            atFrame: this.sceneCalculationTick,
+            volume
+          }
+        ])
+      } else {
+        listForFrame.push({
+          audioPath,
+          atFrame: this.sceneCalculationTick,
+          volume
+        })
+      }
+    } else if (this.isRendering) {
+      // Handle rendering scenerio soon
+      this.renderingAudioGather.push({
+        audioPath,
+        volume,
+        atFrame: Math.round(this.sceneRenderTick / renderSkip)
+      })
+    } else if (this.isPlaying && this.doNotPlayAudio === false) {
+      playAudio(audioPath, volume)
+    }
+  }
+
   addWait(duration: number) {
     this.addAnim(createAnim(easeConstant(0, duration), () => {}))
   }
 
   async jumpToFrameAtIndex(index: number, notSize: boolean = false) {
+    this.doNotPlayAudio = true
     this.resetComponents(notSize)
+    this.isBuilding = true
     await this.buildFunction(this)
+    this.isBuilding = false
+    await loadAllAudio()
 
     if (index > this.totalSceneTicks - 1) {
       index = 0
     }
 
     if (this.traceFromStart) {
-      await this.traceToFrameIndex(index)
+      await this.traceToFrameIndex(index, false)
     } else {
       const allInstructionUntilNow = this.getSceneInstructionsUpToIndex(index - 1)
       for (let i = 0; i < allInstructionUntilNow.length; i++) {
         await allInstructionUntilNow[i].instruction(allInstructionUntilNow[i].key)
       }
-      await this.traceCurrentFrame(index)
+      await this.traceCurrentFrame(index, false)
     }
 
     this.renderCurrentFrame()
@@ -179,6 +224,8 @@ export class AnimatedScene {
     await this.playEffectFunction()
 
     // console.log('INSTRUCTIONS', this.sceneInstructions)
+
+    this.doNotPlayAudio = false
   }
 
   getAspectRatio() {
@@ -288,6 +335,7 @@ export class AnimatedScene {
   }
 
   async render() {
+    this.isRendering = true
     this.isPlaying = true
     this.stopControls()
     const renderName = generateID(10)
@@ -306,17 +354,23 @@ export class AnimatedScene {
     div.style.opacity = '0'
 
     this.renderer.setSize(this.pixelsWidth, this.pixelsHeight, true)
+
+    window.scrollTo(0, 0)
     const startFrame = 0
     await this.jumpToFrameAtIndex(startFrame, true)
     for (let i = startFrame; i < this.totalSceneTicks; i++) {
       this.sceneRenderTick = i
       //To not trace start frame twice
       if (i !== startFrame) {
-        await this.traceCurrentFrame(this.sceneRenderTick)
+        await this.traceCurrentFrame(this.sceneRenderTick, true)
       }
       if (this.sceneRenderTick % renderSkip === 0) {
         this.renderCurrentFrame()
-        await captureCanvasFrame(Math.round(i / renderSkip), renderName, this.renderer)
+        await captureCanvasFrame(
+          Math.round(this.sceneRenderTick / renderSkip),
+          renderName,
+          this.renderer
+        )
       }
       await this.playEffectFunction()
       if (i % 10 === 0) {
@@ -324,7 +378,10 @@ export class AnimatedScene {
       }
     }
 
-    triggerEncoder(this.pixelsWidth, this.pixelsHeight)
+    triggerEncoder(this.pixelsWidth, this.pixelsHeight, this.renderingAudioGather)
+
+    this.renderingAudioGather = []
+    this.isRendering = false
 
     div.style.opacity = '1'
 
@@ -361,7 +418,7 @@ export class AnimatedScene {
           this.sceneRenderTick = currentFrame
           //To not apply trace twice if we just jumped to startframe (and thus tranced it)
           if (trace) {
-            await this.traceCurrentFrame(this.sceneRenderTick)
+            await this.traceCurrentFrame(this.sceneRenderTick, true)
           }
           this.renderCurrentFrame()
           currentFrame++
@@ -385,14 +442,14 @@ export class AnimatedScene {
     this.renderer.render(this.scene, this.camera)
   }
 
-  private async traceToFrameIndex(index: number) {
+  private async traceToFrameIndex(index: number, withAudio: boolean) {
     //Trace all actions
     for (let traceTick = 0; traceTick <= index; traceTick++) {
-      await this.traceCurrentFrame(traceTick)
+      await this.traceCurrentFrame(traceTick, withAudio)
     }
   }
 
-  private async traceCurrentFrame(index: number) {
+  private async traceCurrentFrame(index: number, withAudio: boolean) {
     //Trace all actions
     const frameInstructions = this.sceneInstructions.get(index)
     if (frameInstructions) {
@@ -412,6 +469,15 @@ export class AnimatedScene {
 
     for (let d = 0; d < this.sceneDependencies.length; d++) {
       await this.sceneDependencies[d](index, ticksToMillis(index))
+    }
+
+    if (withAudio) {
+      const soundsForTick = this.planedSounds.get(index)
+      if (soundsForTick) {
+        for (const sound of soundsForTick) {
+          this.playAudio(sound.audioPath, sound.volume)
+        }
+      }
     }
   }
 

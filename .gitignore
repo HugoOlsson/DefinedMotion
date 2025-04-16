@@ -6,3 +6,4 @@ out
 *.log*
 /image_renders
 /rendered_videos
+/audio_renders

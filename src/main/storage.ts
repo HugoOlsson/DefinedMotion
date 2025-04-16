@@ -1,8 +1,10 @@
 import path from 'path'
 import fs from 'fs/promises'
+import fsSync from 'fs'
 
-export async function deleteImageRendersFolderContents() {
+export async function deleteRenderedContent() {
   const folderPath = './image_renders'
+  const audioRendersDir = './audio_renders'
 
   try {
     // Read all entries in the folder.
@@ -21,7 +23,12 @@ export async function deleteImageRendersFolderContents() {
       })
     )
 
-    console.log('All "render_" directories in "image_renders/" have been deleted.')
+    fsSync.readdirSync(audioRendersDir).forEach((item) => {
+      const itemPath = path.join(audioRendersDir, item)
+      fsSync.rmSync(itemPath, { recursive: true, force: true })
+    })
+
+    console.log('All render cache have been deleted.')
   } catch (error) {
     console.error(`Error while deleting render folders: ${(error as any).message}`)
   }

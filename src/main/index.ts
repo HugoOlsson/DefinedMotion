@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { renderVideo } from './rendering'
-import { deleteImageRendersFolderContents } from './storage'
+import { deleteRenderedContent } from './storage'
 
 let mainWindow: BrowserWindow
 
@@ -86,7 +86,7 @@ ipcMain.handle('start-video-render', async (event, options) => {
   }
 })
 
-deleteImageRendersFolderContents()
+deleteRenderedContent()
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

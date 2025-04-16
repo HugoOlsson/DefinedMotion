@@ -16,6 +16,8 @@ import { createFastText, createLine, updateText } from '../../lib/rendering/obje
 import { COLORS } from '../../lib/rendering/helpers'
 import { createText } from 'three/examples/jsm/Addons.js'
 import { placeNextTo } from '../../lib/scene/helpers'
+import tickSound from '../../assets/audio/tick_sound.mp3'
+import keyboard1 from '../../assets/audio/keyboard1.mp3'
 
 const strokeColor = '#ff0000'
 const backCharacter = 'Ď'
@@ -255,10 +257,11 @@ const setText = async (textNode: any, addedCharacter: string) => {
   // Update the text node
   await updateText(textNode, textNode.text)
 }
-const typeAnimation = (scene: THREE.Scene, characters: string, textNode: any, speed: number) => {
+const typeAnimation = (scene: AnimatedScene, characters: string, textNode: any, speed: number) => {
   let lastIndex = -1
   let keyStroke: THREE.Mesh | undefined
   let pointLight: THREE.PointLight | undefined
+  let lastCharacter
   const animation = createAnim(
     easeLinear(0, 1, characters.length * speed),
     async (value, _, isLast) => {
@@ -267,17 +270,23 @@ const typeAnimation = (scene: THREE.Scene, characters: string, textNode: any, sp
 
       if (index !== lastIndex) {
         lastIndex = index
-        ;({ keyStroke, pointLight } = setPosition(scene, translateToKey(character)))
+        ;({ keyStroke, pointLight } = setPosition(scene.scene, translateToKey(character)))
         await setText(textNode, character)
+        if (lastCharacter === backCharacter && character === backCharacter) {
+        } else {
+          scene.playAudio(keyboard1, character === backCharacter || character === ' ' ? 0.5 : 0.2)
+          scene.playAudio(tickSound, character === ' ' ? 0.2 : 0.05)
+        }
+        lastCharacter = character
       }
 
       if (isLast) {
         setTimeout(() => {
           if (keyStroke) {
-            scene.remove(keyStroke)
+            scene.scene.remove(keyStroke)
           }
           if (pointLight) {
-            scene.remove(pointLight)
+            scene.scene.remove(pointLight)
           }
         }, 500)
       }
@@ -289,6 +298,8 @@ const typeAnimation = (scene: THREE.Scene, characters: string, textNode: any, sp
 
 export const keyboardScene = (): AnimatedScene => {
   return new AnimatedScene(1080, 2160, true, true, async (scene) => {
+    scene.registerAudio(tickSound)
+    scene.registerAudio(keyboard1)
     addSceneLighting(scene.scene, { intensity: 1, colorScheme: 'cool' })
 
     scene.renderer.shadowMap.enabled = true
@@ -371,47 +382,47 @@ export const keyboardScene = (): AnimatedScene => {
     const line = createLine({ point1, point2: point1.clone().add(new THREE.Vector3(6, 0, 0)) })
     scene.add(line)
 
-    const typeSpeed = 70
+    const typeSpeed = 100
     const deleteSpeed = 30
 
     const line1 = 'Hello people!'
-    scene.addAnim(typeAnimation(scene.scene, line1, text, typeSpeed))
+    scene.addAnim(typeAnimation(scene, line1, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
-      typeAnimation(scene.scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed)
+      typeAnimation(scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed)
     )
 
     scene.addWait(300)
     const line2 = 'I am just testing my programmatic animation library!'
-    scene.addAnim(typeAnimation(scene.scene, line2, text, typeSpeed))
+    scene.addAnim(typeAnimation(scene, line2, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
-      typeAnimation(scene.scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed)
+      typeAnimation(scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed)
     )
 
     scene.addWait(300)
     const line3 = `It is inspired by 3Blue1Brown's Manim and Motion Canvas. It is meant for technical and mathematical animations!`
-    scene.addAnim(typeAnimation(scene.scene, line3, text, typeSpeed))
+    scene.addAnim(typeAnimation(scene, line3, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
-      typeAnimation(scene.scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed)
+      typeAnimation(scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed)
     )
 
     scene.addWait(300)
     const line4 =
       'It features: Hot reload, Navigable Viewport, Advanced Rendering Primitives for 2D and 3D, Realtime development playback, Precise Animations, Typed objects and more!'
-    scene.addAnim(typeAnimation(scene.scene, line4, text, typeSpeed))
+    scene.addAnim(typeAnimation(scene, line4, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
-      typeAnimation(scene.scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed)
+      typeAnimation(scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed)
     )
 
     scene.addWait(300)
     const line5 = `Use the project by visiting "Defined Motion" on GitHub, thanks!`
-    scene.addAnim(typeAnimation(scene.scene, line5, text, typeSpeed))
+    scene.addAnim(typeAnimation(scene, line5, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
-      typeAnimation(scene.scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed)
+      typeAnimation(scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed)
     )
 
     const initialZoom = scene.camera.zoom
