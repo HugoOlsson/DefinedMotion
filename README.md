@@ -1,4 +1,4 @@
-# codemotion
+# MotionByDefinition
 
 An Electron application with Svelte and TypeScript
 
