@@ -362,7 +362,7 @@ export const keyboardScene = (): AnimatedScene => {
     // Add the plane to the scene
     scene.add(texturePlane)
     scene.add(largePlane)
-    ;(scene.camera as THREE.PerspectiveCamera).setFocalLength(27)
+    ;(scene.camera as THREE.PerspectiveCamera).setFocalLength(25)
 
     //setPosition(scene.scene, translateToKey(' '))
 
@@ -382,10 +382,10 @@ export const keyboardScene = (): AnimatedScene => {
     const line = createLine({ point1, point2: point1.clone().add(new THREE.Vector3(6, 0, 0)) })
     scene.add(line)
 
-    const typeSpeed = 100
+    const typeSpeed = 70
     const deleteSpeed = 30
 
-    const line1 = 'Hello people!'
+    const line1 = 'Hello YouTube!'
     scene.addAnim(typeAnimation(scene, line1, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
@@ -410,7 +410,7 @@ export const keyboardScene = (): AnimatedScene => {
 
     scene.addWait(300)
     const line4 =
-      'It features: Hot reload, Navigable Viewport, Advanced Rendering Primitives for 2D and 3D, Realtime development playback, Precise Animations, Typed objects and more!'
+      'One of its features is that when you save your code, the animation updates immediately in the viewport. No need to render the video, open the file and then see the result!'
     scene.addAnim(typeAnimation(scene, line4, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
@@ -418,7 +418,7 @@ export const keyboardScene = (): AnimatedScene => {
     )
 
     scene.addWait(300)
-    const line5 = `Use the project by visiting "Defined Motion" on GitHub, thanks!`
+    const line5 = `Use the project by visiting "TickMotion" by Hugo Olsson on GitHub, thanks!`
     scene.addAnim(typeAnimation(scene, line5, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(

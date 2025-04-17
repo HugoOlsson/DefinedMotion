@@ -1,5 +1,5 @@
 {
-  "name": "MotionByDefinition",
+  "name": "TickMotion",
   "version": "1.0.0",
   "description": "An Electron application with Svelte and TypeScript",
   "main": "./out/main/index.js",

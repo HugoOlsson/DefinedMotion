@@ -1,4 +1,4 @@
-# MBD - Motion by Definition
+# TickMotion
 
 This is a programmatic animation library, similar to 3Blue1Brown's Manim or Motion Canvas. It focuses on giving a very tight feedback loop for the development by just saving file to see updates directly (hot reload). It uses Three.js as rendering backend to get very performant rendering.
 
