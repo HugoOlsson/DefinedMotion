@@ -95,7 +95,10 @@ export function renderVideo(options: RenderOptions): Promise<string> {
       if (includeAudio) {
         ffmpegArgs.push(
           '-c:a',
-          'aac' // Audio codec.
+          'aac', // Audio codec.
+          '-af',
+          'apad', // <-- pad audio with silence
+          '-shortest' // <-- cut output to shortest input (i.e. video)
         )
       }
 

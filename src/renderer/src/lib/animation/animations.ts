@@ -148,8 +148,10 @@ export const moveCameraAnimation = (
   })
 }
 
-export const moveCameraAnimation3D = (
+export const moveRotateCameraAnimation3D = (
   camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+  startPosition: THREE.Vector3,
+  startRotation: THREE.Quaternion,
   positionTarget: THREE.Vector3,
   rotationTarget: THREE.Quaternion,
   duration: number = 800
@@ -157,22 +159,29 @@ export const moveCameraAnimation3D = (
   // Store the target position (we'll capture the start position when animation begins)
   const targetPosition = positionTarget.clone()
 
-  // We'll capture these values when the animation starts
-  let startPosition: THREE.Vector3
-  let posDelta: THREE.Vector3
-  let startRotation: THREE.Quaternion
+  const posDelta = targetPosition.clone().sub(startPosition)
 
   // Create animation with eased interpolation
   return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
-    // On first frame, capture the current camera position
-    if (progress === 0) {
-      startPosition = camera.position.clone()
-      startRotation = camera.quaternion.clone()
-      // Calculate movement delta (only for x and y)
-      posDelta = targetPosition.clone().sub(startPosition)
-    }
     camera.position.copy(startPosition.clone().add(posDelta.clone().multiplyScalar(progress)))
     camera.quaternion.copy(startRotation).slerp(rotationTarget, progress)
+  })
+}
+
+export const moveCameraAnimation3D = (
+  camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+  startPosition: THREE.Vector3,
+  positionTarget: THREE.Vector3,
+  duration: number = 800
+): UserAnimation => {
+  // Store the target position (we'll capture the start position when animation begins)
+  const targetPosition = positionTarget.clone()
+
+  const posDelta = targetPosition.clone().sub(startPosition)
+
+  // Create animation with eased interpolation
+  return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
+    camera.position.copy(startPosition.clone().add(posDelta.clone().multiplyScalar(progress)))
   })
 }
 

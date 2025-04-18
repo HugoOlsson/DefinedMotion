@@ -162,7 +162,7 @@ export const createRectangle = (
 }
 
 // Define interface extending Line with your custom method
-interface PaddedLine extends THREE.Line {
+export interface PaddedLine extends THREE.Line {
   updatePositions: (
     newPoint1?: THREE.Vector3,
     newPoint2?: THREE.Vector3,
@@ -184,7 +184,7 @@ export const createLine = ({
 }: {
   point1?: THREE.Vector3
   point2?: THREE.Vector3
-  color?: THREE.Color
+  color?: THREE.ColorRepresentation
   width?: number
   padding?: number
 } = {}): PaddedLine => {

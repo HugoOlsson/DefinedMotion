@@ -13,6 +13,11 @@ import {
   transform,
   identity
 } from 'transformation-matrix'
+import { drawVectorizedNodes } from './drawing'
+
+export const createSVGShape = (svg: string, width: number) => {
+  return drawVectorizedNodes(vectorizeSVGStructure(parseSVGString(svg)), width)
+}
 
 export const parseSVGString = (svg: string) => {
   return parse(svg)
@@ -121,7 +126,7 @@ function generatePoints(
       const cx = props.cx
       const cy = props.cy
       const r = props.r
-      const samples = 32
+      const samples = 100
       return {
         points: Array.from({ length: samples + 1 }, (_, i) => {
           const theta = (2 * Math.PI * i) / samples

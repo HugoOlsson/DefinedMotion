@@ -166,6 +166,7 @@ export class AnimatedScene {
   playAudio(audioPath: string, volume: number = 1) {
     if (this.isBuilding) {
       const listForFrame = this.planedSounds.get(this.sceneCalculationTick)
+
       if (!listForFrame) {
         this.planedSounds.set(this.sceneCalculationTick, [
           {
@@ -203,6 +204,7 @@ export class AnimatedScene {
     this.isBuilding = true
     await this.buildFunction(this)
     this.isBuilding = false
+
     await loadAllAudio()
 
     if (index > this.totalSceneTicks - 1) {
@@ -216,7 +218,7 @@ export class AnimatedScene {
       for (let i = 0; i < allInstructionUntilNow.length; i++) {
         await allInstructionUntilNow[i].instruction(allInstructionUntilNow[i].key)
       }
-      await this.traceCurrentFrame(index, false)
+      await this.traceCurrentFrame(index, false, false)
     }
 
     this.renderCurrentFrame()
@@ -361,9 +363,9 @@ export class AnimatedScene {
     for (let i = startFrame; i < this.totalSceneTicks; i++) {
       this.sceneRenderTick = i
       //To not trace start frame twice
-      if (i !== startFrame) {
-        await this.traceCurrentFrame(this.sceneRenderTick, true)
-      }
+
+      await this.traceCurrentFrame(this.sceneRenderTick, true, i === startFrame)
+
       if (this.sceneRenderTick % renderSkip === 0) {
         this.renderCurrentFrame()
         await captureCanvasFrame(
@@ -417,9 +419,7 @@ export class AnimatedScene {
         if (numberCalledAnimate % animationFPSThrottle === 0) {
           this.sceneRenderTick = currentFrame
           //To not apply trace twice if we just jumped to startframe (and thus tranced it)
-          if (trace) {
-            await this.traceCurrentFrame(this.sceneRenderTick, true)
-          }
+          await this.traceCurrentFrame(this.sceneRenderTick, true, !trace)
           this.renderCurrentFrame()
           currentFrame++
           await this.playEffectFunction()
@@ -445,11 +445,20 @@ export class AnimatedScene {
   private async traceToFrameIndex(index: number, withAudio: boolean) {
     //Trace all actions
     for (let traceTick = 0; traceTick <= index; traceTick++) {
-      await this.traceCurrentFrame(traceTick, withAudio)
+      await this.traceCurrentFrame(traceTick, withAudio, false)
     }
   }
 
-  private async traceCurrentFrame(index: number, withAudio: boolean) {
+  private async traceCurrentFrame(index: number, withAudio: boolean, onlyAudio: boolean) {
+    if (withAudio) {
+      const soundsForTick = this.planedSounds.get(index)
+      if (soundsForTick) {
+        for (const sound of soundsForTick) {
+          this.playAudio(sound.audioPath, sound.volume)
+        }
+      }
+    }
+    if (onlyAudio) return
     //Trace all actions
     const frameInstructions = this.sceneInstructions.get(index)
     if (frameInstructions) {
@@ -469,15 +478,6 @@ export class AnimatedScene {
 
     for (let d = 0; d < this.sceneDependencies.length; d++) {
       await this.sceneDependencies[d](index, ticksToMillis(index))
-    }
-
-    if (withAudio) {
-      const soundsForTick = this.planedSounds.get(index)
-      if (soundsForTick) {
-        for (const sound of soundsForTick) {
-          this.playAudio(sound.audioPath, sound.volume)
-        }
-      }
     }
   }
 
@@ -524,6 +524,7 @@ export class AnimatedScene {
     this.sceneAnimations = []
     this.sceneDependencies = []
     this.sceneInstructions = new Map()
+    this.planedSounds = new Map()
   }
 
   private captureCameraState(camera: THREE.Camera) {
