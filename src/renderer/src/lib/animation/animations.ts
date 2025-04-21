@@ -54,8 +54,13 @@ export const setScale = <T extends THREE.Object3D>(
   return object
 }
 
-export const fadeIn = (object: THREE.Object3D, duration: number = 800): UserAnimation => {
-  return new UserAnimation(easeInOutQuad(0, 1, duration), (value) => {
+export const fade = (
+  object: THREE.Object3D,
+  duration: number = 800,
+  fromValue: number = 0,
+  toValue: number = 1
+): UserAnimation => {
+  return new UserAnimation(easeInOutQuad(fromValue, toValue, duration), (value) => {
     setOpacity(object, value)
   })
 }
@@ -69,8 +74,10 @@ export const fadeInTowardsEnd = (object: THREE.Object3D, duration: number = 800)
   )
 }
 
+export const fadeIn = (object: THREE.Object3D, duration: number = 800) => fade(object, duration)
+
 export const fadeOut = (object: THREE.Object3D, duration: number = 800) =>
-  fadeIn(object, duration).reverse()
+  fade(object, duration).reverse()
 
 export const zoomIn = (
   object: THREE.Object3D,
@@ -156,15 +163,18 @@ export const moveRotateCameraAnimation3D = (
   rotationTarget: THREE.Quaternion,
   duration: number = 800
 ): UserAnimation => {
+  const startPosCopy = startPosition.clone()
+  const startRotCopy = startRotation.clone()
+
   // Store the target position (we'll capture the start position when animation begins)
   const targetPosition = positionTarget.clone()
 
-  const posDelta = targetPosition.clone().sub(startPosition)
+  const posDelta = targetPosition.clone().sub(startPosCopy)
 
   // Create animation with eased interpolation
   return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
-    camera.position.copy(startPosition.clone().add(posDelta.clone().multiplyScalar(progress)))
-    camera.quaternion.copy(startRotation).slerp(rotationTarget, progress)
+    camera.position.copy(startPosCopy.clone().add(posDelta.clone().multiplyScalar(progress)))
+    camera.quaternion.copy(startRotCopy).slerp(rotationTarget, progress)
   })
 }
 

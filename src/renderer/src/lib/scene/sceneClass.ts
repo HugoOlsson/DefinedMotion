@@ -143,6 +143,19 @@ export class AnimatedScene {
     this.sceneCalculationTick += longest
   }
 
+  insertAnimAt(tick: number, ...animations: UserAnimation[]) {
+    for (const animation of animations) {
+      const internalAnimation: InternalAnimation = {
+        startTick: tick,
+        endTick: tick + animation.interpolation.length - 1,
+        updater: animation.updater,
+        interpolation: animation.interpolation
+      }
+
+      this.sceneAnimations.push(internalAnimation)
+    }
+  }
+
   addSequentialBackgroundAnims(...sequentialAnimations: UserAnimation[]) {
     let padding = 0
     for (const animation of sequentialAnimations) {

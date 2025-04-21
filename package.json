@@ -27,6 +27,7 @@
     "@types/three": "^0.175.0",
     "flubber": "^0.4.2",
     "mathjax": "^3.2.2",
+    "mathjax-full": "^3.2.2",
     "sharp": "^0.34.1",
     "svg-parser": "^2.0.4",
     "svg-path-parser": "^1.1.0",
