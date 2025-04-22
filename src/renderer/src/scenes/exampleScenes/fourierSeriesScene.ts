@@ -18,7 +18,8 @@ import {
   fadeOut,
   moveCameraAnimation,
   moveRotateCameraAnimation3D,
-  setOpacity
+  setOpacity,
+  zoomOut
 } from '../../lib/animation/animations'
 import tickSound from '../../assets/audio/tick_sound.mp3'
 import { ThreeMFLoader } from 'three/examples/jsm/Addons.js'
@@ -114,6 +115,7 @@ interface RelationGroup {
   connectionLines: PaddedLine[]
   topGroup: THREE.Group
   relation: Relation
+  latexText: THREE.Mesh
   opacity: number
 }
 
@@ -131,7 +133,7 @@ const relations: Relation[] = [
     },
     k: (n) => 2 * n - 1,
     phase: (_) => 0,
-    latexString: String.raw`\sum_{n=1}^{\infty} \frac{4}{\pi (2n-1)} \sin\left( (2n-1)t \right)`
+    latexString: String.raw`\sum_{n=1}^{N} \frac{4}{\pi (2n-1)} \sin\left( (2n-1)t \right)`
   },
 
   // 2. Sawtooth Wave
@@ -317,7 +319,7 @@ export const fourierSeriesScene = (): AnimatedScene => {
       let svgString = latexToSVG(relation.latexString) // 1.5x scaling
 
       const svgImage = await createSVGPlane(svgString, 3, 6)
-      svgImage.position.set(0, 13, 0)
+      svgImage.position.set(-9, -11, -1)
 
       topGroup.add(svgImage)
 
@@ -331,6 +333,7 @@ export const fourierSeriesScene = (): AnimatedScene => {
         connectionLines,
         topGroup,
         relation,
+        latexText: svgImage,
         opacity: 1
       })
     }
@@ -357,8 +360,8 @@ export const fourierSeriesScene = (): AnimatedScene => {
     //scene.add(textsGroup)
 
     let mode: string = 'wide'
-    let mode2: number = 1
-    let mode2List = [1, 0, 2]
+    let mode2: number = 0
+    let mode2List = [0, 2, 2]
     let mode2Index = 0
 
     const POS_SNAP_TIME = 10000
@@ -380,6 +383,12 @@ export const fourierSeriesScene = (): AnimatedScene => {
           mode2Index++
           mode2 = mode2List[mode2Index % mode2List.length]
           cameraLineIndex++
+
+          if (mode2 === 2) {
+            for (let i = 0; i < relationGroups.length; i++) {
+              scene.insertAnimAt(tick, zoomOut(relationGroups[i].latexText, 200))
+            }
+          }
         }
 
         lastTransition = time
@@ -388,13 +397,13 @@ export const fourierSeriesScene = (): AnimatedScene => {
           if (i !== Number(mode)) {
             scene.insertAnimAt(
               tick,
-              fade(relationGroups[i].group, 100, relationGroups[i].opacity, 0.1)
+              fade(relationGroups[i].group, 200, relationGroups[i].opacity, 0.1)
             )
             relationGroups[i].opacity = 0.1
           } else {
             scene.insertAnimAt(
               tick,
-              fade(relationGroups[i].group, 100, relationGroups[i].opacity, 1)
+              fade(relationGroups[i].group, 200, relationGroups[i].opacity, 1)
             )
             relationGroups[i].opacity = 1
           }
@@ -466,7 +475,7 @@ export const fourierSeriesScene = (): AnimatedScene => {
       scene.camera.quaternion.slerp(targetRotation, rotLerp)
     })
 
-    scene.addWait(75000)
+    scene.addWait(45000)
   })
 }
 
