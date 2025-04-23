@@ -4,6 +4,19 @@ import { createFunctionSurface, updateFunctionSurface } from '../../lib/renderin
 import { AnimatedScene } from '../../lib/scene/sceneClass'
 import * as THREE from 'three'
 
+const surfaceMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  metalness: 0.8,
+  roughness: 0.1,
+  side: THREE.DoubleSide
+}) as any
+
+const sphereMaterial = new THREE.MeshStandardMaterial({
+  color: 0x000000,
+  emissive: 0xffffff,
+  emissiveIntensity: 200.0
+})
+
 const sineTimeFunction = (time: number): ((a: number, b: number) => number) => {
   return (a: number, b: number) =>
     (5 * (Math.sin(a * 2 + time) * Math.cos(b * 2 + time))) /
@@ -14,7 +27,6 @@ const sineTimeFunction = (time: number): ((a: number, b: number) => number) => {
 export const surfaceScene = (): AnimatedScene => {
   return new AnimatedScene(1500, 1500, true, false, async (scene) => {
     const funcMinMaxes: [number, number, number, number] = [-7, 7, -7, 7]
-    //addSceneLighting(scene.scene)
 
     addBackgroundGradient({
       scene,
@@ -22,33 +34,15 @@ export const surfaceScene = (): AnimatedScene => {
       bottomColor: COLORS.black,
       lightingIntensity: 10
     })
-    /*await addHDRI({
-        scene,
-        hdriPath: HDRIs.photoStudio3,
-        lightingIntensity: 0.5,
-        useAsBackground: true,
-        backgroundOpacity: 1,
-        blurAmount: 2
-      })*/
 
     const gridHelper = new THREE.GridHelper(20, 20)
-
     const axesHelper = new THREE.AxesHelper(20)
 
     const sineSurface = createFunctionSurface(sineTimeFunction(0), ...funcMinMaxes)
-    sineSurface.material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.8,
-      roughness: 0.1,
-      side: THREE.DoubleSide
-    }) as any
+    sineSurface.material = surfaceMaterial
 
     const geometry = new THREE.SphereGeometry(0.3, 32, 32)
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x000000,
-      emissive: 0xffffff,
-      emissiveIntensity: 200.0
-    })
+    const material = sphereMaterial
 
     const sphere = new THREE.Mesh(geometry, material)
     const pointLight = new THREE.PointLight(0xffffff, 50) // color, intensity, distance
@@ -60,7 +54,6 @@ export const surfaceScene = (): AnimatedScene => {
 
     scene.camera.position.set(3.889329, 7.895859, 10.51772)
     scene.camera.rotation.set(-0.6027059, 0.3079325, 0.2056132)
-    // Initial position and target setup
     const centerPoint = new THREE.Vector3(0, 0, 0)
     const distance = scene.camera.position.distanceTo(centerPoint)
     let angle = 0
@@ -69,7 +62,7 @@ export const surfaceScene = (): AnimatedScene => {
       const func = sineTimeFunction(tick / 20)
       updateFunctionSurface(sineSurface, func, ...funcMinMaxes)
 
-      group.position.y = 6 //func(0, 0)
+      group.position.y = 6
 
       angle += 0.005
 
