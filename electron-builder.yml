@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: TickMotion
+productName: DefinedMotion
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: TickMotion
+  executableName: DefinedMotion
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

@@ -418,7 +418,7 @@ export const keyboardScene = (): AnimatedScene => {
     )
 
     scene.addWait(300)
-    const line5 = `Use the project by visiting "TickMotion" by Hugo Olsson on GitHub, thanks!`
+    const line5 = `Use the project by visiting "DefinedMotion" by Hugo Olsson on GitHub, thanks!`
     scene.addAnim(typeAnimation(scene, line5, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(
