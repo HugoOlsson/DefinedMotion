@@ -110,7 +110,10 @@ export async function loadOBJWithMTLPaths(
 }
 
 // Generic async function that loads a GLB file given its full path/URL
-export async function loadGLB(glbPath: string): Promise<THREE.Object3D> {
+export async function loadGLB(
+  glbPath: string,
+  overrideMaterial?: THREE.Material
+): Promise<THREE.Object3D> {
   try {
     const gltf: GLTF = await new Promise((resolve, reject) => {
       const loader = new GLTFLoader()
@@ -126,6 +129,13 @@ export async function loadGLB(glbPath: string): Promise<THREE.Object3D> {
       if ((child as THREE.Mesh).isMesh) {
         child.castShadow = true
         child.receiveShadow = true
+
+        if (overrideMaterial) {
+          child.material = overrideMaterial
+          // if the material instance has textures or other maps,
+          // make sure to mark it for update
+          child.material.needsUpdate = true
+        }
       }
     })
 

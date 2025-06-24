@@ -41,7 +41,7 @@ export const surfaceScene = (): AnimatedScene => {
     const sineSurface = createFunctionSurface(sineTimeFunction(0), ...funcMinMaxes)
     sineSurface.material = surfaceMaterial
 
-    const geometry = new THREE.SphereGeometry(0.3, 32, 32)
+    const geometry = new THREE.SphereGeometry(1, 32, 32)
     const material = sphereMaterial
 
     const sphere = new THREE.Mesh(geometry, material)

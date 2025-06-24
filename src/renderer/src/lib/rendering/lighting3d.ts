@@ -5,6 +5,10 @@ import _photoStudio2 from '../../assets/hdri/photo-studio2.hdr?url'
 import _photoStudio3 from '../../assets/hdri/photo-studio3.hdr?url'
 
 import _outdoor1 from '../../assets/hdri/outdoor1.hdr?url'
+import _indoor1 from '../../assets/hdri/indoor1.hdr?url'
+
+import _metro1 from '../../assets/hdri/metro1.hdr?url'
+
 import { AnimatedScene } from '../scene/sceneClass'
 import vert_blur_hdri from '../shaders/hdri_blur/vert.glsl?raw'
 import frag_blur_hdri from '../shaders/hdri_blur/frag.glsl?raw'
@@ -249,82 +253,44 @@ export function setupStandardScene(
   return addSceneLighting(scene, lightingOptions)
 }
 
-export enum HDRIs {
-  photoStudio1 = _photoStudio1 as any,
-  photoStudio2 = _photoStudio2 as any,
-  photoStudio3 = _photoStudio3 as any,
-  outdoor1 = _outdoor1 as any
+export interface HDRIData {
+  texture: THREE.DataTexture
+  material: THREE.Material
 }
 
-export async function addHDRI({
-  scene,
-  hdriPath,
-  lightingIntensity = 1.0,
-  useAsBackground = true,
-  backgroundOpacity = 1,
-  blurAmount = 0
-}: {
-  scene: AnimatedScene
-  hdriPath: HDRIs | string
-  lightingIntensity?: number
-  useAsBackground?: boolean
-  backgroundOpacity?: number
-  blurAmount?: number
-}): Promise<void> {
-  // Create PMREM Generator for converting equirectangular HDRI to cubemap
-  const pmremGenerator: THREE.PMREMGenerator = new THREE.PMREMGenerator(scene.renderer)
-  pmremGenerator.compileEquirectangularShader()
-
-  // Load the HDRI using RGBELoader
+export const loadHDRIData = async (
+  path: HDRIs | string,
+  blurAmount: number,
+  opacity: number = 1
+): Promise<HDRIData> => {
   const rgbeLoader: RGBELoader = new RGBELoader()
 
   return new Promise((resolve, reject) => {
     rgbeLoader.setDataType(THREE.FloatType).load(
-      hdriPath as any,
+      path as any,
       (texture: THREE.DataTexture): void => {
-        // Process the HDRI texture
-        const envMap: THREE.Texture = pmremGenerator.fromEquirectangular(texture).texture
-
-        if (useAsBackground) {
-          // Create background sphere
-          const geometry = new THREE.SphereGeometry(scene.farLimitRender / 2, 40, 40)
-
-          const blurredMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-              uTexture: { value: texture },
-              uBlurAmount: { value: blurAmount }, // Increase for more blur
-              uTextureSize: {
-                value: new THREE.Vector2(texture.image.width, texture.image.height)
-              },
-              sigma: { value: 3.0 }, // Add this uniform
-              opacity: { value: backgroundOpacity }
+        const blurredMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            uTexture: { value: texture },
+            uBlurAmount: { value: blurAmount }, // Increase for more blur
+            uTextureSize: {
+              value: new THREE.Vector2(texture.image.width, texture.image.height)
             },
-            vertexShader: vert_blur_hdri,
-            fragmentShader: frag_blur_hdri,
-            side: THREE.BackSide,
-            transparent: true
-          })
-          const backgroundSphere = new THREE.Mesh(geometry, blurredMaterial)
-          backgroundSphere.renderOrder = -1 // Render before other objects
+            sigma: { value: 3.0 }, // Add this uniform
+            opacity: { value: opacity }
+          },
+          vertexShader: vert_blur_hdri,
+          fragmentShader: frag_blur_hdri,
+          side: THREE.BackSide,
+          transparent: true
+        })
 
-          // Attach to camera
-          scene.scene.add(backgroundSphere)
-        }
-
-        // Apply to scene environment (for reflections)
-        scene.scene.environment = envMap
-
-        scene.scene.environmentIntensity = lightingIntensity
-
-        // Clean up resources
-        // texture.dispose()
-        pmremGenerator.dispose()
-        resolve()
+        resolve({
+          texture,
+          material: blurredMaterial
+        })
       },
-      // Optional progress callback
-      (xhr: ProgressEvent<EventTarget>): void => {
-        // You could implement loading progress here
-      },
+      (_) => {},
       // Optional error callback
       (error): void => {
         console.error('Error loading HDRI:', error)
@@ -332,6 +298,42 @@ export async function addHDRI({
       }
     )
   })
+}
+
+export enum HDRIs {
+  photoStudio1 = _photoStudio1 as any,
+  photoStudio2 = _photoStudio2 as any,
+  photoStudio3 = _photoStudio3 as any,
+  outdoor1 = _outdoor1 as any,
+  indoor1 = _indoor1 as any,
+  metro1 = _metro1 as any
+}
+
+export async function addHDRI(scene: AnimatedScene, hdriData: HDRIData, lightingIntensity = 1.0) {
+  // Create PMREM Generator for converting equirectangular HDRI to cubemap
+  const pmremGenerator: THREE.PMREMGenerator = new THREE.PMREMGenerator(scene.renderer)
+  pmremGenerator.compileEquirectangularShader()
+
+  // Process the HDRI texture
+  const envMap: THREE.Texture = pmremGenerator.fromEquirectangular(hdriData.texture).texture
+
+  // Create background sphere
+  const geometry = new THREE.SphereGeometry(scene.farLimitRender / 2, 40, 40)
+
+  const backgroundSphere = new THREE.Mesh(geometry, hdriData.material)
+  backgroundSphere.renderOrder = -1 // Render before other objects
+
+  // Attach to camera
+  scene.scene.add(backgroundSphere)
+
+  // Apply to scene environment (for reflections)
+  scene.scene.environment = envMap
+
+  scene.scene.environmentIntensity = lightingIntensity
+
+  // Clean up resources
+  // texture.dispose()
+  pmremGenerator.dispose()
 }
 
 export function addBackgroundGradient({

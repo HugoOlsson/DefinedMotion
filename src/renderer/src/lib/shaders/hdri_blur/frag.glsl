@@ -4,6 +4,7 @@ uniform float uBlurAmount;
 uniform vec2 uTextureSize;
 uniform float sigma; // Missing uniform declaration
 uniform float opacity;
+uniform float uSaturation;  
 
 // Add these at the top before calculateWeight()
 const float PI = 3.141592653589793;

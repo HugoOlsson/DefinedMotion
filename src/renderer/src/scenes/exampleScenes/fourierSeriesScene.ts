@@ -119,7 +119,7 @@ interface RelationGroup {
   opacity: number
 }
 
-const N = 12
+const N = 20
 const colors = [...neonColors] //interpolateHexColors('#0062ff', '#ff0000', N)
 const plotYOffset = -21
 const baseRadius = 5

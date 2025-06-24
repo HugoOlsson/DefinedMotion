@@ -4,7 +4,8 @@ import {
   addBackgroundGradient,
   addHDRI,
   addSceneLighting,
-  HDRIs
+  HDRIs,
+  loadHDRIData
 } from '../../lib/rendering/lighting3d'
 import { AnimatedScene } from '../../lib/scene/sceneClass'
 import * as THREE from 'three'
@@ -92,14 +93,15 @@ const morphAnimation = (
     line.setPoints(interpolate(vecFunc1, vecFunc2, value))
   })
 }
+const hdriData = await loadHDRIData(HDRIs.outdoor1, 1, 1)
 
 export const functionsAnimation = (): AnimatedScene => {
   return new AnimatedScene(1080, 2160, true, true, async (scene) => {
-    scene.registerAudio(fadeSound)
+    // scene.registerAudio(fadeSound)
     scene.add(create2DAxis({ xmin: -10, xmax: 10, ymin: -10, ymax: 10, ticks: 10, tickSize: 0.5 }))
     addSceneLighting(scene.scene)
 
-    await addHDRI({ scene, hdriPath: HDRIs.outdoor1, useAsBackground: true, blurAmount: 2 })
+    await addHDRI(scene, hdriData, 1)
     addBackgroundGradient({
       scene,
       topColor: '#00639d',
@@ -107,7 +109,7 @@ export const functionsAnimation = (): AnimatedScene => {
       backgroundOpacity: 0.5
     })
     scene.camera.position.set(0, 0, 10)
-    const informationTextNode = await createFastText('Some of the functions are scaled.', 0.5)
+    const informationTextNode = await createFastText('Some of the functions are scaled.', 0.6)
     informationTextNode.position.y = 13.5
     setOpacity(informationTextNode, 0.4)
     scene.add(informationTextNode)
@@ -119,14 +121,15 @@ export const functionsAnimation = (): AnimatedScene => {
 
     const vecFuncs = vectorizeFunctions(functions)
 
-    scene.camera.position.set(22.75257, 5.1673, 22.15442)
+    scene.camera.position.set(9.82015, 4.347805, 29.81918)
     scene.camera.quaternion.set(-0.07633829, 0.3762715, 0.03112576, 0.9228345)
+    scene.camera.zoom = 0.8
 
     const moveAnimation = moveCameraAnimation3D(
       scene.camera,
       scene.camera.position.clone(),
-      new THREE.Vector3(-26.65509, 3.952411, 30.48066),
-      2000
+      new THREE.Vector3(-9.625222, 4.32878, 29.57185),
+      2500
     )
 
     scene.onEachTick(() => {
@@ -140,7 +143,7 @@ export const functionsAnimation = (): AnimatedScene => {
     )
 
     for (let i = 0; i < vecFuncs.length - 1; i++) {
-      scene.playAudio(fadeSound, 0.03)
+      // scene.playAudio(fadeSound, 0.03)
 
       scene.addSequentialBackgroundAnims(
         morphAnimation(plotLine, vecFuncs[i], vecFuncs[i + 1], 300)

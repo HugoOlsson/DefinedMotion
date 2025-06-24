@@ -2,14 +2,19 @@ import {
   addBackgroundGradient,
   addHDRI,
   addSceneLighting,
-  HDRIs
+  HDRIs,
+  loadHDRIData
 } from '../../lib/rendering/lighting3d'
 import { loadGLB } from '../../lib/rendering/objects/import'
 import { AnimatedScene } from '../../lib/scene/sceneClass'
 import * as THREE from 'three'
 import ibmKeyboard from '../../assets/objects/keyboardScene/ibm-keyboard.glb?url'
 import { createBumpMap } from '../../lib/rendering/bumpMaps/noise'
-import { moveCameraAnimation3D, rotateCamera3D } from '../../lib/animation/animations'
+import {
+  moveCameraAnimation3D,
+  moveRotateCameraAnimation3D,
+  rotateCamera3D
+} from '../../lib/animation/animations'
 import { createAnim } from '../../lib/animation/protocols'
 import { easeLinear } from '../../lib/animation/interpolations'
 import { createFastText, createLine, updateText } from '../../lib/rendering/objects2d'
@@ -296,6 +301,8 @@ const typeAnimation = (scene: AnimatedScene, characters: string, textNode: any, 
   return animation
 }
 
+const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2, 0.5)
+
 export const keyboardScene = (): AnimatedScene => {
   return new AnimatedScene(1080, 2160, true, true, async (scene) => {
     scene.registerAudio(tickSound)
@@ -303,13 +310,7 @@ export const keyboardScene = (): AnimatedScene => {
     addSceneLighting(scene.scene, { intensity: 1, colorScheme: 'cool' })
 
     scene.renderer.shadowMap.enabled = true
-    await addHDRI({
-      scene,
-      hdriPath: HDRIs.photoStudio1,
-      useAsBackground: true,
-      lightingIntensity: 0.5,
-      blurAmount: 2
-    })
+    await addHDRI(scene, hdriData, 0.65)
     addBackgroundGradient({
       scene,
       topColor: COLORS.blue,
@@ -324,17 +325,24 @@ export const keyboardScene = (): AnimatedScene => {
       scene.camera.quaternion.set(-0.0590337, -0.005013175, -0.0002964671, 0.9982434)
     })
 
+    const targetPos = new THREE.Vector3(-2.151799 - 1, 22.90854, 1.769867 + 1).multiplyScalar(0.65)
+    const targetRot = new THREE.Quaternion(-0.6683053, -0.001480137, -0.001329754, 0.7438844)
+
     scene.addAnim(
-      moveCameraAnimation3D(
+      moveRotateCameraAnimation3D(
         scene.camera,
-        new THREE.Vector3(-2.151799 - 1, 22.90854, 1.769867 + 1).multiplyScalar(0.65),
-        new THREE.Quaternion(-0.6683053, -0.001480137, -0.001329754, 0.7438844),
+        scene.camera.position,
+        scene.camera.quaternion,
+        targetPos,
+        targetRot,
         1000
       )
     )
 
-    const rotateAnim = moveCameraAnimation3D(
+    const rotateAnim = moveRotateCameraAnimation3D(
       scene.camera,
+      targetPos,
+      targetRot,
       new THREE.Vector3(-2.196693 - 1, 20.67784, 9.621079 + 1).multiplyScalar(0.65),
       new THREE.Quaternion(-0.5668163, -0.003930429, -0.002704235, 0.8238304),
       4000
@@ -385,7 +393,7 @@ export const keyboardScene = (): AnimatedScene => {
     const typeSpeed = 70
     const deleteSpeed = 30
 
-    const line1 = 'Hello YouTube!'
+    const line1 = 'Hello Instagram!'
     scene.addAnim(typeAnimation(scene, line1, text, typeSpeed))
     scene.addWait(1000)
     scene.addAnim(

@@ -5,7 +5,8 @@ import {
   addBackgroundGradient,
   addHDRI,
   addSceneLighting,
-  HDRIs
+  HDRIs,
+  loadHDRIData
 } from '../../lib/rendering/lighting3d'
 import { createFastText } from '../../lib/rendering/objects2d'
 import { AnimatedScene } from '../../lib/scene/sceneClass'
@@ -41,18 +42,20 @@ export const field: VectorField3D = (x, y, z, time) => {
   }
 }
 
+const hdriData = await loadHDRIData(HDRIs.outdoor1, 2, 1)
+
 export const vectorFieldScene = (): AnimatedScene => {
   return new AnimatedScene(1080, 2160, true, false, async (scene) => {
     addSceneLighting(scene.scene)
-    await addHDRI({ scene, hdriPath: HDRIs.outdoor1, useAsBackground: true, blurAmount: 2 })
+    await addHDRI(scene, hdriData, 1)
     addBackgroundGradient({
       scene,
       topColor: '#00639d',
       bottomColor: COLORS.black,
       backgroundOpacity: 0.5
     })
-    const max = 30
-    const xs = linspace(-max, max, 8)
+    const max = 25
+    const xs = linspace(-max, max, 6)
     const ys = [...xs]
     const zs = [...xs]
 
@@ -106,10 +109,6 @@ export const vectorFieldScene = (): AnimatedScene => {
           arrowHelper.cone.castShadow
 
           arrows[i][j][k] = arrowHelper
-          setOpacity(
-            arrows[i][j][k] as any,
-            1 - Math.pow(x * x + y * y + z * z, 2) / Math.pow(max * max * 3, 1.95)
-          )
 
           // 3. add to scene
           scene.add(arrowHelper)
@@ -131,7 +130,7 @@ export const vectorFieldScene = (): AnimatedScene => {
     const material = new THREE.MeshStandardMaterial({
       color: 0x000000,
       emissive: 0xffffff,
-      emissiveIntensity: 200.0
+      emissiveIntensity: 20.0
     })
 
     interface GroupData {
@@ -142,7 +141,7 @@ export const vectorFieldScene = (): AnimatedScene => {
 
     const groups: GroupData[] = []
 
-    Array(100)
+    Array(30)
       .fill(0)
       .forEach(() => {
         const sphere = new THREE.Mesh(geometry, material)
@@ -168,7 +167,7 @@ export const vectorFieldScene = (): AnimatedScene => {
 
     scene.onEachTick((tick, time) => {
       textNode.lookAt(scene.camera.position)
-      const editedTime = time / 200
+      const editedTime = time / 500
 
       for (const groupData of groups) {
         const fieldValue = field(
@@ -180,7 +179,7 @@ export const vectorFieldScene = (): AnimatedScene => {
         groupData.acceleration.set(fieldValue.x, fieldValue.y, fieldValue.z)
 
         // Update velocity with acceleration (basic kinematic equation)
-        groupData.velocity.add(groupData.acceleration.clone().multiplyScalar(1)) // Adjust time factor for smoothness
+        groupData.velocity.add(groupData.acceleration.clone().multiplyScalar(2)) // Adjust time factor for smoothness
 
         // Update position of point light based on velocity
         groupData.group.position.add(groupData.velocity)
