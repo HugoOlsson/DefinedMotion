@@ -72,7 +72,7 @@
 
 <div class=" flex flex-col p-4">
   <div id={animationWindowID} class="w-full"></div>
-  <div class="flex justify-between mt-2">
+  <div class="flex justify-between mt-2 font-bold text-sm">
     <button
       onclick={() => {
         if (scene.isPlaying) {
@@ -100,8 +100,8 @@
       id="playerSliderID"
     />
   </div>
-  <p id="cameraPositionTextID" class="mt-2"></p>
-  <p id="cameraRotationTextID" class="mt-2"></p>
+  <p id="cameraPositionTextID" class="mt-2 text-xs"></p>
+  <p id="cameraRotationTextID" class="mt-2 text-xs"></p>
 </div>
 
 <style>

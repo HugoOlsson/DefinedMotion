@@ -5,7 +5,7 @@ import {
   type InternalAnimation,
   type UserAnimation
 } from '../animation/protocols'
-import { generateID, logCameraState, setCameraPositionText } from '../general/helpers'
+import { generateID, logCameraState } from '../general/helpers'
 import { sleep } from '../rendering/helpers'
 import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
@@ -15,6 +15,16 @@ import { animationFPSThrottle, renderSkip } from '../../../../entry'
 import { addDestroyFunction } from '../general/onDestory'
 import { ticksToMillis } from '../animation/helpers'
 import { AudioInScene, loadAllAudio, playAudio, registerAudio } from '../audio/loader'
+
+export enum SpaceSetting {
+  ThreeDim,
+  TwoDim
+}
+
+export enum HotReloadSetting {
+  TraceFromStart,
+  BeginFromCurrent
+}
 
 type SceneInstruction = (tick: number) => any
 
@@ -80,14 +90,17 @@ export class AnimatedScene {
   constructor(
     pixelsWidth: number,
     pixelsHeight: number,
-    threeDim: boolean = true,
-    traceFromStart: boolean = true,
+    spaceSetting: SpaceSetting = SpaceSetting.ThreeDim,
+    hotReloadSetting: HotReloadSetting = HotReloadSetting.TraceFromStart,
     buildFunctionGiven: (scene: AnimatedScene) => any
   ) {
     this.container = globalContainerRef
     this.pixelsHeight = pixelsHeight
     this.pixelsWidth = pixelsWidth
-    this.traceFromStart = traceFromStart
+    this.traceFromStart = hotReloadSetting === HotReloadSetting.TraceFromStart
+
+    const threeDim = spaceSetting === SpaceSetting.ThreeDim
+
     const { scene, camera, renderer, controls } = createScene(
       globalContainerRef,
       pixelsWidth,

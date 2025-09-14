@@ -5,8 +5,8 @@ import {
   createRectangle,
   updateText
 } from '../renderer/src/lib/rendering/objects2d'
-import { AnimatedScene } from '../renderer/src/lib/scene/sceneClass'
-import tickSound from '../renderer/src/assets/audio/tick_sound.mp3'
+import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
+import tickSound from '../assets/audio/tick_sound.mp3'
 import * as THREE from 'three'
 
 let alternatives = [
@@ -59,24 +59,30 @@ const slideColors = [
 ]
 
 export const alternativesScene = (): AnimatedScene => {
-  return new AnimatedScene(1000, 1000, false, false, async (scene) => {
-    const background = createRectangle(200, 200)
-    const textElement = await createFastText('', 1.5)
-    scene.add(background, textElement)
-    scene.registerAudio(tickSound)
+  return new AnimatedScene(
+    1000,
+    1000,
+    SpaceSetting.TwoDim,
+    HotReloadSetting.BeginFromCurrent,
+    async (scene) => {
+      const background = createRectangle(200, 200)
+      const textElement = await createFastText('', 1.5)
+      scene.add(background, textElement)
+      scene.registerAudio(tickSound)
 
-    let lastIndex
-    const switchAnimation = createAnim(easeLinear(0, 1, alternatives.length * 300), (value) => {
-      const index = Math.floor(value * alternatives.length)
+      let lastIndex
+      const switchAnimation = createAnim(easeLinear(0, 1, alternatives.length * 300), (value) => {
+        const index = Math.floor(value * alternatives.length)
 
-      if (index !== lastIndex) {
-        lastIndex = index
-        background.material.color = new THREE.Color(slideColors[index % slideColors.length])
-        updateText(textElement, alternatives[index % alternatives.length])
-        scene.playAudio(tickSound)
-      }
-    })
+        if (index !== lastIndex) {
+          lastIndex = index
+          background.material.color = new THREE.Color(slideColors[index % slideColors.length])
+          updateText(textElement, alternatives[index % alternatives.length])
+          scene.playAudio(tickSound)
+        }
+      })
 
-    scene.addAnim(switchAnimation)
-  })
+      scene.addAnim(switchAnimation)
+    }
+  )
 }

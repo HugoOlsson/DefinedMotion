@@ -1,34 +1,12 @@
-import { group } from 'console'
-import {
-  createCircle,
-  createFastText,
-  createLine,
-  PaddedLine,
-  updateText
-} from '../renderer/src/lib/rendering/objects2d'
-import { createSVGShape, vectorizeSVGStructure } from '../renderer/src/lib/rendering/svg/parsing'
-import { AnimatedScene } from '../renderer/src/lib/scene/sceneClass'
+import { createFastText, createLine, PaddedLine } from '../renderer/src/lib/rendering/objects2d'
+import { createSVGShape } from '../renderer/src/lib/rendering/svg/parsing'
+import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
-import { MeshLine, MeshLineMaterial } from 'three.meshline'
-import { addBackgroundGradient, addHDRI, HDRIs } from '../renderer/src/lib/rendering/lighting3d'
+import { addBackgroundGradient } from '../renderer/src/lib/rendering/lighting3d'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
-import {
-  fade,
-  fadeIn,
-  fadeOut,
-  moveCameraAnimation,
-  moveRotateCameraAnimation3D,
-  setOpacity,
-  zoomOut
-} from '../renderer/src/lib/animation/animations'
-import tickSound from '../../assets/audio/tick_sound.mp3'
-import { ThreeMFLoader } from 'three/examples/jsm/Addons.js'
+import { fade, setOpacity, zoomOut } from '../renderer/src/lib/animation/animations'
+import tickSound from '$assets/audio/tick_sound.mp3'
 import { linspace } from '../renderer/src/lib/mathHelpers/vectors'
-import { modelDirection } from 'three/tsl'
-import { UserAnimation } from '../renderer/src/lib/animation/protocols'
-import { linear } from 'svelte/easing'
-import { easeLinear } from '../renderer/src/lib/animation/interpolations'
-import interstellar from '../../assets/audio/interstellar.mp3'
 import { latexToSVG } from '../renderer/src/lib/rendering/svg/rastered'
 
 const getCircleSVG = (color: string, percentageStrokeWidth: number = 4) => `
@@ -252,231 +230,240 @@ async function createSVGPlane(svgString: string, size: number = 5, resolutionSca
 }
 
 export const fourierSeriesScene = (): AnimatedScene => {
-  return new AnimatedScene(1080, 2160, true, true, async (scene) => {
-    scene.registerAudio(tickSound)
-    //scene.registerAudio(interstellar)
-    //scene.playAudio(interstellar)
-    //await addHDRI({ scene, hdriPath: HDRIs.outdoor1, useAsBackground: true, blurAmount: 2 })
-    addBackgroundGradient({
-      scene,
-      topColor: '#000000',
-      bottomColor: COLORS.black,
-      backgroundOpacity: 0.5
-    })
-
-    const relationGroups: RelationGroup[] = []
-    const relationsZ = linspace(-25, 25, relations.length)
-
-    for (let i = 0; i < relations.length; i++) {
-      const relation = relations[i]
-      const relationGroup = new THREE.Group()
-      const topGroup = new THREE.Group()
-      const circlesAxes = create2DAxis({ tickSpacing: baseRadius })
-
-      topGroup.add(circlesAxes)
-
-      const circleGroups: CircleGroup[] = []
-      for (let i = 0; i < N; i++) {
-        const n = i + 1
-        const circleGroup = new CircleGroup(
-          new THREE.Vector3(0, 0, 0),
-          relation.radius(n),
-          5 + i * 1,
-          colors[i]
-        )
-        topGroup.add(circleGroup.group)
-        circleGroups.push(circleGroup)
-      }
-
-      relationGroup.add(topGroup)
-
-      const plotAxes = create2DAxis({
-        ymin: -baseRadius * 1.5,
-        ymax: baseRadius * 1.5,
-        xmax: Math.PI * 27,
-        tickSpacing: Math.PI / 2
+  return new AnimatedScene(
+    1080,
+    2160,
+    SpaceSetting.ThreeDim,
+    HotReloadSetting.TraceFromStart,
+    async (scene) => {
+      scene.registerAudio(tickSound)
+      //scene.registerAudio(interstellar)
+      //scene.playAudio(interstellar)
+      //await addHDRI({ scene, hdriPath: HDRIs.outdoor1, useAsBackground: true, blurAmount: 2 })
+      addBackgroundGradient({
+        scene,
+        topColor: '#000000',
+        bottomColor: COLORS.black,
+        backgroundOpacity: 0.5
       })
-      plotAxes.position.y = plotYOffset
-      relationGroup.add(plotAxes)
 
-      const plotLines: PlotLine[] = []
-      const connectionLines: PaddedLine[] = []
+      const relationGroups: RelationGroup[] = []
+      const relationsZ = linspace(-25, 25, relations.length)
 
-      for (let i = 0; i < N; i++) {
-        const plotLine = new PlotLine(relationGroup, colors[i], 100_000)
-        plotLines.push(plotLine)
-        const line = createLine({ color: colors[i], width: 1 })
-        line.frustumCulled = false
-        relationGroup.add(line)
-        connectionLines.push(line)
-      }
+      for (let i = 0; i < relations.length; i++) {
+        const relation = relations[i]
+        const relationGroup = new THREE.Group()
+        const topGroup = new THREE.Group()
+        const circlesAxes = create2DAxis({ tickSpacing: baseRadius })
 
-      /* const fourierTextNode = await createFastText(relation.name, 1)
+        topGroup.add(circlesAxes)
+
+        const circleGroups: CircleGroup[] = []
+        for (let i = 0; i < N; i++) {
+          const n = i + 1
+          const circleGroup = new CircleGroup(
+            new THREE.Vector3(0, 0, 0),
+            relation.radius(n),
+            5 + i * 1,
+            colors[i]
+          )
+          topGroup.add(circleGroup.group)
+          circleGroups.push(circleGroup)
+        }
+
+        relationGroup.add(topGroup)
+
+        const plotAxes = create2DAxis({
+          ymin: -baseRadius * 1.5,
+          ymax: baseRadius * 1.5,
+          xmax: Math.PI * 27,
+          tickSpacing: Math.PI / 2
+        })
+        plotAxes.position.y = plotYOffset
+        relationGroup.add(plotAxes)
+
+        const plotLines: PlotLine[] = []
+        const connectionLines: PaddedLine[] = []
+
+        for (let i = 0; i < N; i++) {
+          const plotLine = new PlotLine(relationGroup, colors[i], 100_000)
+          plotLines.push(plotLine)
+          const line = createLine({ color: colors[i], width: 1 })
+          line.frustumCulled = false
+          relationGroup.add(line)
+          connectionLines.push(line)
+        }
+
+        /* const fourierTextNode = await createFastText(relation.name, 1)
       fourierTextNode.position.y = 13
 
       topGroup.add(fourierTextNode) */
 
-      let svgString = latexToSVG(relation.latexString) // 1.5x scaling
+        let svgString = latexToSVG(relation.latexString) // 1.5x scaling
 
-      const svgImage = await createSVGPlane(svgString, 3, 6)
-      svgImage.position.set(-9, -11, -1)
+        const svgImage = await createSVGPlane(svgString, 3, 6)
+        svgImage.position.set(-9, -11, -1)
 
-      topGroup.add(svgImage)
+        topGroup.add(svgImage)
 
-      relationGroup.position.z = relationsZ[i]
-      scene.add(relationGroup)
+        relationGroup.position.z = relationsZ[i]
+        scene.add(relationGroup)
 
-      relationGroups.push({
-        group: relationGroup,
-        circleGroups,
-        plotLines,
-        connectionLines,
-        topGroup,
-        relation,
-        latexText: svgImage,
-        opacity: 1
-      })
-    }
+        relationGroups.push({
+          group: relationGroup,
+          circleGroups,
+          plotLines,
+          connectionLines,
+          topGroup,
+          relation,
+          latexText: svgImage,
+          opacity: 1
+        })
+      }
 
-    const startCameraPos = new THREE.Vector3(-42.1133, 6.217837, 52.55059)
-    const startCameraRot = new THREE.Quaternion(-0.1144444, -0.3540472, -0.04370152, 0.9271695)
-    scene.camera.position.copy(startCameraPos)
-    scene.camera.quaternion.copy(startCameraRot)
+      const startCameraPos = new THREE.Vector3(-42.1133, 6.217837, 52.55059)
+      const startCameraRot = new THREE.Quaternion(-0.1144444, -0.3540472, -0.04370152, 0.9271695)
+      scene.camera.position.copy(startCameraPos)
+      scene.camera.quaternion.copy(startCameraRot)
 
-    const textsGroup = new THREE.Group()
+      const textsGroup = new THREE.Group()
 
-    const fourierTextNode = await createFastText('Fourier Series', 3)
-    fourierTextNode.position.y = 3
+      const fourierTextNode = await createFastText('Fourier Series', 3)
+      fourierTextNode.position.y = 3
 
-    textsGroup.add(fourierTextNode)
+      textsGroup.add(fourierTextNode)
 
-    const textNode = await createFastText('Sawtooth Wave', 1.8)
-    textNode.position.y = 0
-    setOpacity(textNode, 0.4)
-    textsGroup.add(textNode)
+      const textNode = await createFastText('Sawtooth Wave', 1.8)
+      textNode.position.y = 0
+      setOpacity(textNode, 0.4)
+      textsGroup.add(textNode)
 
-    textsGroup.position.y = 20
+      textsGroup.position.y = 20
 
-    //scene.add(textsGroup)
+      //scene.add(textsGroup)
 
-    let mode: string = 'wide'
-    let mode2: number = 0
-    let mode2List = [0, 2, 2]
-    let mode2Index = 0
+      let mode: string = 'wide'
+      let mode2: number = 0
+      let mode2List = [0, 2, 2]
+      let mode2Index = 0
 
-    const POS_SNAP_TIME = 10000
-    const ROT_SNAP_TIME = 8000
-    let lastTransition = 0
+      const POS_SNAP_TIME = 10000
+      const ROT_SNAP_TIME = 8000
+      let lastTransition = 0
 
-    let cameraLineIndex = 0
-    scene.onEachTick((tick, time) => {
-      const x = time / 700
+      let cameraLineIndex = 0
+      scene.onEachTick((tick, time) => {
+        const x = time / 700
 
-      if (tick % 480 === 0 && tick !== 0) {
-        console.log(cameraLineIndex, mode, mode2)
-        if (cameraLineIndex < relations.length) {
-          mode = cameraLineIndex.toString()
-          cameraLineIndex++
-        } else {
-          cameraLineIndex = 0
-          mode = cameraLineIndex.toString()
-          mode2Index++
-          mode2 = mode2List[mode2Index % mode2List.length]
-          cameraLineIndex++
+        if (tick % 480 === 0 && tick !== 0) {
+          console.log(cameraLineIndex, mode, mode2)
+          if (cameraLineIndex < relations.length) {
+            mode = cameraLineIndex.toString()
+            cameraLineIndex++
+          } else {
+            cameraLineIndex = 0
+            mode = cameraLineIndex.toString()
+            mode2Index++
+            mode2 = mode2List[mode2Index % mode2List.length]
+            cameraLineIndex++
 
-          if (mode2 === 2) {
-            for (let i = 0; i < relationGroups.length; i++) {
-              scene.insertAnimAt(tick, zoomOut(relationGroups[i].latexText, 200))
+            if (mode2 === 2) {
+              for (let i = 0; i < relationGroups.length; i++) {
+                scene.insertAnimAt(tick, zoomOut(relationGroups[i].latexText, 200))
+              }
+            }
+          }
+
+          lastTransition = time
+
+          for (let i = 0; i < relationGroups.length; i++) {
+            if (i !== Number(mode)) {
+              scene.insertAnimAt(
+                tick,
+                fade(relationGroups[i].group, 200, relationGroups[i].opacity, 0.1)
+              )
+              relationGroups[i].opacity = 0.1
+            } else {
+              scene.insertAnimAt(
+                tick,
+                fade(relationGroups[i].group, 200, relationGroups[i].opacity, 1)
+              )
+              relationGroups[i].opacity = 1
             }
           }
         }
 
-        lastTransition = time
-
-        for (let i = 0; i < relationGroups.length; i++) {
-          if (i !== Number(mode)) {
-            scene.insertAnimAt(
-              tick,
-              fade(relationGroups[i].group, 200, relationGroups[i].opacity, 0.1)
-            )
-            relationGroups[i].opacity = 0.1
-          } else {
-            scene.insertAnimAt(
-              tick,
-              fade(relationGroups[i].group, 200, relationGroups[i].opacity, 1)
-            )
-            relationGroups[i].opacity = 1
+        for (const relationGroup of relationGroups) {
+          const circleGroups = relationGroup.circleGroups
+          const plotLines = relationGroup.plotLines
+          const connectionLines = relationGroup.connectionLines
+          const topGroup = relationGroup.topGroup
+          for (let i = 0; i < N; i++) {
+            const n = i + 1
+            const k = relationGroup.relation.k(n)
+            circleGroups[i].setRotation(k * x)
           }
-        }
-      }
+          for (let i = 1; i < N; i++) {
+            circleGroups[i].setCenter(circleGroups[i - 1].getAnchorPoint())
+          }
 
-      for (const relationGroup of relationGroups) {
-        const circleGroups = relationGroup.circleGroups
-        const plotLines = relationGroup.plotLines
-        const connectionLines = relationGroup.connectionLines
-        const topGroup = relationGroup.topGroup
-        for (let i = 0; i < N; i++) {
-          const n = i + 1
-          const k = relationGroup.relation.k(n)
-          circleGroups[i].setRotation(k * x)
-        }
-        for (let i = 1; i < N; i++) {
-          circleGroups[i].setCenter(circleGroups[i - 1].getAnchorPoint())
-        }
+          for (let i = 0; i < N; i++) {
+            const worldTip = circleGroups[i].getAnchorPoint()
+            plotLines[i].addPoint([x, worldTip.y + plotYOffset])
 
-        for (let i = 0; i < N; i++) {
-          const worldTip = circleGroups[i].getAnchorPoint()
-          plotLines[i].addPoint([x, worldTip.y + plotYOffset])
+            const p1 = worldTip.clone()
+            p1.z = 0
+            connectionLines[i].updatePositions(
+              p1,
+              new THREE.Vector3(x, worldTip.y + plotYOffset, 0)
+            )
+          }
 
-          const p1 = worldTip.clone()
-          p1.z = 0
-          connectionLines[i].updatePositions(p1, new THREE.Vector3(x, worldTip.y + plotYOffset, 0))
+          topGroup.position.x = x
         }
 
-        topGroup.position.x = x
-      }
+        //scene.camera.position.x = x + startCameraPos.x
+        textsGroup.position.x = x
 
-      //scene.camera.position.x = x + startCameraPos.x
-      textsGroup.position.x = x
+        let targetPosition: THREE.Vector3
+        let targetRotation: THREE.Quaternion
 
-      let targetPosition: THREE.Vector3
-      let targetRotation: THREE.Quaternion
+        if (mode === 'wide') {
+          targetPosition = startCameraPos.clone()
+          targetPosition.x = x + startCameraPos.x
 
-      if (mode === 'wide') {
-        targetPosition = startCameraPos.clone()
-        targetPosition.x = x + startCameraPos.x
+          targetRotation = startCameraRot.clone()
+        } else if (mode2 === 0) {
+          const index = Number(mode)
+          const zPos = relationsZ[index] + 18
+          targetPosition = new THREE.Vector3(-28.81272 + x, -15.44788, zPos)
+          targetRotation = new THREE.Quaternion(0.03540297, -0.4387143, 0.01730056, 0.8977623)
+        } else if (mode2 == 1) {
+          const index = Number(mode)
+          const zPos = relationsZ[index] + 18
+          targetPosition = new THREE.Vector3(15.89088 + x, 23.76457, zPos)
+          targetRotation = new THREE.Quaternion(-0.3922925, 0.3045554, 0.1394623, 0.8566813)
+        } else {
+          const index = Number(mode)
+          const followGroup = relationGroups[index].circleGroups[1]
+          const tip = followGroup.getAnchorPoint()
 
-        targetRotation = startCameraRot.clone()
-      } else if (mode2 === 0) {
-        const index = Number(mode)
-        const zPos = relationsZ[index] + 18
-        targetPosition = new THREE.Vector3(-28.81272 + x, -15.44788, zPos)
-        targetRotation = new THREE.Quaternion(0.03540297, -0.4387143, 0.01730056, 0.8977623)
-      } else if (mode2 == 1) {
-        const index = Number(mode)
-        const zPos = relationsZ[index] + 18
-        targetPosition = new THREE.Vector3(15.89088 + x, 23.76457, zPos)
-        targetRotation = new THREE.Quaternion(-0.3922925, 0.3045554, 0.1394623, 0.8566813)
-      } else {
-        const index = Number(mode)
-        const followGroup = relationGroups[index].circleGroups[1]
-        const tip = followGroup.getAnchorPoint()
+          // place the camera relative to the circle
+          targetPosition = tip.clone().add(new THREE.Vector3(0, 0, 10)) // 30 units “in front”
+          targetRotation = new THREE.Quaternion(0, 0, 0, 1)
+        }
+        const deltaTime = time - lastTransition
 
-        // place the camera relative to the circle
-        targetPosition = tip.clone().add(new THREE.Vector3(0, 0, 10)) // 30 units “in front”
-        targetRotation = new THREE.Quaternion(0, 0, 0, 1)
-      }
-      const deltaTime = time - lastTransition
+        const posLerp = 1 - Math.exp(-deltaTime / POS_SNAP_TIME)
+        const rotLerp = 1 - Math.exp(-deltaTime / ROT_SNAP_TIME)
 
-      const posLerp = 1 - Math.exp(-deltaTime / POS_SNAP_TIME)
-      const rotLerp = 1 - Math.exp(-deltaTime / ROT_SNAP_TIME)
+        scene.camera.position.lerp(targetPosition, posLerp)
+        scene.camera.quaternion.slerp(targetRotation, rotLerp)
+      })
 
-      scene.camera.position.lerp(targetPosition, posLerp)
-      scene.camera.quaternion.slerp(targetRotation, rotLerp)
-    })
-
-    scene.addWait(45000)
-  })
+      scene.addWait(45000)
+    }
+  )
 }
 
 class PlotLine {

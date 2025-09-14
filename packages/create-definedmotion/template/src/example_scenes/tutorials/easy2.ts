@@ -1,165 +1,16 @@
-# DefinedMotion - An animation library
-
-### Animate Three.js with all its power
-
-This is a programmatic animation library, similar to 3Blue1Brown's Manim or Motion Canvas. It focuses on giving a tight feedback loop for development by seeing changes by saving (hot reload) and providing great rendering capabilities for 2D and 3D.
-
-
-### Quick Overview
-
-- Library + viewer for building animations in **TypeScript**
-- **Hot-reload on save** for a super-fast feedback loop
-- Use **ANY** primitive/feature the Three.js ecosystem gives.
-- Type safety by building animation by using TypeScript.
-- **One-click rendering** (FFmpeg) for final output
-- **Interactive viewer** for navigating and inspecting the scene
-- Performant for complex animations, Three.js plus the faster runtime speed of TypeScript compared to Python helps productivity.
-- **Declarative** scene + animation API with easy dependency composition
-
-
-<table>
-  <tr>
-    <td><img src="resources/animation2.gif" alt="Fourier series animation" width="200" /></td>
-    <td><img src="resources/animation3.gif" alt="Keyboard clicking animation" width="200" /></td>
-  </tr>
-</table>
-<img src="resources/animation1.gif" alt="Math surface animation" width="200" />
-
-
-## Look at example scenes
-Visit /src/example_scenes and look how scenes are made, this is likely a good way to learn the library. The entrypoint that specifies what scene that should be shown in the viewer is src/entry.ts.
-
-
-### Create Scene 
-```ts
-export const yourSceneName = (): AnimatedScene => {
-  return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart, async (scene) => {
-
-  })
-}
-
-```
-
-### Scene tasks
-```ts
-
-  return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart, async (scene) => {
-    ...
-
-    scene.addAnim(/* add animation, these will run in parallel*/)
-
-    scene.onEachTick((tick, time) => {
-        /* Run this function for every tick/frame */
-        /* This is often used to set up dependencies or calculated movements */
-        /* Conceptually it can be "On each tick, set the line endings at the position of sphere A and sphere B", this will make the line updated regardless of what happens to sphere A and B */
-    })
-
-    scene.do(() => {
-        /* Add instruction at current tick/frame.
-        This can be any function, it will be called at the tick.
-
-        Often used to for example add elements to the scene
-        */
-    })
-
-    scene.addWait(1000) //Will add an animation that does nothing (waits) for the duration
-
-    scene.insertAnimAt(tick, /* animations */ ) // Works like addAnim(...) but you can just insert an animation anywhere anytime. You can insert animations in the future or present during onEachTick. This is very powerful for complex animations.
-
-    scene.addSequentialBackgroundAnims(/* Animations, these will run in sequence */) // This function allows you to add animations that will not push the timeline pointer, if you are at frame X and add an animation that is 300 frames long, this will not make the next added thing to be at X+300, but instead just X (because this adds it in the "background").
-
-
-    // Register an audio before use, this function is often used in the absolute beginning of the scene.
-    scene.registerAudio(/* audio path */)
-
-    // Anywhere in the code (but after registerAudio of the sound), play the sound
-    scene.playAudio(/* audio path */, volume)
-    ...
-  })
-
-```
-
-This project is very new, more documentation will come soon.
-
-
-
-## Project Setup
- 
-1. Run `npx create-definedmotion project_name`
-2. Install all dependencies with `npm install`
-3. Run the animation viewer with `npm run dev`
-4. Add your scene in src/scenes
-5. Update the src/entry.ts file to use your animation.
-6. When you want to render your animation, click "Render". You will need to have ffmpeg on your system and available in your system PATH.
-
-This will hopefully have better documentation soon. If you have any questions, feel free to contact me at hugo.contact01@gmail.com
-
-## Easy example
-```ts
-// Goal for this animation:
-// Move a circle back and forth and continually change its color
-
-// Step 1: Create function that returns AnimatedScene
-export function tutorial_easy1(): AnimatedScene {
-  // We return an animated scene that has some settings and lastly has a callback function
-  // The first two parameters are resolution, this will be a vertical clip
-  // The third argument sets if we want 3D or 2D
-  // The forth allows us to say how hot reload should be handled,
-  // With trace from start, at hot reload, the actions of all frames before the current, will be accounted for.
-  // If you don't have accumulative changes (or if its fine without for debug), then it's much faster to use "HotReloadSetting.BeginFromCurrent" since it will only have to calculate the current frames actions.
-
-  return new AnimatedScene(
-    1080,
-    1920,
-    SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
-    (scene) => {
-      // Helper function to create a "THREE.CircleGeometry"
-      // You can just use any Three.js code if you want
-      const circle = createCircle(5)
-
-      // Add our circle to the scene
-      scene.add(circle)
-
-      // Create an animation that makes it move from left to right
-      // This is very modular and easy to build on
-      // createAnim takes two argument, an interpolation (just calculated number[]), and a call back function where you can use each value
-      // So here we are creating the interpolation with easeInOutQuad: number[]
-      // And give a function that is called for each frame with the current interpolation value
-      const anim = createAnim(easeInOutQuad(-5, 5, 500), (value) => (circle.position.x = value))
-
-      // We use "addAnim" to schedule an animation, it will run from the frame (tick) it was added at
-      // Since this is our first added animation in this scene, we are currently at tick 0, So it will just add to the start.
-      // But say that we are in a complex animation and our previous buildings would mean that we are at frame 49878 for example (we wouldn't know this)
-      // Then it just adds the animation with that offset
-      scene.addAnim(anim)
-
-      // To make the circle also go back, we can reverse the entire animation and add it again
-      // Notice that we are copying it, this is so that the reverse() doesn't affect the original variable "anim"
-      scene.addAnim(anim.copy().reverse())
-
-      // We now finally add a function that will be called at each frame (tick) in our animation
-      // This doesn't push the tick forward like the "addAnim" does.
-      // It just declares a function that should be run at each frame
-      // For this animation, we want to set a color to the circle at each frame.
-      scene.onEachTick((tick) => {
-        circle.material.color = new THREE.Color().setRGB(posXSigmoid(circle.position.x / 4), 1, 1)
-      })
-    }
-  )
-}
-
-
-```
-
-#### Animated function surface
-```ts
+// Tutorial 2 (easy2.ts)
 // Goal for this animation:
 // 1) Render a time-varying mathematical surface (z = f(x, y, t))
 // 2) Add a glowing orb with a point light
 // 3) Animate the camera on a smooth orbit while the surface deforms
+
+import * as THREE from 'three'
+
+import { AnimatedScene, HotReloadSetting, SpaceSetting } from '$renderer/lib/scene/sceneClass'
+
+// If your helpers live elsewhere, tweak these paths:'
+import { createFunctionSurface, updateFunctionSurface } from '$renderer/lib/rendering/objects3d'
+import { addBackgroundGradient } from '$renderer/lib/rendering/lighting3d'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 0: Materials used by our surface and our glowing sphere
@@ -288,21 +139,3 @@ export function tutorial_easy2(): AnimatedScene {
     }
   )
 }
-
-```
-
-## Created with DefinedMotion
-
-### Fourier series scenes:
-* https://www.reddit.com/r/manim/comments/1k53byc/what_do_you_guys_think_of_my_animation/
-* https://www.youtube.com/shorts/sF5wHVjqrGA
-* https://www.youtube.com/shorts/2vC4DHrBxas
-
-### Animated function plots:
-* https://www.youtube.com/shorts/Pi6R351Vi5s
-  
-### Keyboard animation:
-* https://www.youtube.com/shorts/4efvamUyjxU
-
-
-

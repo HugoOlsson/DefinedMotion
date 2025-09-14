@@ -2,6 +2,10 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import glsl from 'vite-plugin-glsl'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const r = (p: string) => path.resolve(fileURLToPath(new URL('.', import.meta.url)), p)
 
 export default defineConfig({
   main: {
@@ -20,7 +24,9 @@ export default defineConfig({
         fs: 'node:fs',
         path: 'node:path',
         os: 'node:os',
-        crypto: 'node:crypto'
+        crypto: 'node:crypto',
+        $assets: r('src/assets'),
+        $renderer: r('src/renderer/src')
         // Add other Node.js modules you need
       }
     },

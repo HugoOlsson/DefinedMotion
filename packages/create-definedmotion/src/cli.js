@@ -3,7 +3,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import minimist from 'minimist';
-import { execSync } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const argv = minimist(process.argv.slice(2));
@@ -32,7 +31,7 @@ async function createProject() {
 
   // Copy template
   const templateDir = path.join(__dirname, '..', 'template');
-  
+
   console.log(chalk.gray('Creating project structure...'));
   fs.copySync(templateDir, targetDir);
 
@@ -52,44 +51,19 @@ async function createProject() {
 
   console.log(chalk.green('✓') + ' Project structure created');
 
-  // Install dependencies (unless skipped)
-  if (!argv['skip-install']) {
-    console.log(chalk.gray('\nInstalling dependencies (this may take a minute)...\n'));
-    
-    try {
-      execSync('npm install', {
-        cwd: targetDir,
-        stdio: 'inherit'
-      });
-      console.log('\n' + chalk.green('✓') + ' Dependencies installed');
-    } catch (error) {
-      console.log('\n' + chalk.yellow('⚠') + ' Failed to install dependencies');
-      console.log(chalk.gray('  You can install them manually:'));
-      console.log('  ' + chalk.cyan(`cd ${projectName}`));
-      console.log('  ' + chalk.cyan('npm install'));
-    }
-  }
-
-  // Success message
+  // Always skip dependency installation; print next steps instead
   console.log('\n' + chalk.bold.green('✨ Success!') + ' Created ' + chalk.cyan(projectName));
   console.log('\n' + chalk.bold('Next steps:'));
   console.log(chalk.gray('\n  Navigate to your project:'));
   console.log('  ' + chalk.cyan(`cd ${projectName}`));
-  
-  if (argv['skip-install']) {
-    console.log(chalk.gray('\n  Install dependencies:'));
-    console.log('  ' + chalk.cyan('npm install'));
-  }
-  
+  console.log(chalk.gray('\n  Install dependencies:'));
+  console.log('  ' + chalk.cyan('npm install'));
   console.log(chalk.gray('\n  Start development:'));
   console.log('  ' + chalk.cyan('npm run dev'));
-  
   console.log(chalk.gray('\n  Create your animations in:'));
   console.log('  ' + chalk.cyan('src/renderer/src/scenes/'));
-  
   console.log('\n' + chalk.gray('Need help? Check out the docs:'));
   console.log('  ' + chalk.cyan('https://github.com/HugoOlsson/DefinedMotion'));
-  
   console.log('\n' + chalk.bold('Happy animating! 🚀\n'));
 }
 

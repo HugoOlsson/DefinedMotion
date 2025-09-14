@@ -30,64 +30,6 @@ export const setStateInScene = async (scene: AnimatedScene) => {
   await scene.jumpToFrameAtIndex(0)
 }
 
-let lastPosText = ''
-let lastRotText = ''
-export const setCameraPositionText = (
-  position: THREE.Vector3,
-  rotation: THREE.Euler,
-  quaternion?: THREE.Quaternion
-): void => {
-  const posRef = document.getElementById('cameraPositionTextID')
-  const rotRef = document.getElementById('cameraRotationTextID')
-  if (!posRef || !rotRef) return // Exit if elements are not found
-
-  // Construct the new position text with specified precision
-  const newPosText: string =
-    'Camera position: (' +
-    position.x.toPrecision(7) +
-    ', ' +
-    position.y.toPrecision(7) +
-    ', ' +
-    position.z.toPrecision(7) +
-    ')'
-
-  // Construct the new Euler rotation text, including the rotation order
-  let newRotText: string =
-    'Camera rotation (Euler): (' +
-    rotation.x.toPrecision(7) +
-    ', ' +
-    rotation.y.toPrecision(7) +
-    ', ' +
-    rotation.z.toPrecision(7) +
-    ') - Order: ' +
-    rotation.order
-
-  // Optionally append quaternion details if provided
-  if (quaternion) {
-    newRotText +=
-      '\nQuaternion: (' +
-      quaternion.x.toPrecision(7) +
-      ', ' +
-      quaternion.y.toPrecision(7) +
-      ', ' +
-      quaternion.z.toPrecision(7) +
-      ', ' +
-      quaternion.w.toPrecision(7) +
-      ')'
-  }
-
-  // Update the DOM only if the content has changed to avoid unnecessary DOM operations
-  if (newPosText !== lastPosText) {
-    lastPosText = newPosText
-    posRef.textContent = newPosText
-  }
-
-  if (newRotText !== lastRotText) {
-    lastRotText = newRotText
-    rotRef.textContent = newRotText
-  }
-}
-
 let lastStateText = ''
 
 export const logCameraState = (
@@ -100,14 +42,12 @@ export const logCameraState = (
 
   // Format numbers to 7 significant digits and create code-ready string
   const stateCode = `
-
 scene.camera.position.set(
   ${position.x.toPrecision(7)}, 
   ${position.y.toPrecision(7)}, 
   ${position.z.toPrecision(7)}
 );
 
-scene.camera.rotation.order = '${rotation.order}'; 
 scene.camera.rotation.set(
   ${rotation.x.toPrecision(7)}, 
   ${rotation.y.toPrecision(7)}, 
@@ -120,12 +60,18 @@ scene.camera.quaternion.set(
   ${quaternion.z.toPrecision(7)}, 
   ${quaternion.w.toPrecision(7)}
 );
+
+scene.camera.rotation.order = '${rotation.order}'; 
 `
 
   // Only update DOM if state changed
   if (stateCode !== lastStateText) {
     lastStateText = stateCode
     const output = document.getElementById('cameraPositionTextID')
-    if (output) output.textContent = stateCode
+    if (output) {
+      output.textContent = stateCode
+      // Add CSS to preserve whitespace and line breaks
+      output.style.whiteSpace = 'pre'
+    }
   }
 }

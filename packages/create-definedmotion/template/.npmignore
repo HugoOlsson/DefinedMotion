@@ -1,0 +1,9 @@
+node_modules
+.vite
+.svelte-kit
+.svelte2tsx-language-server-files
+out
+image_renders
+rendered_videos
+audio_renders
+src/scenes/*

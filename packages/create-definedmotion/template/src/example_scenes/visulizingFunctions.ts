@@ -1,4 +1,3 @@
-import { metalness, roughness } from 'three/tsl'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import {
   addBackgroundGradient,
@@ -7,7 +6,7 @@ import {
   HDRIs,
   loadHDRIData
 } from '../renderer/src/lib/rendering/lighting3d'
-import { AnimatedScene } from '../renderer/src/lib/scene/sceneClass'
+import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
 import { linspace } from '../renderer/src/lib/mathHelpers/vectors'
@@ -19,9 +18,7 @@ import {
   moveCameraAnimation3D,
   setOpacity
 } from '../renderer/src/lib/animation/animations'
-import fadeSound from '../../assets/audio/fadeSound.mp3'
 import { createFastText, updateText } from '../renderer/src/lib/rendering/objects2d'
-import { update } from 'three/examples/jsm/libs/tween.module.js'
 
 const functions: [string, (x: number) => number][] = [
   // ──────────── Start Simple & Recognizable ────────────
@@ -101,68 +98,76 @@ const morphAnimation = (
 const hdriData = await loadHDRIData(HDRIs.outdoor1, 1, 1)
 
 export const functionsAnimation = (): AnimatedScene => {
-  return new AnimatedScene(1080, 2160, true, true, async (scene) => {
-    // scene.registerAudio(fadeSound)
-    scene.add(create2DAxis({ xmin: -10, xmax: 10, ymin: -10, ymax: 10, ticks: 10, tickSize: 0.5 }))
-    addSceneLighting(scene.scene)
+  return new AnimatedScene(
+    1080,
+    2160,
+    SpaceSetting.ThreeDim,
+    HotReloadSetting.TraceFromStart,
+    async (scene) => {
+      // scene.registerAudio(fadeSound)
+      scene.add(
+        create2DAxis({ xmin: -10, xmax: 10, ymin: -10, ymax: 10, ticks: 10, tickSize: 0.5 })
+      )
+      addSceneLighting(scene.scene)
 
-    await addHDRI(scene, hdriData, 1)
-    addBackgroundGradient({
-      scene,
-      topColor: '#00639d',
-      bottomColor: COLORS.black,
-      backgroundOpacity: 0.5
-    })
-    scene.camera.position.set(0, 0, 10)
-    const informationTextNode = await createFastText('Some of the functions are scaled.', 0.6)
-    informationTextNode.position.y = 13.5
-    setOpacity(informationTextNode, 0.4)
-    scene.add(informationTextNode)
-    const textNode = await createFastText('', 1.5)
-    textNode.position.y = 12
-    scene.add(textNode)
+      await addHDRI(scene, hdriData, 1)
+      addBackgroundGradient({
+        scene,
+        topColor: '#00639d',
+        bottomColor: COLORS.black,
+        backgroundOpacity: 0.5
+      })
+      scene.camera.position.set(0, 0, 10)
+      const informationTextNode = await createFastText('Some of the functions are scaled.', 0.6)
+      informationTextNode.position.y = 13.5
+      setOpacity(informationTextNode, 0.4)
+      scene.add(informationTextNode)
+      const textNode = await createFastText('', 1.5)
+      textNode.position.y = 12
+      scene.add(textNode)
 
-    const plotLine = new PlotLine(scene.scene, 0xffffff)
+      const plotLine = new PlotLine(scene.scene, 0xffffff)
 
-    const vecFuncs = vectorizeFunctions(functions)
+      const vecFuncs = vectorizeFunctions(functions)
 
-    scene.camera.position.set(9.82015, 4.347805, 29.81918)
-    scene.camera.quaternion.set(-0.07633829, 0.3762715, 0.03112576, 0.9228345)
-    scene.camera.zoom = 0.8
+      scene.camera.position.set(9.82015, 4.347805, 29.81918)
+      scene.camera.quaternion.set(-0.07633829, 0.3762715, 0.03112576, 0.9228345)
+      scene.camera.zoom = 0.8
 
-    const moveAnimation = moveCameraAnimation3D(
-      scene.camera,
-      scene.camera.position.clone(),
-      new THREE.Vector3(-9.625222, 4.32878, 29.57185),
-      2500
-    )
+      const moveAnimation = moveCameraAnimation3D(
+        scene.camera,
+        scene.camera.position.clone(),
+        new THREE.Vector3(-9.625222, 4.32878, 29.57185),
+        2500
+      )
 
-    scene.onEachTick(() => {
-      scene.camera.lookAt(0, 0, -2)
-    })
-
-    scene.addSequentialBackgroundAnims(
-      ...Array(20)
-        .fill(0)
-        .flatMap(() => [moveAnimation, moveAnimation.copy().reverse()])
-    )
-
-    for (let i = 0; i < vecFuncs.length - 1; i++) {
-      // scene.playAudio(fadeSound, 0.03)
+      scene.onEachTick(() => {
+        scene.camera.lookAt(0, 0, -2)
+      })
 
       scene.addSequentialBackgroundAnims(
-        morphAnimation(plotLine, vecFuncs[i], vecFuncs[i + 1], 300)
+        ...Array(20)
+          .fill(0)
+          .flatMap(() => [moveAnimation, moveAnimation.copy().reverse()])
       )
-      scene.addAnim(fadeOut(textNode, 150))
-      scene.do(async () => {
-        await updateText(textNode, functions[i + 1][0])
-      })
-      scene.addAnim(fadeIn(textNode, 150))
-      scene.addWait(800)
-    }
 
-    scene.addWait(1600)
-  })
+      for (let i = 0; i < vecFuncs.length - 1; i++) {
+        // scene.playAudio(fadeSound, 0.03)
+
+        scene.addSequentialBackgroundAnims(
+          morphAnimation(plotLine, vecFuncs[i], vecFuncs[i + 1], 300)
+        )
+        scene.addAnim(fadeOut(textNode, 150))
+        scene.do(async () => {
+          await updateText(textNode, functions[i + 1][0])
+        })
+        scene.addAnim(fadeIn(textNode, 150))
+        scene.addWait(800)
+      }
+
+      scene.addWait(1600)
+    }
+  )
 }
 
 class PlotLine {
