@@ -1,0 +1,37 @@
+{
+  "name": "create-definedmotion",
+  "version": "0.1.1",
+  "description": "Create a new DefinedMotion animation project",
+  "author": "Hugo Olsson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HugoOlsson/DefinedMotion"
+  },
+  "type": "module",
+  "bin": {
+    "create-definedmotion": "./bin/index.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "template"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node bin/index.js test-project --skip-install"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0",
+    "minimist": "^1.2.8"
+  },
+  "keywords": [
+    "definedmotion",
+    "animation",
+    "three.js",
+    "motion-graphics"
+  ]
+}
