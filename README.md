@@ -305,5 +305,3 @@ export function tutorial_easy2(): AnimatedScene {
 * https://www.youtube.com/shorts/4efvamUyjxU
 
 
-
-google-site-verification: google11c08f9eaa0f84d2.html
