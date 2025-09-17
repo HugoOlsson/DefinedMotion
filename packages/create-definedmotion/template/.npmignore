@@ -6,4 +6,4 @@ out
 image_renders
 rendered_videos
 audio_renders
-src/scenes/*
+template/src/scenes/**
