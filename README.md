@@ -17,21 +17,18 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 - **Declarative** scene + animation API with easy dependency composition
 
 
-<div style="
-  display:grid;
-  gap:8px;
-  grid-template-columns:repeat(2, minmax(200px, 1fr));
-  max-width:calc(2 * 200px + 8px);  /* cap at 2 cells wide */
-  width:100%;
-  margin:0 auto;
- "> 
-  <img src="resources/animation1.gif" alt="Math surface animation" width="200" loading="lazy" decoding="async" />
-  <img src="resources/animation4.gif" alt="3D Galton board producing a normal distribution" width="200" loading="lazy" decoding="async" />
-  <img src="resources/animation2.gif" alt="Fourier series animation" width="200" loading="lazy" decoding="async" />
-  <img src="resources/animation3.gif" alt="Keyboard clicking animation" width="200" loading="lazy" decoding="async" />
- 
-</div>
-
+<table>
+  <tbody>
+    <tr>
+      <td><img src="resources/animation2.gif" alt="Fourier series animation" width="200" loading="lazy" decoding="async" /></td>
+      <td><img src="resources/animation3.gif" alt="Keyboard clicking animation" width="200" loading="lazy" decoding="async" /></td>
+    </tr>
+    <tr>
+      <td><img src="resources/animation1.gif" alt="Math surface animation" width="200" loading="lazy" decoding="async" /></td>
+      <td><img src="resources/animation4.gif" alt="3D Galton board producing a normal distribution" width="200" loading="lazy" decoding="async" /></td>
+    </tr>
+  </tbody>
+</table>
 
 ## Look at example scenes
 Visit /src/example_scenes and look how scenes are made, this is likely a good way to learn the library. The entrypoint that specifies what scene that should be shown in the viewer is src/entry.ts.
