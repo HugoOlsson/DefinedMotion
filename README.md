@@ -2,7 +2,7 @@
 
 ### Animate Three.js with all its power
 
-This is a programmatic animation library, similar to 3Blue1Brown's Manim or Motion Canvas. It focuses on giving a tight feedback loop for development by seeing changes by saving (hot reload) and providing great rendering capabilities for 2D and 3D.
+This is a programmatic animation library, similar to 3Blue1Brown's Manim or Motion Canvas. It focuses on giving a tight feedback loop for development by seeing changes on save (hot reload) and providing great rendering capabilities for 2D and 3D.
 
 
 ### Quick Overview
@@ -17,13 +17,20 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 - **Declarative** scene + animation API with easy dependency composition
 
 
-<table>
-  <tr>
-    <td><img src="resources/animation2.gif" alt="Fourier series animation" width="200" /></td>
-    <td><img src="resources/animation3.gif" alt="Keyboard clicking animation" width="200" /></td>
-  </tr>
-</table>
-<img src="resources/animation1.gif" alt="Math surface animation" width="200" />
+<div style="
+  display:grid;
+  gap:8px;
+  grid-template-columns:repeat(2, minmax(200px, 1fr));
+  max-width:calc(2 * 200px + 8px);  /* cap at 2 cells wide */
+  width:100%;
+  margin:0 auto;
+ "> 
+  <img src="resources/animation1.gif" alt="Math surface animation" width="200" loading="lazy" decoding="async" />
+  <img src="resources/animation4.gif" alt="3D Galton board producing a normal distribution" width="200" loading="lazy" decoding="async" />
+  <img src="resources/animation2.gif" alt="Fourier series animation" width="200" loading="lazy" decoding="async" />
+  <img src="resources/animation3.gif" alt="Keyboard clicking animation" width="200" loading="lazy" decoding="async" />
+ 
+</div>
 
 
 ## Look at example scenes
@@ -48,7 +55,7 @@ export const yourSceneName = (): AnimatedScene => {
     HotReloadSetting.TraceFromStart, async (scene) => {
     ...
 
-    scene.addAnim(/* add animation, these will run in parallel*/)
+    scene.addAnim(/* add animations, these will run in parallel*/)
 
     scene.onEachTick((tick, time) => {
         /* Run this function for every tick/frame */
