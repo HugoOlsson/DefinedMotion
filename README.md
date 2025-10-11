@@ -294,7 +294,7 @@ export function tutorial_easy2(): AnimatedScene {
 }
 
 ```
-
+<!--
 ## Created with DefinedMotion
 
 ### Fourier series scenes:
@@ -309,3 +309,4 @@ export function tutorial_easy2(): AnimatedScene {
 * https://www.youtube.com/shorts/4efvamUyjxU
 
 
+-->
