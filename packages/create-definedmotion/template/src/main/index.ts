@@ -4,14 +4,22 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { renderVideo } from './rendering'
 import { deleteRenderedContent } from './storage'
+import ElectronStore from 'electron-store'
+
+const store = new ElectronStore()
 
 let mainWindow: BrowserWindow
 
 function createWindow(): void {
   // Create the browser window.
+
+  const defaultBounds = { width: 1000, height: 1300 }
+  const savedBounds: any = store.get('windowBounds', defaultBounds)
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 1300,
+    width: savedBounds.width,
+    height: savedBounds.height,
+    x: savedBounds.x,
+    y: savedBounds.y,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -24,6 +32,14 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
+  })
+
+  mainWindow.on('resize', () => {
+    store.set('windowBounds', mainWindow.getBounds())
+  })
+
+  mainWindow.on('move', () => {
+    store.set('windowBounds', mainWindow.getBounds())
   })
 
   mainWindow.on('ready-to-show', () => {
