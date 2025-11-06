@@ -2,10 +2,14 @@
   import './app.css'
   import { generateID, setStateInScene, updateStateInUrl } from './lib/general/helpers'
   import { onDestroy, onMount } from 'svelte'
-  import { setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
+  import { hotreloadNameLookup, setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
   import { loadFonts } from './lib/rendering/objects2d'
-  import { entryScene } from '../../entry'
+  import { animationFPSThrottle, entryScene, renderSkip } from '../../entry'
   import { callAllDestroyFunctions } from './lib/general/onDestory'
+  import rotateIcon from "./application_assets/360.svg"
+  import moveIcon from "./application_assets/move.svg"
+  
+
 
   //const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 
@@ -16,6 +20,8 @@
   const UI_FRAME_MS = 33; // ~30 Hz. Use 16 for ~60 Hz.
   let lastUiUpdate = 0;
 
+  let screenRefreshRate = $state(0) 
+
    function formatMs(ms: number) {
     const sign = ms < 0 ? '-' : ''
     ms = Math.abs(ms)
@@ -25,9 +31,11 @@
     return `${sign}${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}.${String(millis).padStart(3,'0')}`
   }
 
+
   const animationWindowID = generateID()
 
   let scene: AnimatedScene
+  let hasInitScene = $state(false)
 
   let isPlayingStateVar = $state(false)
 
@@ -76,6 +84,7 @@
     setGlobalContainerRef(animationWindow)
 
     scene = entryScene()
+    hasInitScene = true
 
     scene.playEffectFunction = () => {
      maybeUpdateUI();
@@ -96,6 +105,8 @@
       animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
     })
 
+   screenRefreshRate = await (window.api as any).getDisplayHz();  
+
     // ipcRenderer.send('resize-window', { width: 1000, height: 1000 })
   })
 
@@ -105,13 +116,13 @@
   })
 </script>
 
-<div class=" flex flex-col p-4">
-  <div id={animationWindowID} class="w-full"></div>
+<div class=" flex flex-col p-2">
+  <div id={animationWindowID} class="w-full rounded-sm overflow-clip"></div>
   <div class="flex justify-between mt-2 font-bold text-sm items-center">
 
       
     <button
-    class="w-[70px] text-start"
+    class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full p-1 hover:bg-black/10 transition"
           onclick={() => {
             if (scene.isPlaying) {
               scene.pause()
@@ -130,7 +141,7 @@
       <p bind:this={timeValueElement} class="font-normal text-[0.7rem] leading-none w-[93px] ">Time:</p>
       </div>
     <button
-    class="w-[70px] text-end"
+    class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full  p-1 hover:bg-black/10 transition"
       onclick={() => {
         scene.render()
       }}>Render</button
@@ -146,8 +157,43 @@
       class="w-full focus:outline-none"
     />
   </div>
+
+  <div class="h-4"></div>
+  {#if hasInitScene && scene}
+ 
+  <p class="font-bold text-sm">Helpers</p>
+  <div class="h-2"></div>
+  <div class="flex flex-wrap gap-2">
+    <button class="text-[0.65rem] font-medium cursor-pointer  bg-black/5 rounded-full p-1 pl-4 pr-4 hover:bg-black/10 transition" >
+        <div class="flex gap-1 items-center">
+
+        <p>Copy camera <strong>position</strong></p>
+      <img src={moveIcon} alt="Rotation icon" class="w-[15px]"/></div>
+    </button>
+    <button class="text-[0.65rem] font-medium cursor-pointer  bg-black/5 rounded-full p-1 pl-4 pr-4 hover:bg-black/10 transition" >
+        <div class="flex gap-1 items-center">
+
+        <p>Copy camera <strong>rotation</strong></p>
+      <img src={rotateIcon} alt="Rotation icon" class="w-[15px]"/></div>
+    </button>
+  </div>
+
+   <div class="h-6"></div>
+  <p class="font-bold text-sm">Details</p>
+  <div class="h-2"></div>
+  <p class="text-xs">Animation playback FPS: <strong>{(screenRefreshRate/animationFPSThrottle).toFixed(2)}</strong> Hz, rendered video FPS: <strong>{(screenRefreshRate/animationFPSThrottle/renderSkip).toFixed(2)}</strong> Hz</p>
+<div class="h-2"></div>
+ <p class="text-[0.7rem] opacity-50">Hot reload mode: <strong>{hotreloadNameLookup(scene.hotReloadSetting)}</strong></p>
+  <p class="text-[0.7rem] opacity-50">Screen refresh rate: <strong>{screenRefreshRate.toFixed(2)}</strong> Hz</p>
+  <p class="text-[0.7rem] opacity-50">Animation refresh rate divider <strong>{animationFPSThrottle}</strong></p>
+  <p class="text-[0.7rem] opacity-50">Render skip constant <strong>{renderSkip}</strong></p>
+  {/if}
+
+ 
+  <!--
   <p id="cameraPositionTextID" class="mt-2 text-xs"></p>
   <p id="cameraRotationTextID" class="mt-2 text-xs"></p>
+  -->
 </div>
 
 <style>
@@ -167,10 +213,20 @@
   /* Thumb style for Chrome */
   input[type='range']::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
+    width: 10px;
     height: 16px;
-    border-radius: 50%;
-    background: #3b82f6;
+    border-radius: 5px;
+    background: #c2c2c2;
+    border: 2px solid #616161;
     margin-top: -6px; /* Center the thumb on the track */
+    cursor: pointer;
+     transition: all 0.1s ease;
+
+    /* Larger hitbox using box-shadow trick */
+    box-shadow: 0 0 0 8px transparent;
+  }
+
+  input[type='range']::-webkit-slider-thumb:hover {
+    background: #616161;
   }
 </style>

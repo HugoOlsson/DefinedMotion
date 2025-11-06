@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme, screen } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -8,7 +8,21 @@ import ElectronStore from 'electron-store'
 
 const store = new ElectronStore()
 
+// Force light mode
+nativeTheme.themeSource = 'light'
+
 let mainWindow: BrowserWindow
+
+function getHzForWebContents(wc: Electron.WebContents): number {
+  const win = BrowserWindow.fromWebContents(wc)
+  if (win) {
+    const b = win.getBounds()
+    const nearest = screen.getDisplayNearestPoint({ x: b.x, y: b.y })
+    return nearest.displayFrequency || 60
+  }
+  // Fallback to primary display
+  return screen.getPrimaryDisplay().displayFrequency || 60
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -21,6 +35,7 @@ function createWindow(): void {
     x: savedBounds.x,
     y: savedBounds.y,
     show: false,
+    title: "DefinedMotion",
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -90,6 +105,31 @@ app.whenReady().then(() => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+
+  // RPC: renderer asks main for the current display refresh rate (Hz)
+  ipcMain.handle('get-display-hz', (event) => {
+    return getHzForWebContents(event.sender)
+  })
+
+    function broadcastHzToAllWindows() {
+    for (const w of BrowserWindow.getAllWindows()) {
+      const hz = getHzForWebContents(w.webContents)
+      w.webContents.send('display-hz-changed', hz)
+    }
+  }
+
+  // Display geometry / metrics changed (resolution/scale/mode changes, some moves)
+  screen.on('display-metrics-changed', () => {
+    broadcastHzToAllWindows()
+  })
+
+  // Displays added/removed (dock/undock, hot-plug)
+  screen.on('display-added', () => {
+    broadcastHzToAllWindows()
+  })
+  screen.on('display-removed', () => {
+    broadcastHzToAllWindows()
   })
 })
 

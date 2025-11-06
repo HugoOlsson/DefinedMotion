@@ -2,8 +2,22 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { RenderOptions } from '../main/rendering'
 
+
+// ---- NEW helpers for event subscription
+function onDisplayHzChanged(cb: (hz: number) => void) {
+  const channel = 'display-hz-changed'
+  const listener = (_: unknown, hz: number) => cb(hz)
+  ipcRenderer.on(channel, listener)
+  // return an unsubscribe fn
+  return () => ipcRenderer.removeListener(channel, listener)
+}
+
 const customAPI = {
-  startVideoRender: (options: RenderOptions) => ipcRenderer.invoke('start-video-render', options)
+  startVideoRender: (options: RenderOptions) => ipcRenderer.invoke('start-video-render', options),
+
+  getDisplayHz: (): Promise<number> => ipcRenderer.invoke('get-display-hz'),
+
+  onDisplayHzChanged
 }
 
 // Custom APIs for renderer

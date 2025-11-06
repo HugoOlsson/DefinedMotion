@@ -27,6 +27,17 @@ export enum HotReloadSetting {
   BeginFreshOnSave
 }
 
+export const hotreloadNameLookup = (mode: HotReloadSetting) => {
+  switch (mode) {
+    case HotReloadSetting.TraceFromStart:
+      return "Trace from start";
+    case HotReloadSetting.BeginFromCurrent:
+      return "Begin from current without trace";
+    case HotReloadSetting.BeginFreshOnSave:
+      return "Go to the beginning";
+  }
+}
+
 type SceneInstruction = (tick: number) => any
 
 export let globalContainerRef: HTMLElement
