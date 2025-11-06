@@ -9,6 +9,22 @@
 
   //const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 
+  let frameValueElement: HTMLParagraphElement
+  let timeValueElement: HTMLParagraphElement
+  let sliderElement: HTMLInputElement
+
+  const UI_FRAME_MS = 33; // ~30 Hz. Use 16 for ~60 Hz.
+  let lastUiUpdate = 0;
+
+   function formatMs(ms: number) {
+    const sign = ms < 0 ? '-' : ''
+    ms = Math.abs(ms)
+    const minutes = Math.floor(ms / 60000)
+    const seconds = Math.floor((ms % 60000) / 1000)
+    const millis  = Math.floor(ms % 1000)
+    return `${sign}${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}.${String(millis).padStart(3,'0')}`
+  }
+
   const animationWindowID = generateID()
 
   let scene: AnimatedScene
@@ -25,16 +41,36 @@
       const frame = Math.round((sliderValue / maxSliderValue) * (scene.totalSceneTicks - 1))
       if (frame !== lastSetFrame) {
         await scene.jumpToFrameAtIndex(frame)
+        updateUIImmediate();
         lastSetFrame = frame
       }
     }
   }
 
+  function updateUIImmediate() {
+    // slider
+    (sliderElement as any).value =
+      (scene.sceneRenderTick / (scene.totalSceneTicks - 1)) * maxSliderValue;
+
+    // texts
+    if (frameValueElement) frameValueElement.textContent = `Frame: ${scene.sceneRenderTick}`;
+    if (timeValueElement)  timeValueElement.textContent  = `Time: ${formatMs(scene.getCurrentTimeMs())}`;
+  }
+
+  function maybeUpdateUI() {
+    const now = performance.now();
+    if (now - lastUiUpdate >= UI_FRAME_MS) {
+      lastUiUpdate = now;
+      updateUIImmediate();
+    }
+  }
+
+
   onMount(async () => {
     if (!entryScene) return
     await loadFonts()
     const animationWindow = document.getElementById(animationWindowID)
-    const sliderElement = document.getElementById('playerSliderID')
+    
     if (!animationWindow || !sliderElement) return
 
     setGlobalContainerRef(animationWindow)
@@ -42,8 +78,7 @@
     scene = entryScene()
 
     scene.playEffectFunction = () => {
-      ;(sliderElement as any).value =
-        (scene.sceneRenderTick / (scene.totalSceneTicks - 1)) * maxSliderValue
+     maybeUpdateUI();
     }
     const currentWidth = animationWindow.clientWidth
     animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
@@ -72,19 +107,30 @@
 
 <div class=" flex flex-col p-4">
   <div id={animationWindowID} class="w-full"></div>
-  <div class="flex justify-between mt-2 font-bold text-sm">
+  <div class="flex justify-between mt-2 font-bold text-sm items-center">
+
+      
     <button
-      onclick={() => {
-        if (scene.isPlaying) {
-          scene.pause()
-          isPlayingStateVar = false
-        } else {
-          scene.playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
-          isPlayingStateVar = true
-        }
-      }}>{isPlayingStateVar ? 'Pause' : 'Play'}</button
-    >
+    class="w-[70px] text-start"
+          onclick={() => {
+            if (scene.isPlaying) {
+              scene.pause()
+              updateUIImmediate();
+              isPlayingStateVar = false
+            } else {
+              scene.playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
+              isPlayingStateVar = true
+            }
+          }}>{isPlayingStateVar ? 'Pause' : 'Play'}</button
+        >
+    
+
+    <div class="flex ">
+    <p bind:this={frameValueElement} class="font-normal text-[0.7rem] leading-none mr-2 w-[83px]">Frame:</p>
+      <p bind:this={timeValueElement} class="font-normal text-[0.7rem] leading-none w-[93px] ">Time:</p>
+      </div>
     <button
+    class="w-[70px] text-end"
       onclick={() => {
         scene.render()
       }}>Render</button
@@ -92,12 +138,12 @@
   </div>
   <div class="w-full px-0 mx-0">
     <input
+      bind:this={sliderElement}
       type="range"
       min="0"
       max={maxSliderValue}
       oninput={(e: any) => handleSliderChange(Number(e.target.value))}
       class="w-full focus:outline-none"
-      id="playerSliderID"
     />
   </div>
   <p id="cameraPositionTextID" class="mt-2 text-xs"></p>

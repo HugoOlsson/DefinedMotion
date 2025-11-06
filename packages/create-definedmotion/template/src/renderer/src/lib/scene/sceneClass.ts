@@ -148,6 +148,15 @@ export class AnimatedScene {
     this.appendInstruction(instruction, this.sceneCalculationTick)
   }
 
+  doAt(tick: number, instruction: SceneInstruction) {
+    if (tick < 0) throw new Error('doAt: tick must be ≥ 0')
+    this.appendInstruction(instruction, tick)
+  }
+
+  getCurrentTimeMs() {
+    return ticksToMillis(this.sceneRenderTick)
+  }
+
   addAnim(...animations: UserAnimation[]) {
     const longest = Math.max(...animations.map((a) => a.interpolation.length))
     for (const animation of animations) {
