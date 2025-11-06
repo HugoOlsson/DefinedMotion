@@ -1,6 +1,6 @@
-import { renderOutputFps } from '../../../../entry'
+
 import * as THREE from 'three'
-import { AnimatedScene } from '../scene/sceneClass'
+import { AnimatedScene, renderOutputFps } from '../scene/sceneClass'
 import { AudioInScene } from '../audio/loader'
 
 const fs = require('fs')

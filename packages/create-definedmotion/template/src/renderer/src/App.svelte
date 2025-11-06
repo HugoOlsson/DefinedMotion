@@ -2,27 +2,29 @@
   import './app.css'
   import { generateID, setStateInScene, updateStateInUrl } from './lib/general/helpers'
   import { onDestroy, onMount } from 'svelte'
-  import { hotreloadNameLookup, setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
+  import { hotreloadNameLookup, screenFPS, setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
   import { loadFonts } from './lib/rendering/objects2d'
-  import { animationFPSThrottle, entryScene, renderSkip } from '../../entry'
+  import { animationFPSDivider, entryScene, renderSkip } from '../../entry'
   import { callAllDestroyFunctions } from './lib/general/onDestory'
   import rotateIcon from "./application_assets/360.svg"
   import moveIcon from "./application_assets/move.svg"
   
 
-
-  //const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-
   let frameValueElement: HTMLParagraphElement
   let timeValueElement: HTMLParagraphElement
   let sliderElement: HTMLInputElement
 
-  const UI_FRAME_MS = 33; // ~30 Hz. Use 16 for ~60 Hz.
-  let lastUiUpdate = 0;
+  const TEXT_FRAME_MS_LIMIT = 0.90*1000 / 30;  // A little lower to avoid skipping frames when timing is unfourtunate
+  const SLIDER_FRAME_MS_LIMIT = 0.90*1000 / 60; // A little lower to avoid skipping frames when timing is unfourtunate
+
+  let lastTextUpdate  = 0;
+  let lastSliderUpdate = 0;
 
   let screenRefreshRate = $state(0) 
+  let isRendering = $state(false) 
 
-   function formatMs(ms: number) {
+
+  function formatMs(ms: number) {
     const sign = ms < 0 ? '-' : ''
     ms = Math.abs(ms)
     const minutes = Math.floor(ms / 60000)
@@ -55,24 +57,39 @@
     }
   }
 
-  function updateUIImmediate() {
-    // slider
-    (sliderElement as any).value =
-      (scene.sceneRenderTick / (scene.totalSceneTicks - 1)) * maxSliderValue;
+function updateSliderOnly() {
+  if (!scene || !sliderElement) return;
+  const denom = Math.max(1, (scene.totalSceneTicks - 1));
+  (sliderElement as any).value = (scene.sceneRenderTick / denom) * maxSliderValue;
+}
 
-    // texts
-    if (frameValueElement) frameValueElement.textContent = `Frame: ${scene.sceneRenderTick}`;
-    if (timeValueElement)  timeValueElement.textContent  = `Time: ${formatMs(scene.getCurrentTimeMs())}`;
-  }
+function updateTextsOnly() {
+  if (!scene) return;
+  if (frameValueElement) frameValueElement.textContent = `Frame: ${scene.sceneRenderTick}`;
+  if (timeValueElement)  timeValueElement.textContent  = `Time: ${formatMs(scene.getCurrentTimeMs())}`;
+}
+
+function updateUIImmediate() {
+  updateSliderOnly();
+  updateTextsOnly();
+}
+
 
   function maybeUpdateUI() {
-    const now = performance.now();
-    if (now - lastUiUpdate >= UI_FRAME_MS) {
-      lastUiUpdate = now;
-      updateUIImmediate();
-    }
+  const now = performance.now();
+
+  // ~60 Hz slider
+  if (now - lastSliderUpdate >= SLIDER_FRAME_MS_LIMIT) {
+    lastSliderUpdate = now;
+    updateSliderOnly();
   }
 
+  // ~30 Hz texts
+  if (now - lastTextUpdate >= TEXT_FRAME_MS_LIMIT) {
+    lastTextUpdate = now;
+    updateTextsOnly();
+  }
+}
 
   onMount(async () => {
     if (!entryScene) return
@@ -88,6 +105,9 @@
 
     scene.playEffectFunction = () => {
      maybeUpdateUI();
+    }
+    scene.renderingEventFunction = (isStart) => {
+      isRendering = isStart
     }
     const currentWidth = animationWindow.clientWidth
     animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
@@ -105,7 +125,7 @@
       animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
     })
 
-   screenRefreshRate = await (window.api as any).getDisplayHz();  
+   screenRefreshRate = screenFPS
 
     // ipcRenderer.send('resize-window', { width: 1000, height: 1000 })
   })
@@ -114,13 +134,46 @@
     clearInterval(urlUpdaterInterval)
     callAllDestroyFunctions()
   })
+
+  function fmt(n: number) {
+  return Number(n).toPrecision(7);
+}
+
+function cameraPositionCode() {
+  const p = scene.camera.position;
+  return `scene.camera.position.set(
+  ${fmt(p.x)}, 
+  ${fmt(p.y)}, 
+  ${fmt(p.z)}
+);`;
+}
+
+function cameraRotationCode() {
+  const q = scene.camera.quaternion;
+  return `scene.camera.quaternion.set(
+  ${fmt(q.x)}, 
+  ${fmt(q.y)}, 
+  ${fmt(q.z)}, 
+  ${fmt(q.w)}
+);`;
+}
+
+export async function copyToClipboard(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
+}
 </script>
 
 <div class=" flex flex-col p-2">
   <div id={animationWindowID} class="w-full rounded-sm overflow-clip"></div>
+  {#if isRendering}
+ <p class="text-[17px] self-center p-6 pb-1">Do <strong>not save</strong> code during rendering</p>
+   <p class="text-xs self-center pt-0 p-2">The viewer might hot reload and affect the result</p>
+  {/if}
+  
   <div class="flex justify-between mt-2 font-bold text-sm items-center">
 
-      
+ 
+
     <button
     class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full p-1 hover:bg-black/10 transition"
           onclick={() => {
@@ -164,13 +217,13 @@
   <p class="font-bold text-sm">Helpers</p>
   <div class="h-2"></div>
   <div class="flex flex-wrap gap-2">
-    <button class="text-[0.65rem] font-medium cursor-pointer  bg-black/5 rounded-full p-1 pl-4 pr-4 hover:bg-black/10 transition" >
+    <button onclick={() => copyToClipboard(cameraPositionCode())} class="text-[0.65rem] font-medium cursor-pointer  bg-black/5 rounded-full p-1 pl-4 pr-4 hover:bg-black/10 transition active:bg-blue-200 active:border-blue-200" >
         <div class="flex gap-1 items-center">
 
         <p>Copy camera <strong>position</strong></p>
       <img src={moveIcon} alt="Rotation icon" class="w-[15px]"/></div>
     </button>
-    <button class="text-[0.65rem] font-medium cursor-pointer  bg-black/5 rounded-full p-1 pl-4 pr-4 hover:bg-black/10 transition" >
+    <button onclick={() => copyToClipboard(cameraRotationCode())} class="text-[0.65rem] font-medium cursor-pointer  bg-black/5 rounded-full p-1 pl-4 pr-4 hover:bg-black/10 transition active:bg-blue-200 active:border-blue-200" >
         <div class="flex gap-1 items-center">
 
         <p>Copy camera <strong>rotation</strong></p>
@@ -181,11 +234,11 @@
    <div class="h-6"></div>
   <p class="font-bold text-sm">Details</p>
   <div class="h-2"></div>
-  <p class="text-xs">Animation playback FPS: <strong>{(screenRefreshRate/animationFPSThrottle).toFixed(2)}</strong> Hz, rendered video FPS: <strong>{(screenRefreshRate/animationFPSThrottle/renderSkip).toFixed(2)}</strong> Hz</p>
+  <p class="text-xs">Animation playback FPS: <strong>{(screenRefreshRate/animationFPSDivider).toFixed(2)}</strong> Hz, rendered video FPS: <strong>{(screenRefreshRate/animationFPSDivider/renderSkip).toFixed(2)}</strong> Hz</p>
 <div class="h-2"></div>
  <p class="text-[0.7rem] opacity-50">Hot reload mode: <strong>{hotreloadNameLookup(scene.hotReloadSetting)}</strong></p>
   <p class="text-[0.7rem] opacity-50">Screen refresh rate: <strong>{screenRefreshRate.toFixed(2)}</strong> Hz</p>
-  <p class="text-[0.7rem] opacity-50">Animation refresh rate divider <strong>{animationFPSThrottle}</strong></p>
+  <p class="text-[0.7rem] opacity-50">Animation FPS divider <strong>{animationFPSDivider}</strong></p>
   <p class="text-[0.7rem] opacity-50">Render skip constant <strong>{renderSkip}</strong></p>
   {/if}
 

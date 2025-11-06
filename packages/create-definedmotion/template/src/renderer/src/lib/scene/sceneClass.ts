@@ -5,16 +5,28 @@ import {
   type InternalAnimation,
   type UserAnimation
 } from '../animation/protocols'
-import { generateID, logCameraState } from '../general/helpers'
+import { generateID } from '../general/helpers'
 import { sleep } from '../rendering/helpers'
 import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
-import { animationFPSThrottle, renderSkip } from '../../../../entry'
+import { animationFPSDivider, renderSkip } from '../../../../entry'
 import { addDestroyFunction } from '../general/onDestory'
-import { ticksToMillis } from '../animation/helpers'
 import { AudioInScene, loadAllAudio, playAudio, registerAudio } from '../audio/loader'
+
+export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
+
+const timelineFPS = screenFPS / animationFPSDivider;
+
+// Convert ticks (frames) to milliseconds
+export const ticksToMillis = (ticks: number) => (ticks / timelineFPS) * 1000
+
+// Convert milliseconds to the closest whole number of ticks
+export const millisToTicks = (ms: number) => Math.ceil((ms / 1000) * timelineFPS)
+
+export const renderOutputFps = () => timelineFPS / renderSkip
+
 
 export enum SpaceSetting {
   ThreeDim,
@@ -32,7 +44,7 @@ export const hotreloadNameLookup = (mode: HotReloadSetting) => {
     case HotReloadSetting.TraceFromStart:
       return "Trace from start";
     case HotReloadSetting.BeginFromCurrent:
-      return "Begin from current without trace";
+      return "Begin from current frame without trace";
     case HotReloadSetting.BeginFreshOnSave:
       return "Go to the beginning";
   }
@@ -65,6 +77,8 @@ export class AnimatedScene {
   private pixelsHeight
 
   playEffectFunction: () => any = () => {}
+
+  renderingEventFunction: (start: boolean) => any = () => {}
 
   isPlaying = false
 
@@ -206,7 +220,7 @@ export class AnimatedScene {
   }
 
   end() {
-    this.totalSceneTicks = this.sceneCalculationTick + 1
+    this.totalSceneTicks = this.sceneCalculationTick 
   }
 
   registerAudio(audioPath: string) {
@@ -341,10 +355,6 @@ export class AnimatedScene {
 
       this.renderCurrentFrame()
       animateCounter++
-
-      if (animateCounter % 10 === 0) {
-        logCameraState(this.camera)
-      }
     }
     animate()
   }
@@ -387,6 +397,7 @@ export class AnimatedScene {
   }
 
   async render() {
+    this.renderingEventFunction(true)
     this.isRendering = true
     this.isPlaying = true
     this.stopControls()
@@ -449,6 +460,7 @@ export class AnimatedScene {
 
     this.isPlaying = false
     this.startControls()
+    this.renderingEventFunction(false)
   }
 
   play() {
@@ -459,14 +471,14 @@ export class AnimatedScene {
     this.isPlaying = true
     this.stopControls()
     await this.jumpToFrameAtIndex(fromFrame)
-    logCameraState(this.camera)
 
     let currentFrame = fromFrame
     let numberCalledAnimate = 0
     const animate = async (trace: boolean) => {
       if (!this.isPlaying) return
       if (currentFrame <= toFrame) {
-        if (numberCalledAnimate % animationFPSThrottle === 0) {
+        // Still modulus since the requestAnimationFrame runs at the screenFPS rate, not timelineFPS rate
+        if (numberCalledAnimate % animationFPSDivider === 0) {
           this.sceneRenderTick = currentFrame
           //To not apply trace twice if we just jumped to startframe (and thus tranced it)
           await this.traceCurrentFrame(this.sceneRenderTick, true, !trace)

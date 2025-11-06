@@ -1,4 +1,5 @@
-import { millisToTicks } from './helpers'
+import { millisToTicks } from "../scene/sceneClass"
+
 
 export const concatInterpols = (...interpolations: number[][]) => {
   return interpolations.reduce((acc, curr) => acc.concat(curr), [])
