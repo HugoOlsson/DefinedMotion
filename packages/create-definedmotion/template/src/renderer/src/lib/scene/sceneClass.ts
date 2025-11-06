@@ -23,7 +23,8 @@ export enum SpaceSetting {
 
 export enum HotReloadSetting {
   TraceFromStart,
-  BeginFromCurrent
+  BeginFromCurrent,
+  BeginFreshOnSave
 }
 
 type SceneInstruction = (tick: number) => any
@@ -77,6 +78,7 @@ export class AnimatedScene {
 
   private buildFunction: (scene: this) => any
 
+  public hotReloadSetting: HotReloadSetting
   private traceFromStart: boolean
 
   private controlsAnimationFrameId: number | null = null
@@ -86,6 +88,7 @@ export class AnimatedScene {
   private isRendering = false
   private doNotPlayAudio = false
   private renderingAudioGather: AudioInScene[] = []
+  
 
   constructor(
     pixelsWidth: number,
@@ -97,7 +100,8 @@ export class AnimatedScene {
     this.container = globalContainerRef
     this.pixelsHeight = pixelsHeight
     this.pixelsWidth = pixelsWidth
-    this.traceFromStart = hotReloadSetting === HotReloadSetting.TraceFromStart
+    this.hotReloadSetting = hotReloadSetting
+    this.traceFromStart = hotReloadSetting !== HotReloadSetting.BeginFromCurrent
 
     const threeDim = spaceSetting === SpaceSetting.ThreeDim
 
