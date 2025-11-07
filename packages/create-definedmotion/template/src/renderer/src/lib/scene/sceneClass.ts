@@ -113,6 +113,8 @@ export class AnimatedScene {
   private isRendering = false
   private doNotPlayAudio = false
   private renderingAudioGather: AudioInScene[] = []
+
+  private playbackTargetDistance: number | null = null
   
 
   constructor(
@@ -207,6 +209,21 @@ export class AnimatedScene {
     }
   }
 
+  addDeferredAnims(...futureAnimations: (() => UserAnimation)[]) {
+    // Execute once during planning just to get durations
+    const tempAnims = futureAnimations.map(fn => fn())
+    const longest = Math.max(...tempAnims.map((a) => a.interpolation.length))
+    
+    this.do((tick) => {
+      const calculatedAnimations: UserAnimation[] = []
+      for (const futureAnimation of futureAnimations) {
+        calculatedAnimations.push(futureAnimation()) // Execute again at runtime
+      }
+      this.insertAnimAt(tick, ...calculatedAnimations)
+    })
+    this.sceneCalculationTick += longest
+  }
+
   addSequentialBackgroundAnims(...sequentialAnimations: UserAnimation[]) {
     let padding = 0
     for (const animation of sequentialAnimations) {
@@ -299,24 +316,17 @@ export class AnimatedScene {
   }
 
   private syncControlsWithCamera() {
-    // Get the direction vector (works for both camera types)
-    const direction = new THREE.Vector3(0, 0, -1)
+  const dir = new THREE.Vector3();
+  this.camera.getWorldDirection(dir); // works for both camera types
 
-    // Use the appropriate transformation based on camera type
-    if (this.camera.type === 'OrthographicCamera') {
-      direction.transformDirection(this.camera.matrixWorld)
-    } else {
-      direction.applyQuaternion(this.camera.quaternion)
-    }
+  const distance =
+    this.playbackTargetDistance ??
+    this.controls.target.distanceTo(this.camera.position);
 
-    // Calculate the new target (same for both camera types)
-    const targetDistance = this.controls.target.distanceTo(this.controls.object.position)
-    const newTarget = this.camera.position.clone().add(direction.multiplyScalar(targetDistance))
-    this.controls.target.copy(newTarget)
-
-    // Reset the internal state
-    this.controls.update()
-  }
+  const newTarget = this.camera.position.clone().add(dir.multiplyScalar(distance));
+  this.controls.target.copy(newTarget);
+  this.controls.update();
+} 
 
   private startControls() {
     this.controls.enabled = true
@@ -391,9 +401,12 @@ export class AnimatedScene {
     this.isPlaying = false
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
 
-    this.syncControlsWithCamera()
 
-    this.startControls()
+    // use the captured distance one last time
+    this.syncControlsWithCamera();
+    this.playbackTargetDistance = null;
+
+    this.startControls();
   }
 
   async render() {
@@ -472,6 +485,10 @@ export class AnimatedScene {
     this.stopControls()
     await this.jumpToFrameAtIndex(fromFrame)
 
+    // Capture a distance that OrbitControls will keep during play
+  this.playbackTargetDistance =
+    this.controls.target.distanceTo(this.camera.position)
+
     let currentFrame = fromFrame
     let numberCalledAnimate = 0
     const animate = async (trace: boolean) => {
@@ -482,6 +499,17 @@ export class AnimatedScene {
           this.sceneRenderTick = currentFrame
           //To not apply trace twice if we just jumped to startframe (and thus tranced it)
           await this.traceCurrentFrame(this.sceneRenderTick, true, !trace)
+
+          // --- Keep controls.target aligned with the animated camera ---
+          if (this.playbackTargetDistance != null) {
+            const camDir = new THREE.Vector3()
+            this.camera.getWorldDirection(camDir)         // forward (-Z in view space)
+            const target = this.camera.position.clone()
+              .add(camDir.multiplyScalar(this.playbackTargetDistance))
+            this.controls.target.copy(target)
+            this.controls.update() // ok to call while disabled; just updates internals
+          }
+
           this.renderCurrentFrame()
           currentFrame++
           await this.playEffectFunction()
