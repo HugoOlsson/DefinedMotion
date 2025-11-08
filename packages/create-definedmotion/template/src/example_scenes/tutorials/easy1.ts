@@ -37,18 +37,18 @@ export function tutorial_easy1(): AnimatedScene {
       // And give a function that is called for each frame with the current interpolation value
       const anim = createAnim(easeInOutQuad(-5, 5, 500), (value) => (circle.position.x = value))
 
-      // We use "addAnim" to schedule an animation, it will run from the frame (tick) it was added at
+      // We use "addAnims" to schedule an animation, it will run from the frame (tick) it was added at
       // Since this is our first added animation in this scene, we are currently at tick 0, So it will just add to the start.
       // But say that we are in a complex animation and our previous buildings would mean that we are at frame 49878 for example (we wouldn't know this)
       // Then it just adds the animation with that offset
-      scene.addAnim(anim)
+      scene.addAnims(anim)
 
       // To make the circle also go back, we can reverse the entire animation and add it again
       // Notice that we are copying it, this is so that the reverse() doesn't affect the original variable "anim"
-      scene.addAnim(anim.copy().reverse())
+      scene.addAnims(anim.copy().reverse())
 
       // We now finally add a function that will be called at each frame (tick) in our animation
-      // This doesn't push the tick forward like the "addAnim" does.
+      // This doesn't push the tick forward like the "addAnims" does.
       // It just declares a function that should be run at each frame
       // For this animation, we want to set a color to the circle at each frame.
       scene.onEachTick((tick) => {

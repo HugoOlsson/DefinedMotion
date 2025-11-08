@@ -82,7 +82,7 @@ export const alternativesScene = (): AnimatedScene => {
         }
       })
 
-      scene.addAnim(switchAnimation)
+      scene.addAnims(switchAnimation)
     }
   )
 }

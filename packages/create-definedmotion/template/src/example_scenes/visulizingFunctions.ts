@@ -157,11 +157,11 @@ export const functionsAnimation = (): AnimatedScene => {
         scene.addSequentialBackgroundAnims(
           morphAnimation(plotLine, vecFuncs[i], vecFuncs[i + 1], 300)
         )
-        scene.addAnim(fadeOut(textNode, 150))
+        scene.addAnims(fadeOut(textNode, 150))
         scene.do(async () => {
           await updateText(textNode, functions[i + 1][0])
         })
-        scene.addAnim(fadeIn(textNode, 150))
+        scene.addAnims(fadeIn(textNode, 150))
         scene.addWait(800)
       }
 

@@ -34,7 +34,7 @@ export function test_deferred_anims2(): AnimatedScene {
         easeInOutQuad(-3, 0, 600),
         (x) => (box.position.x = x)
       )
-      scene.addAnim(moveToCenter)
+      scene.addAnims(moveToCenter)
 
       // Give a short beat
       scene.addWait(300)

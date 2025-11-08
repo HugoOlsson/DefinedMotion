@@ -191,7 +191,7 @@ export class AnimatedScene {
     return ticksToMillis(this.sceneRenderTick)
   }
 
-  addAnim(...animations: UserAnimation[]) {
+  addAnims(...animations: UserAnimation[]) {
     const longest = Math.max(...animations.map((a) => a.interpolation.length))
     for (const animation of animations) {
       this.appendAnimation(animation)
@@ -199,7 +199,7 @@ export class AnimatedScene {
     this.sceneCalculationTick += longest
   }
 
-  insertAnimAt(tick: number, ...animations: UserAnimation[]) {
+  insertAnimsAt(tick: number, ...animations: UserAnimation[]) {
     for (const animation of animations) {
       const internalAnimation: InternalAnimation = {
         startTick: tick,
@@ -222,7 +222,7 @@ export class AnimatedScene {
       for (const futureAnimation of futureAnimations) {
         calculatedAnimations.push(futureAnimation()) // Execute again at runtime
       }
-      this.insertAnimAt(tick, ...calculatedAnimations)
+      this.insertAnimsAt(tick, ...calculatedAnimations)
     })
     this.sceneCalculationTick += longest
   }
@@ -279,7 +279,7 @@ export class AnimatedScene {
   }
 
   addWait(duration: number) {
-    this.addAnim(createAnim(easeConstant(0, duration), () => {}))
+    this.addAnims(createAnim(easeConstant(0, duration), () => {}))
   }
 
   async jumpToFrameAtIndex(index: number, notSize: boolean = false) {

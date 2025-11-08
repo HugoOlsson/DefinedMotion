@@ -18,7 +18,7 @@ export const test_updater1 = (): AnimatedScene => {
         moveAnimation.updater = () => {}
 
 
-        dm.addAnim(moveAnimation)
-        dm.addAnim(moveAnimation.copy().reverse())
+        dm.addAnims(moveAnimation)
+        dm.addAnims(moveAnimation.copy().reverse())
     })
 }

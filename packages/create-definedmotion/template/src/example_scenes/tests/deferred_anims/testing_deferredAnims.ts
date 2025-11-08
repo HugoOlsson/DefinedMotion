@@ -11,7 +11,7 @@ import { createAnim } from '$renderer/lib/animation/protocols'
  * Demo: proves that addDeferredAnims (closure-based) captures runtime state.
  * - You can drag/orbit before pressing Play.
  * - When playback reaches the deferred blocks, the move starts from the *live* camera pose.
- * - Also shows an eager animation (card rocking) that’s precomputed with addAnim.
+ * - Also shows an eager animation (card rocking) that’s precomputed with addAnims.
  */
 export function test_deferred_anims(): AnimatedScene {
   return new AnimatedScene(
@@ -32,8 +32,8 @@ export function test_deferred_anims(): AnimatedScene {
 
       // Eager anim (pure, precomputable) — keeps the scene alive regardless of camera
       const rock = createAnim(easeInOutQuad(-0.3, 0.3, 180), (v) => (card.rotation.z = v))
-      scene.addAnim(rock)
-      scene.addAnim(rock.copy().reverse()) // 360 ticks total
+      scene.addAnims(rock)
+      scene.addAnims(rock.copy().reverse()) // 360 ticks total
       scene.addWait(800)
 
       // -------- Deferred camera move #1 (uses your addDeferredAnims signature) --------

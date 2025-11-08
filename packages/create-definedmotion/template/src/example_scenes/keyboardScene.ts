@@ -329,7 +329,7 @@ export const keyboardScene = (): AnimatedScene => {
       )
       const targetRot = new THREE.Quaternion(-0.6683053, -0.001480137, -0.001329754, 0.7438844)
 
-      scene.addAnim(
+      scene.addAnims(
         moveRotateCameraAnimation3D(
           scene.camera,
           scene.camera.position,
@@ -395,42 +395,42 @@ export const keyboardScene = (): AnimatedScene => {
       const deleteSpeed = 30
 
       const line1 = 'Hello Instagram!'
-      scene.addAnim(typeAnimation(scene, line1, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line1, text, typeSpeed))
       scene.addWait(1000)
-      scene.addAnim(
+      scene.addAnims(
         typeAnimation(scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed)
       )
 
       scene.addWait(300)
       const line2 = 'I am just testing my programmatic animation library!'
-      scene.addAnim(typeAnimation(scene, line2, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line2, text, typeSpeed))
       scene.addWait(1000)
-      scene.addAnim(
+      scene.addAnims(
         typeAnimation(scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed)
       )
 
       scene.addWait(300)
       const line3 = `It is inspired by 3Blue1Brown's Manim and Motion Canvas. It is meant for technical and mathematical animations!`
-      scene.addAnim(typeAnimation(scene, line3, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line3, text, typeSpeed))
       scene.addWait(1000)
-      scene.addAnim(
+      scene.addAnims(
         typeAnimation(scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed)
       )
 
       scene.addWait(300)
       const line4 =
         'One of its features is that when you save your code, the animation updates immediately in the viewport. No need to render the video, open the file and then see the result!'
-      scene.addAnim(typeAnimation(scene, line4, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line4, text, typeSpeed))
       scene.addWait(1000)
-      scene.addAnim(
+      scene.addAnims(
         typeAnimation(scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed)
       )
 
       scene.addWait(300)
       const line5 = `Use the project by visiting "DefinedMotion" by Hugo Olsson on GitHub, thanks!`
-      scene.addAnim(typeAnimation(scene, line5, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line5, text, typeSpeed))
       scene.addWait(1000)
-      scene.addAnim(
+      scene.addAnims(
         typeAnimation(scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed)
       )
 

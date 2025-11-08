@@ -124,7 +124,7 @@ export function tutorial_easy3(): AnimatedScene {
       })
 
       // Start the slide show
-      scene.addAnim(switcher)
+      scene.addAnims(switcher)
 
       // Let it run a bit after the last change (nice tail for render/export)
       scene.addWait(1_000)

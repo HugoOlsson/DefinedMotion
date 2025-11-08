@@ -369,7 +369,7 @@ export const fourierSeriesScene = (): AnimatedScene => {
 
             if (mode2 === 2) {
               for (let i = 0; i < relationGroups.length; i++) {
-                scene.insertAnimAt(tick, zoomOut(relationGroups[i].latexText, 200))
+                scene.insertAnimsAt(tick, zoomOut(relationGroups[i].latexText, 200))
               }
             }
           }
@@ -378,13 +378,13 @@ export const fourierSeriesScene = (): AnimatedScene => {
 
           for (let i = 0; i < relationGroups.length; i++) {
             if (i !== Number(mode)) {
-              scene.insertAnimAt(
+              scene.insertAnimsAt(
                 tick,
                 fade(relationGroups[i].group, 200, relationGroups[i].opacity, 0.1)
               )
               relationGroups[i].opacity = 0.1
             } else {
-              scene.insertAnimAt(
+              scene.insertAnimsAt(
                 tick,
                 fade(relationGroups[i].group, 200, relationGroups[i].opacity, 1)
               )
