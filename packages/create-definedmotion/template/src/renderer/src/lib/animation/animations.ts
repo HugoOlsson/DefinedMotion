@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { UserAnimation } from './protocols'
 import { easeConstant, easeInOutQuad } from './interpolations'
+import { updateSVGShape } from '../rendering/svg/svgObjectHelpers'
 
 export const setOpacity = <T extends THREE.Object3D>(
   object: T,
@@ -211,4 +212,16 @@ export const rotateCamera3D = (
     }
     camera.quaternion.copy(startRotation).slerp(rotationTarget, progress)
   })
+}
+
+export const updateSVGAnim = (currentSVGObject: THREE.Group, toSvg: string, durationMs: number = 300, targetWidth?: number) => {
+    const interpolation = easeInOutQuad(-1,1, durationMs)
+    const middleValue = interpolation[Math.ceil(interpolation.length/2)]
+    return new UserAnimation(interpolation, (value) => {
+        
+        if (value === middleValue) {
+          updateSVGShape(currentSVGObject, toSvg, {targetWidth: targetWidth})
+        }
+        setOpacity(currentSVGObject, Math.abs(value))
+    })
 }

@@ -1,6 +1,12 @@
 import * as THREE from 'three'
-import type { SceneComponents } from './protocols'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+
+export interface SceneComponents {
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
+  renderer: THREE.WebGLRenderer
+  scene: THREE.Scene
+  controls: OrbitControls
+}
 
 export const createScene = (
   container: HTMLElement,

@@ -1,5 +1,5 @@
 import { createFastText, createLine, PaddedLine } from '../renderer/src/lib/rendering/objects2d'
-import { createSVGShape } from '../renderer/src/lib/rendering/svg/parsing'
+
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
 import { addBackgroundGradient } from '../renderer/src/lib/rendering/lighting3d'
@@ -7,7 +7,9 @@ import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import { fade, setOpacity, zoomOut } from '../renderer/src/lib/animation/animations'
 import tickSound from '$assets/audio/tick_sound.mp3'
 import { linspace } from '../renderer/src/lib/mathHelpers/vectors'
-import { latexToSVG } from '../renderer/src/lib/rendering/svg/rastered'
+import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
+import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
+
 
 const getCircleSVG = (color: string, percentageStrokeWidth: number = 4) => `
 <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -93,7 +95,7 @@ interface RelationGroup {
   connectionLines: PaddedLine[]
   topGroup: THREE.Group
   relation: Relation
-  latexText: THREE.Mesh
+  latexText: THREE.Group
   opacity: number
 }
 
@@ -301,8 +303,8 @@ export const fourierSeriesScene = (): AnimatedScene => {
 
         let svgString = latexToSVG(relation.latexString) // 1.5x scaling
 
-        const svgImage = await createSVGPlane(svgString, 3, 6)
-        svgImage.position.set(-9, -11, -1)
+        const svgImage = createSVGShape(svgString, 11)
+        svgImage.position.set(-13, -11, -1)
 
         topGroup.add(svgImage)
 

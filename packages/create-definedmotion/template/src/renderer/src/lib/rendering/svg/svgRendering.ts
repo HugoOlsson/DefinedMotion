@@ -1,0 +1,83 @@
+// svg-latex.ts
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
+import * as THREE from 'three';
+
+const CONTENT_NAME = 'SVGContent';
+
+export function createSVGShape(svg: string, targetWidth: number, detail = 2): THREE.Group {
+  const loader = new SVGLoader();
+  const svgData = loader.parse(svg);
+
+  // OUTER: stable container (caller may position/scale this)
+  const container = new THREE.Group();
+
+  // INNER: all normalization happens here
+  const content = new THREE.Group();
+  content.name = CONTENT_NAME;
+  content.scale.y = -1; // flip SVG Y
+
+  const CURVE_SEGMENTS = Math.max(12, Math.round(24 * detail));
+
+  for (const path of svgData.paths) {
+    const style = path.userData?.style || {};
+    const fillColor   = style.fill   && style.fill   !== 'none' ? style.fill   : null;
+    const strokeColor = style.stroke && style.stroke !== 'none' ? style.stroke : null;
+    const strokeWidth = +style.strokeWidth || 0;
+    const opacity       = style.opacity != null ? +style.opacity : 1;
+    const fillOpacity   = style.fillOpacity   != null ? +style.fillOpacity   : opacity;
+    const strokeOpacity = style.strokeOpacity != null ? +style.strokeOpacity : opacity;
+
+    if (fillColor) {
+      const shapes = SVGLoader.createShapes(path);
+      for (const shape of shapes) {
+        const geom = new THREE.ShapeGeometry(shape, CURVE_SEGMENTS);
+        const mat = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(fillColor),
+          side: THREE.DoubleSide,
+          transparent: fillOpacity < 1,
+          opacity: fillOpacity,
+          depthTest: true,
+          depthWrite: true,
+          toneMapped: false,
+        });
+        content.add(new THREE.Mesh(geom, mat));
+      }
+    }
+
+    if (strokeColor && strokeWidth > 0) {
+      const svgStyle = {
+        ...style,
+        strokeWidth,
+        linecap: style.linecap || 'butt',
+        linejoin: style.linejoin || 'miter',
+        miterlimit: style.miterlimit != null ? +style.miterlimit : 4,
+      };
+      const strokeMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(strokeColor),
+        transparent: strokeOpacity < 1,
+        opacity: strokeOpacity,
+        depthTest: true,
+        depthWrite: true,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      });
+      for (const sub of path.subPaths) {
+        const pts = sub.getPoints();
+        const geom = SVGLoader.pointsToStroke(pts, svgStyle);
+        if (geom) content.add(new THREE.Mesh(geom, strokeMat));
+      }
+    }
+  }
+
+  // normalize width & center ON THE INNER CONTENT
+  const preBox = new THREE.Box3().setFromObject(content);
+  const preSize = preBox.getSize(new THREE.Vector3());
+  if (preSize.x > 0) content.scale.multiplyScalar(targetWidth / preSize.x);
+
+  const box = new THREE.Box3().setFromObject(content);
+  const center = box.getCenter(new THREE.Vector3());
+  content.position.sub(center);
+
+  container.add(content);
+  return container;
+}
