@@ -38,7 +38,7 @@ Visit /src/example_scenes and look how scenes are made, this is likely a good wa
 ```ts
 export const yourSceneName = (): AnimatedScene => {
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart, async (scene) => {
+    HotReloadSetting.TraceFromStart, async (dm) => {
 
   })
 }
@@ -49,18 +49,21 @@ export const yourSceneName = (): AnimatedScene => {
 ```ts
 
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart, async (scene) => {
+    HotReloadSetting.TraceFromStart, async (dm) => {
     ...
 
-    scene.addAnims(/* add animations, these will run in parallel*/)
+    dm.addAnims(/* add animations, these will run in parallel*/)
 
-    scene.onEachTick((tick, time) => {
+    dm.addDeferredAnims(/* add animations functions, these will run in parallel. 
+    The animations will be evaluated later to use the values that will be when the animation starts.*/)
+
+    dm.onEachTick((frame, time) => {
         /* Run this function for every tick/frame */
         /* This is often used to set up dependencies or calculated movements */
         /* Conceptually it can be "On each tick, set the line endings at the position of sphere A and sphere B", this will make the line updated regardless of what happens to sphere A and B */
     })
 
-    scene.do(() => {
+    dm.do(() => {
         /* Add instruction at current tick/frame.
         This can be any function, it will be called at the tick.
 
@@ -68,18 +71,26 @@ export const yourSceneName = (): AnimatedScene => {
         */
     })
 
-    scene.addWait(1000) //Will add an animation that does nothing (waits) for the duration
+     dm.doAt(frame, () => {
+        /* Add instruction at a certain tick/frame.
+        This can be any function, it will be called at the tick.
 
-    scene.insertAnimsAt(tick, /* animations */ ) // Works like addAnims(...) but you can just insert an animation anywhere anytime. You can insert animations in the future or present during onEachTick. This is very powerful for complex animations.
+        Often used to for example add elements to the scene
+        */
+    })
 
-    scene.addSequentialBackgroundAnims(/* Animations, these will run in sequence */) // This function allows you to add animations that will not push the timeline pointer, if you are at frame X and add an animation that is 300 frames long, this will not make the next added thing to be at X+300, but instead just X (because this adds it in the "background").
+    dm.addWait(1000) //Will add an animation that does nothing (waits) for the duration
+
+    dm.insertAnimsAt(frame, /* animations */ ) // Works like addAnims(...) but you can just insert an animation anywhere anytime. You can insert animations in the future or present during onEachTick. This is very powerful for complex animations.
+
+    dm.addSequentialBackgroundAnims(/* Animations, these will run in sequence */) // This function allows you to add animations that will not push the timeline pointer, if you are at frame X and add an animation that is 300 frames long, this will not make the next added thing to be at X+300, but instead just X (because this adds it in the "background").
 
 
     // Register an audio before use, this function is often used in the absolute beginning of the scene.
-    scene.registerAudio(/* audio path */)
+    dm.registerAudio(/* audio path */)
 
     // Anywhere in the code (but after registerAudio of the sound), play the sound
-    scene.playAudio(/* audio path */, volume)
+    dm.playAudio(/* audio path */, volume)
     ...
   })
 
@@ -119,13 +130,13 @@ export function tutorial_easy1(): AnimatedScene {
     1920,
     SpaceSetting.TwoDim,
     HotReloadSetting.TraceFromStart,
-    (scene) => {
+    (dm) => {
       // Helper function to create a "THREE.CircleGeometry"
       // You can just use any Three.js code if you want
       const circle = createCircle(5)
 
       // Add our circle to the scene
-      scene.add(circle)
+      dm.add(circle)
 
       // Create an animation that makes it move from left to right
       // This is very modular and easy to build on
@@ -138,17 +149,17 @@ export function tutorial_easy1(): AnimatedScene {
       // Since this is our first added animation in this scene, we are currently at tick 0, So it will just add to the start.
       // But say that we are in a complex animation and our previous buildings would mean that we are at frame 49878 for example (we wouldn't know this)
       // Then it just adds the animation with that offset
-      scene.addAnims(anim)
+      dm.addAnims(anim)
 
       // To make the circle also go back, we can reverse the entire animation and add it again
       // Notice that we are copying it, this is so that the reverse() doesn't affect the original variable "anim"
-      scene.addAnims(anim.copy().reverse())
+      dm.addAnims(anim.copy().reverse())
 
       // We now finally add a function that will be called at each frame (tick) in our animation
       // This doesn't push the tick forward like the "addAnims" does.
       // It just declares a function that should be run at each frame
       // For this animation, we want to set a color to the circle at each frame.
-      scene.onEachTick((tick) => {
+      dm.onEachTick((tick) => {
         circle.material.color = new THREE.Color().setRGB(posXSigmoid(circle.position.x / 4), 1, 1)
       })
     }
