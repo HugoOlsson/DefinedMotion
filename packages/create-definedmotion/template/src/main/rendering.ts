@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
+import { fileURLToPath } from 'url'
 
 export interface AudioInScene {
   audioPath: string
@@ -136,28 +137,42 @@ export function renderVideo(options: RenderOptions): Promise<string> {
     }
   })
 }
-/*
-function generateFFmpegAudioCommand(
-  options: RenderOptions,
-  outputFolder: string,
-  id: string
-): string {
-  const inputs: string[] = []
-  const filterChains: string[] = []
-  const amixInputs: string[] = []
 
-  options.renderingAudioGather.forEach((audio, index) => {
-    const startTime = audio.atFrame / options.fps
-    inputs.push(`-i ./src/renderer${audio.audioPath}`)
-    filterChains.push(`[${index}:a]asetpts=PTS+${startTime}/TB,volume=${audio.volume}[a${index}]`)
-    amixInputs.push(`[a${index}]`)
-  })
 
-  const amixFilter = `${amixInputs.join('')}amix=inputs=${amixInputs.length}:duration=longest[aout]`
-  const filterComplex = [...filterChains, amixFilter].join('; ')
+function toFsPath(p: string): string {
+  if (!p) throw new Error('empty path')
 
-  return `ffmpeg ${inputs.join(' ')} -filter_complex "${filterComplex}" -map "[aout]" -c:a libmp3lame -q:a 2 ${outputFolder}/${id}.mp3`
-}*/
+    // Handle Vite dev absolute path
+  if (p.startsWith('/@fs/')) {
+    // Keep the leading slash before "Users"
+    return decodeURIComponent(p.slice(4))  // results in "/Users/…"
+    // Alternatively:
+    // return decodeURIComponent(p.replace(/^\/@fs/, ''))
+  }
+
+  // 2) file:// URL
+  try {
+    const u = new URL(p)
+    if (u.protocol === 'file:') return fileURLToPath(u)
+  } catch {/* not a URL */}
+
+  // 3) already absolute on disk
+  if (path.isAbsolute(p)) return p
+
+  // 4) fallback: try typical asset roots
+  const cleaned = p.replace(/^\/?assets\//, '') // allow "assets/foo.mp3" or "/assets/foo.mp3"
+  const guesses = [
+    path.join(process.cwd(), 'src', 'renderer', 'assets', cleaned),     // dev
+    path.join(process.resourcesPath, 'assets', cleaned),                 // prod packaged
+    path.join(process.cwd(), cleaned)                                    // last resort
+  ]
+  for (const g of guesses) {
+    if (fs.existsSync(g)) return g
+  }
+
+  // final fallback: return as-is (FFmpeg will error, but at least we see the attempted path)
+  return p
+}
 
 function buildAudioMixCommand(renderOptions: RenderOptions, outputFolder: string, id: string) {
   const { fps, renderingAudioGather } = renderOptions
@@ -166,7 +181,9 @@ function buildAudioMixCommand(renderOptions: RenderOptions, outputFolder: string
   let inputIndexes: string[] = []
 
   renderingAudioGather.forEach((audio, index) => {
-    inputs.push(`-i ./src/renderer${audio.audioPath}`)
+     // Prefer an already-provided absolute fsPath (if you later add it); else normalize here
+    const inputPath = (audio as any).fsPath ?? toFsPath(audio.audioPath)
+    inputs.push(`-i "${inputPath}"`)
     const delayMs = Math.floor((audio.atFrame / fps) * 1000)
     // adelay syntax: "adelay=delay_in_ms|delay_in_ms"
     filters.push(`[${index}:a]adelay=${delayMs}|${delayMs},volume=${audio.volume}[a${index}]`)

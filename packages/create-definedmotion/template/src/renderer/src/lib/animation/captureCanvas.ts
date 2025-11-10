@@ -68,18 +68,4 @@ export const triggerEncoder = async (
   } catch (error) {
     console.error('Error calling render:', error)
   }
-  /*
-  
-  exec(
-    './rust-media/target/release/rust-media ' + Math.round(renderOutputFps()).toString(),
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error executing command: ${error}`)
-        return
-      }
-      console.log(`stdout: ${stdout}`)
-      console.error(`stderr: ${stderr}`)
-    }
-  )
-    */
 }
