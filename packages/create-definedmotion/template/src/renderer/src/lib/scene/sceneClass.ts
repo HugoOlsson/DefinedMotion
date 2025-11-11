@@ -13,7 +13,16 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
 import { animationFPSDivider, renderSkip } from '../../../../entry'
 import { addDestroyFunction } from '../general/onDestory'
-import { AudioInScene, loadAllAudio, playAudio, registerAudio } from '../audio/loader'
+import {
+  AudioInScene,
+  loadAllAudio,
+  playAudio,
+  registerAudio,
+  seekToTick as audioSeekToTick,
+  pauseAll as audioPauseAll,
+  resumeAll as audioResumeAll,
+  stopAll as audioStopAll
+} from '../audio/manager'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -309,9 +318,12 @@ export class AnimatedScene {
     this.sceneRenderTick = index
     await this.playEffectFunction()
 
-    // console.log('INSTRUCTIONS', this.sceneInstructions)
-
     this.doNotPlayAudio = false
+
+    // Only (re)start audio when actively playing or rendering
+    if (this.isPlaying && !this.doNotPlayAudio && !this.isRendering) {
+      audioSeekToTick(this.sceneRenderTick, this.planedSounds, timelineFPS)
+    }
   }
 
   getAspectRatio() {
@@ -405,6 +417,7 @@ export class AnimatedScene {
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
 
 
+    audioPauseAll()
     // use the captured distance one last time
     this.syncControlsWithCamera();
     this.playbackTargetDistance = null;
@@ -471,10 +484,11 @@ export class AnimatedScene {
     div.style.zIndex = originalZIndex
 
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
+    this.isPlaying = false
     await this.jumpToFrameAtIndex(0)
     this.renderCurrentFrame()
 
-    this.isPlaying = false
+    
     this.startControls()
     this.renderingEventFunction(false)
   }
@@ -487,6 +501,9 @@ export class AnimatedScene {
     this.isPlaying = true
     this.stopControls()
     await this.jumpToFrameAtIndex(fromFrame)
+
+    // If we were previously paused and had partial offsets captured, this also ensures clean resume:
+    audioResumeAll()
 
     // Capture a distance that OrbitControls will keep during play
   this.playbackTargetDistance =
@@ -604,6 +621,7 @@ export class AnimatedScene {
 
   // Replace recreateComponents with reset logic
   private resetComponents(notSize: boolean) {
+    audioStopAll()   
     this.resetSceneVars()
     this.resetScene()
     this.resetCamera()

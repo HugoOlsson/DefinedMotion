@@ -23,6 +23,9 @@
   let screenRefreshRate = $state(0) 
   let isRendering = $state(false) 
 
+  let isScrubbing = false
+  let wasPlayingBeforeScrub = false
+
 
   function formatMs(ms: number) {
     const sign = ms < 0 ? '-' : ''
@@ -58,9 +61,10 @@
   }
 
 function updateSliderOnly() {
-  if (!scene || !sliderElement) return;
-  const denom = Math.max(1, (scene.totalSceneTicks - 1));
-  (sliderElement as any).value = (scene.sceneRenderTick / denom) * maxSliderValue;
+  if (!scene || !sliderElement) return
+  if (isScrubbing) return            // <-- single guard
+  const denom = Math.max(1, (scene.totalSceneTicks - 1))
+  ;(sliderElement as any).value = (scene.sceneRenderTick / denom) * maxSliderValue
 }
 
 function updateTextsOnly() {
@@ -108,6 +112,10 @@ function updateUIImmediate() {
     }
     scene.renderingEventFunction = (isStart) => {
       isRendering = isStart
+       if (!isStart) {
+        // render just finished; force UI to reflect the reset frame
+        updateUIImmediate()
+      }
     }
     const currentWidth = animationWindow.clientWidth
     animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
@@ -206,8 +214,34 @@ export async function copyToClipboard(text: string): Promise<void> {
       type="range"
       min="0"
       max={maxSliderValue}
-      oninput={(e: any) => handleSliderChange(Number(e.target.value))}
+
       class="w-full focus:outline-none"
+      onpointerdown={() => {
+        if (!scene) return
+        isScrubbing = true
+        wasPlayingBeforeScrub = scene.isPlaying
+        if (scene.isPlaying) {
+          scene.pause()                // silences audio and stops RAF
+          isPlayingStateVar = false
+        }
+      }}
+      oninput={(e: any) => {
+        // while scrubbing: jump visuals quietly; when not scrubbing, behaves like before
+        const v = Number(e.target.value)
+        handleSliderChange(v)
+      }}
+      onpointerup={(e: any) => {
+        if (!scene) return
+        isScrubbing = false
+        const v = Number((e.target as HTMLInputElement).value)
+        // ensure we’re at the dropped frame
+        handleSliderChange(v)
+        if (wasPlayingBeforeScrub) {
+          // resume cleanly from here
+          scene.playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
+          isPlayingStateVar = true
+        }
+      }}
     />
   </div>
 
