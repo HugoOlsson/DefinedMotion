@@ -96,6 +96,7 @@ export class AnimatedScene {
     position: THREE.Vector3
     rotation: THREE.Euler
     zoom?: number
+    fov?: number  
     left?: number
     right?: number
     top?: number
@@ -652,6 +653,7 @@ export class AnimatedScene {
       state.bottom = camera.bottom
     } else if (camera instanceof THREE.PerspectiveCamera) {
       state.zoom = camera.zoom
+      state.fov  = (camera as THREE.PerspectiveCamera).fov
     }
 
     return state
@@ -692,6 +694,9 @@ export class AnimatedScene {
 
     if (cam instanceof THREE.PerspectiveCamera) {
       cam.zoom = this.initialCameraState.zoom!
+      if (this.initialCameraState.fov != null) {
+        (cam as THREE.PerspectiveCamera).fov = this.initialCameraState.fov  
+      }
     }
   }
 

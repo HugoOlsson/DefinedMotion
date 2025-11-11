@@ -3,6 +3,9 @@ import { UserAnimation } from './protocols'
 import { easeConstant, easeInOutQuad } from './interpolations'
 import { updateSVGShape } from '../rendering/svg/svgObjectHelpers'
 
+
+
+// General function to set the opacity of any Three object
 export const setOpacity = <T extends THREE.Object3D>(
   object: T,
   opacity: number,
@@ -25,6 +28,7 @@ export const setOpacity = <T extends THREE.Object3D>(
   return object
 }
 
+// General function to set the scale of any Three object
 export const setScale = <T extends THREE.Object3D>(
   object: T,
   scale: number | { x?: number; y?: number; z?: number },
@@ -93,68 +97,6 @@ export const zoomIn = (
 export const zoomOut = (object: THREE.Object3D, duration: number = 800, endpoint: number = 1) =>
   zoomIn(object, duration, endpoint).reverse()
 
-export const moveToAnimation = (
-  current: THREE.Object3D,
-  target: THREE.Vector3,
-  duration: number = 800
-): UserAnimation => {
-  // Store initial position and calculate target position
-  const startPosition = current.position.clone()
-  const targetWorldPosition = target
-
-  // Convert to current object's parent space if needed
-  const targetLocalPosition = new THREE.Vector3()
-  if (current.parent) {
-    current.parent.worldToLocal(targetLocalPosition.copy(targetWorldPosition))
-  } else {
-    targetLocalPosition.copy(targetWorldPosition)
-  }
-
-  // Calculate movement delta
-  const delta = new THREE.Vector3().subVectors(targetLocalPosition, startPosition)
-
-  // Create animation with eased interpolation
-  return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
-    current.position.copy(startPosition.clone().add(delta.clone().multiplyScalar(progress)))
-    current.updateMatrixWorld()
-  })
-}
-
-export const moveCameraAnimation = (
-  camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
-  target: THREE.Vector3,
-  duration: number = 800
-): UserAnimation => {
-  // Store the target position (we'll capture the start position when animation begins)
-  const targetPosition = new THREE.Vector3(
-    target.x,
-    target.y,
-    camera.position.z // Keep the same z position
-  )
-
-  // We'll capture these values when the animation starts
-  let startPosition: THREE.Vector3
-  let delta: THREE.Vector3
-
-  // Create animation with eased interpolation
-  return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
-    // On first frame, capture the current camera position
-    if (progress === 0) {
-      startPosition = camera.position.clone()
-
-      // Calculate movement delta (only for x and y)
-      delta = new THREE.Vector3(
-        targetPosition.x - startPosition.x,
-        targetPosition.y - startPosition.y,
-        0 // No change in z
-      )
-    }
-
-    camera.position.x = startPosition.x + delta.x * progress
-    camera.position.y = startPosition.y + delta.y * progress
-    camera.updateMatrixWorld()
-  })
-}
 
 export const moveRotateCameraAnimation3D = (
   camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
@@ -196,23 +138,6 @@ export const moveCameraAnimation3D = (
   })
 }
 
-export const rotateCamera3D = (
-  camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
-  rotationTarget: THREE.Quaternion,
-  duration: number = 800
-): UserAnimation => {
-  let startRotation: THREE.Quaternion
-
-  // Create animation with eased interpolation
-  return new UserAnimation(easeInOutQuad(0, 1, duration), (progress) => {
-    // On first frame, capture the current camera position
-    if (progress === 0) {
-      startRotation = camera.quaternion.clone()
-      // Calculate movement delta (only for x and y)
-    }
-    camera.quaternion.copy(startRotation).slerp(rotationTarget, progress)
-  })
-}
 
 export const updateSVGAnim = (currentSVGObject: THREE.Group, toSvg: string, durationMs: number = 300, targetWidth?: number) => {
     const interpolation = easeInOutQuad(-1,1, durationMs)
@@ -224,4 +149,102 @@ export const updateSVGAnim = (currentSVGObject: THREE.Group, toSvg: string, dura
         }
         setOpacity(currentSVGObject, Math.abs(value))
     })
+}
+
+
+// New camera movement toolkit
+
+const cameraAnimStandardDuration = 800
+
+const Interpolation01 = (duration?: number) =>
+  easeInOutQuad(0, 1, duration ?? cameraAnimStandardDuration)
+
+/** Move camera position to a target. */
+export function moveCameraToAnim(
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  cfg: { position: THREE.Vector3 },
+  duration?: number
+): () => UserAnimation {
+  return () => {
+    const start = camera.position.clone()
+    const end = cfg.position.clone()
+    const I = Interpolation01(duration)
+    const delta = new THREE.Vector3().subVectors(end, start)
+    return new UserAnimation(I, (t) => {
+      camera.position.copy(start).addScaledVector(delta, t)
+      camera.updateMatrixWorld()
+    })
+  }
+}
+
+/** Rotate camera to a quaternion target. */
+export function rotateCameraToAnim(
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  cfg: { rotation: THREE.Quaternion },
+  duration?: number
+): () => UserAnimation {
+  return () => {
+    const startQ = camera.quaternion.clone()
+    const endQ = cfg.rotation.clone()
+    const I = Interpolation01(duration)
+    return new UserAnimation(I, (t) => {
+      camera.quaternion.copy(startQ).slerp(endQ, t)
+      camera.updateMatrixWorld()
+    })
+  }
+}
+
+/** Move and (optionally) rotate to a quaternion in one go. */
+export function flyCameraToAnim(
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  cfg: { position: THREE.Vector3; rotation?: THREE.Quaternion },
+  duration?: number
+): () => UserAnimation {
+  return () => {
+    // positions
+    const startPos = camera.position.clone()
+    const endPos = cfg.position.clone()
+    const posDelta = new THREE.Vector3().subVectors(endPos, startPos)
+
+    // rotations
+    const startQ = camera.quaternion.clone()
+    const endQ = cfg.rotation ? cfg.rotation.clone() : startQ.clone()
+
+    const I = Interpolation01(duration)
+    return new UserAnimation(I, (t) => {
+      camera.position.copy(startPos).addScaledVector(posDelta, t)
+      camera.quaternion.copy(startQ).slerp(endQ, t)
+      camera.updateMatrixWorld()
+    })
+  }
+}
+
+/** Zoom: Orthographic -> animate .zoom, Perspective -> animate .fov. */
+export function zoomCameraToAnim(
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  cfg: { zoom?: number; fov?: number }, // Ortho: zoom, Persp: fov
+  duration?: number
+): () => UserAnimation {
+  return () => {
+    const I = Interpolation01(duration)
+
+    if (camera instanceof THREE.OrthographicCamera) {
+      const start = camera.zoom
+      const end = cfg.zoom ?? start
+      const delta = end - start
+      return new UserAnimation(I, (t) => {
+        camera.zoom = start + delta * t
+        camera.updateProjectionMatrix()
+      })
+    } else {
+      const persp = camera as THREE.PerspectiveCamera
+      const start = persp.fov
+      const end = cfg.fov ?? start
+      const delta = end - start
+      return new UserAnimation(I, (t) => {
+        persp.fov = start + delta * t
+        persp.updateProjectionMatrix()
+      })
+    }
+  }
 }
