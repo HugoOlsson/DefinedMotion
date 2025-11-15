@@ -2,7 +2,7 @@
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import * as THREE from 'three';
 
-const CONTENT_NAME = 'SVGContent';
+export const CONTENT_NAME = 'SVGContent';
 
 export function createSVGShape(svg: string, targetWidth: number, detail = 2): THREE.Group {
   const loader = new SVGLoader();
@@ -27,6 +27,20 @@ export function createSVGShape(svg: string, targetWidth: number, detail = 2): TH
     const fillOpacity   = style.fillOpacity   != null ? +style.fillOpacity   : opacity;
     const strokeOpacity = style.strokeOpacity != null ? +style.strokeOpacity : opacity;
 
+
+    //collect any dm-* classes on the source SVG node
+    const node = path.userData?.node as Element | undefined;
+    const dmClasses = node ? collectDMClasses(node) : [];
+
+    const attachClasses = (mesh: THREE.Mesh) => {
+      if (dmClasses.length) {
+        // store logical names: ["lhs", "rhs", "variable", ...]
+        mesh.userData.dmClasses = dmClasses;
+      }
+    };
+
+
+
     if (fillColor) {
       const shapes = SVGLoader.createShapes(path);
       for (const shape of shapes) {
@@ -40,7 +54,9 @@ export function createSVGShape(svg: string, targetWidth: number, detail = 2): TH
           depthWrite: true,
           toneMapped: false,
         });
-        content.add(new THREE.Mesh(geom, mat));
+        const mesh = new THREE.Mesh(geom, mat);
+        attachClasses(mesh);        
+        content.add(mesh);          
       }
     }
 
@@ -64,7 +80,10 @@ export function createSVGShape(svg: string, targetWidth: number, detail = 2): TH
       for (const sub of path.subPaths) {
         const pts = sub.getPoints();
         const geom = SVGLoader.pointsToStroke(pts, svgStyle);
-        if (geom) content.add(new THREE.Mesh(geom, strokeMat));
+         if (!geom) continue;
+        const mesh = new THREE.Mesh(geom, strokeMat);
+        attachClasses(mesh);       
+        content.add(mesh);        
       }
     }
   }
@@ -80,4 +99,22 @@ export function createSVGShape(svg: string, targetWidth: number, detail = 2): TH
 
   container.add(content);
   return container;
+}
+
+
+function collectDMClasses(node: Element | null): string[] {
+  const result = new Set<string>();
+
+  while (node) {
+    const cls = node.getAttribute && node.getAttribute('class');
+    if (cls) {
+      for (const c of cls.split(/\s+/)) {
+        const m = /^dm-(.+)$/.exec(c); // "dm-variable" -> "variable"
+        if (m) result.add(m[1]);
+      }
+    }
+    node = node.parentElement;
+  }
+
+  return [...result];
 }

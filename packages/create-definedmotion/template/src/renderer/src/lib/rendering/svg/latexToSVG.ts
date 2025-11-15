@@ -9,7 +9,12 @@ import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html'
 const adaptor = liteAdaptor()
 RegisterHTMLHandler(adaptor)
 
-const tex = new TeX({ packages: AllPackages })
+const tex = new TeX({ packages: AllPackages,
+  macros: {
+    // \dmClass{tag}{...} -> \class{dm-tag}{...}
+    dmClass: ['{\\class{dm-#1}{#2}}', 2],
+  },
+ })
 const svgOut = new SVG({ fontCache: 'none' })
 const doc = mathjax.document('', { InputJax: tex, OutputJax: svgOut })
 
@@ -123,3 +128,5 @@ export function prepareMathJaxSVG(svg: string): string {
 
   return new XMLSerializer().serializeToString(root);
 }
+
+
