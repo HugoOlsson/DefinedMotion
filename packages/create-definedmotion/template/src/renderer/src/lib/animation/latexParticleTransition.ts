@@ -261,13 +261,16 @@ export function latexParticleTransition(
 
   const particleSize = estimateParticleSize(fromGroup, toGroup)
 
-  const material = new THREE.PointsMaterial({
+  // pick a color from the "from" group (or white if nothing found)
+    const baseColor = pickColorFromGroup(fromGroup)
+
+    const material = new THREE.PointsMaterial({
     size: particleSize,
-    color: 0xffffff,
+    color: baseColor,
     transparent: true,
     opacity: 0,
     depthWrite: false
-  })
+})
 
   const particles = new THREE.Points(geometry, material)
   particles.name = 'LatexParticleTransition'
@@ -331,4 +334,34 @@ export function latexParticleTransition(
       }
     }
   )
+}
+
+
+function pickColorFromGroup(group: THREE.Group): THREE.Color {
+  let picked: THREE.Color | null = null
+
+  group.traverse(obj => {
+    if (picked) return
+    const mesh = obj as THREE.Mesh
+    // @ts-ignore
+    if (!mesh.isMesh) return
+
+    const mat = mesh.material
+    if (Array.isArray(mat)) {
+      for (const m of mat) {
+        const anyMat = m as any
+        if (anyMat && anyMat.color && anyMat.color.isColor) {
+          picked = anyMat.color.clone()
+          return
+        }
+      }
+    } else {
+      const anyMat = mat as any
+      if (anyMat && anyMat.color && anyMat.color.isColor) {
+        picked = anyMat.color.clone()
+      }
+    }
+  })
+
+  return picked ?? new THREE.Color(0xffffff) // fallback
 }
