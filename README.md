@@ -1,20 +1,39 @@
-# DefinedMotion - An animation library
+# DefinedMotion - Programmatic Animations
 
-### Animate Three.js with all its power
+###  Animate Three.js with all its power
 
-This is a programmatic animation library, similar to 3Blue1Brown's Manim or Motion Canvas. It focuses on giving a tight feedback loop for development by seeing changes on save (hot reload) and providing great rendering capabilities for 2D and 3D.
+This is a programmatic animation library, similar to 3Blue1Brown's Manim or Motion Canvas. It focuses on giving a tight feedback loop for development by seeing changes on save (hot reload) and providing the best capabilities for technical animations, both in 2D and 3D.
 
 
-### Quick Overview
 
-- Library + viewer for building animations in **TypeScript**
-- **Hot-reload on save** for a super-fast feedback loop
-- Use **ANY** primitive/feature the Three.js ecosystem gives.
-- Type safety by building animation by using TypeScript.
-- **One-click rendering** (FFmpeg) for final output
-- **Interactive viewer** for navigating and inspecting the scene
-- Performant for complex animations, Three.js plus the faster runtime speed of TypeScript compared to Python helps productivity.
-- **Declarative** scene + animation API with easy dependency composition
+### Quick overview
+
+- ⚡ **Hot-reload on save**  
+  Tweak something, hit save, and see the change instantly in the viewer. No “render first, see later”. Saves minutes per iteration on heavy scenes.
+
+- 🌌 **Full Three.js ecosystem**  
+  Use *any* Three.js primitive or addon: PBR materials, lights, HDRI, helpers, post-processing, model loaders, controls — if it works in Three.js, you can animate it.
+
+- 🚀 **One-line project setup**  
+  Create a ready-to-run project with `npx create-definedmotion my-project` 
+
+- 🔐 **Type-safe animations with TypeScript**  
+  Build reusable helpers and scenes with full IDE support, refactors, and autocomplete.
+
+- 🧭 **Interactive viewer**  
+  Navigate your scene, orbit the camera, and copy the current position/rotation so you don’t have to guess values in code.
+
+- 🧱 **Simple, low-level animation scheduler**  
+  A small set of primitives (`addAnims`, `addDeferredAnims`, `onEachTick`, `doAt`, background sequences…) that stays easy to reason about and makes it trivial to build your own higher-level components and animation primitives.
+
+- 🤖 **Great chatbot / AI assistant compatibility**  
+  Because it uses standard TypeScript + Three.js, modern coding assistants already “understand” your scenes, shaders, loaders, cameras, and math, and can help you write and debug DefinedMotion code even though the library is new.
+
+- 🎥 **One-click rendering**  
+  When you’re happy with the result, click **Render** in the viewer. You only need FFmpeg installed when you’re ready for the final video.
+
+- 🗓️ **Ready for production use**  
+  Build your animation with DM today, it's ready.
 
 
 <table>
@@ -29,6 +48,26 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
     </tr>
   </tbody>
 </table>
+
+
+## How does it compare?
+
+| Feature                  | **DefinedMotion**                                                                                               | **Manim (Community)**                                                                  | **Motion Canvas**                                                                                           |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| **Performance**          | ⚡ Realtime playback in the viewer, even for heavy 3D scenes – no video render needed while iterating          | Built for offline renders; seeing scenes often means waiting for a render             | Very fast 2D Canvas preview, great for UI/diagram work; no built-in 3D engine                              |
+| **Hot reload**           | ✅ Hot reload on save as a core workflow                                                                        | File-watch/CLI loops exist, but you still wait for each render (no true live hot reload) | ✅ Live preview in editor with timeline scrubbing                                                            |
+| **3D & rendering engine**| 🌌 Full **Three.js ecosystem**: PBR materials, lights, HDRI, helpers, post-processing, addons                   | Custom engine, 2D-first; 3D is possible but with less engine/ecosystem depth than Three.js | Designed for 2D Canvas; 3D requires manual tricks and is not a first-class engine feature              |
+| **3D model import**      | 📦 Use any Three.js loader (GLTF/GLB, OBJ, FBX, STL, etc.) – imported models become first-class scene objects   | 3D object support is more limited; importing arbitrary 3D formats is possible but not a core focus | No native 3D mesh import; typically you work with shapes, images, and SVG in 2D                             |
+| **Viewer & interaction** | 🧭 Interactive 3D viewer with helpers for camera, scene inspection, and debugging                              | Workflow is video-output–centric; interactivity usually comes from the final video    | Timeline-focused preview; great for scrubbing and timing, less for exploring a 3D scene                     |
+| **Low-level control**    | 🧱 Low-level access: you work directly with Three.js objects and it's easy to build your own animation primitives      | Object model is extensible but more opinionated; deeper engine changes take more work | Script-based API is flexible for linear timelines, less oriented toward large reactive 3D graphs            |
+| **LaTeX & math text**    | 🧮 LaTeX → SVG → 3D, plus APIs to query positions of substrings (for precise highlights, braces, arrows, etc.). LaTeX becomes true 3D. | Excellent LaTeX support out of the box, huge example base; finer spatial control is more manual | Great 2D LaTeX support inside the Canvas preview; math is 2D (no native 3D LaTeX)                      |
+| **Install & first run**  | 🚀 `npx create-definedmotion my-project` – one line and you’re in the viewer                                   | Python env + Manim install; very well-documented, lots of community resources         | Standard Node project + Motion Canvas setup, integrates nicely with web tooling                             |
+| **Rendering to video**   | 🎥 One-click render in the viewer; you only need `ffmpeg` when you’re ready for the final video                | Mature CLI rendering, integrates well with other Python/video tools                    | Render from the editor; FFmpeg typically part of the pipeline earlier                                       |
+| **Chatbot / AI support** | 🤖 Excellent: all major chatbots understand **TypeScript + Three.js**, so they can help with shaders, loaders, cameras, math, and general WebGL patterns even though DefinedMotion is new | 🤖 Excellent: Manim has a huge footprint; plus Python is extremely well supported by chatbots | 🤖 Very good: TypeScript + Canvas + React-style patterns are well known; Motion Canvas-specific help is improving over time |
+| **Best fit for…**        | Technical animations in general, complex heavy scenes, math/CS/physics visuals, and Three.js-native workflows with fast iteration & hot reload | Math lectures, proofs, blackboard-style animations, especially in Python-centric stacks | YouTube-style 2D explainers with a visual timeline and audio sync; nice primitives for building flexbox-like layouts |
+
+## A dead-easy architecture
+<img src="resources/scheduler.png" alt="Image of the tick-based scheduler"  />
 
 ## Look at example scenes
 Visit /src/example_scenes and look how scenes are made, this is likely a good way to learn the library. The entrypoint that specifies what scene that should be shown in the viewer is src/entry.ts.
@@ -96,9 +135,6 @@ export const yourSceneName = (): AnimatedScene => {
 
 ```
 
-This project is very new, more documentation will come soon.
-
-
 
 ## Project Setup
  
@@ -109,7 +145,6 @@ This project is very new, more documentation will come soon.
 5. Update the src/entry.ts file to use your animation.
 6. When you want to render your animation, click "Render". You will need to have ffmpeg on your system and available in your system PATH.
 
-This will hopefully have better documentation soon. If you have any questions, feel free to contact me at hugo.contact01@gmail.com
 
 ## Easy example
 ```ts
@@ -305,6 +340,10 @@ export function tutorial_easy2(): AnimatedScene {
 }
 
 ```
+
+## Contact
+
+ If you have any questions, feel free to contact me Hugo Olsson at hugo.contact01@gmail.com
 <!--
 ## Created with DefinedMotion
 
