@@ -43,9 +43,12 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
       <td><img src="resources/animation3.gif" alt="Keyboard clicking animation" width="200" loading="lazy" decoding="async" /></td>
     </tr>
     <tr>
-      <td><img src="resources/animation1.gif" alt="Math surface animation" width="200" loading="lazy" decoding="async" /></td>
+     <td><img src="resources/animation5.gif" alt="Latex transition animation" width="200" loading="lazy" decoding="async" /></td>
       <td><img src="resources/animation4.gif" alt="3D Galton board producing a normal distribution" width="200" loading="lazy" decoding="async" /></td>
     </tr>
+    <tr>
+    <td><img src="resources/animation1.gif" alt="Math surface animation" width="200" loading="lazy" decoding="async" /></td>
+     </tr>
   </tbody>
 </table>
 
@@ -67,7 +70,7 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 | **Best fit for…**        | Technical animations in general, complex heavy scenes, math/CS/physics visuals, and Three.js-native workflows with fast iteration & hot reload | Math lectures, proofs, blackboard-style animations, especially in Python-centric stacks | 2D explainers with a visual timeline and audio sync. Nice primitives for building flexbox-like layouts and showing code |
 
 ## A dead-easy architecture
-<img src="resources/scheduler.png" alt="Image of the tick-based scheduler"  />
+<img src="resources/scheduler2.png" alt="Image of the tick-based scheduler"  />
 
 ## Look at example scenes
 Visit /src/example_scenes and look how scenes are made, this is likely a good way to learn the library. The entrypoint that specifies what scene that should be shown in the viewer is src/entry.ts.

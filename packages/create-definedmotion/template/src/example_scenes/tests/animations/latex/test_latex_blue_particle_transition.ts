@@ -8,7 +8,7 @@ import {
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransition } from '$renderer/lib/animation/latexParticleTransition'
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition'
 
 export const test_latex_blue_particle_transition = (): AnimatedScene => {
   return new AnimatedScene(
@@ -73,7 +73,7 @@ export const test_latex_blue_particle_transition = (): AnimatedScene => {
 
       // 6) Add the particle transition animation
       //    (particles will pick up the same blue via pickColorFromGroup)
-      dm.addAnims(latexParticleTransition(groupA, groupB, 1500))
+      dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // Optional pause after the morph
       dm.addWait(300)

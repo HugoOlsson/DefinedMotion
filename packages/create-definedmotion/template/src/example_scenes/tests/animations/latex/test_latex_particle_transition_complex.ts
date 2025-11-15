@@ -8,7 +8,7 @@ import {
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransition } from '$renderer/lib/animation/latexParticleTransition'
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition'
 
 export const test_latex_particle_transition_complex = (): AnimatedScene => {
   return new AnimatedScene(
@@ -56,7 +56,7 @@ export const test_latex_particle_transition_complex = (): AnimatedScene => {
       // 5) Particle transition:
       //    - 2000 ms duration
       //    - default particleCount from helper (tune inside helper if needed)
-      dm.addAnims(latexParticleTransition(groupA, groupB, 2000))
+      dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // A small pause after the morph
       dm.addWait(400)

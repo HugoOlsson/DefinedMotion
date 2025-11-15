@@ -1,3 +1,4 @@
+// latexParticleTransition.ts
 import * as THREE from 'three'
 import { UserAnimation } from './protocols'
 import { easeInOutQuad } from './interpolations'
@@ -208,134 +209,14 @@ function estimateParticleSize(fromGroup: THREE.Group, toGroup: THREE.Group): num
   box.expandByObject(toGroup)
   const size = box.getSize(new THREE.Vector3())
   const diag = size.length() || 1
-  return diag * 0.0045
+  return diag * 0.003
 }
 
 function easeInOut(t: number): number {
-  return t < 0.5 
-    ? 2 * t * t 
+  return t < 0.5
+    ? 2 * t * t
     : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
-
-/**
- * Particle dissolve/morph between two LaTeX SVG groups.
- *
- * Assumptions:
- * - fromGroup and toGroup are already in the scene.
- * - toGroup starts with opacity 0 (invisible).
- * - Groups remain static during the transition.
- */
-export function latexParticleTransition(
-  fromGroup: THREE.Group,
-  toGroup: THREE.Group,
-  durationMs: number = 1000,
-  particleCount: number = 2000
-): UserAnimation {
-  // Surface-sampled positions for both formulas
-  let startPositions = buildSurfaceSamples(fromGroup, particleCount)
-  let endPositions   = buildSurfaceSamples(toGroup,   particleCount)
-
-  if (startPositions.length === 0 || endPositions.length === 0) {
-    // fallback to simple crossfade
-    return new UserAnimation(
-      easeInOutQuad(0, 1, durationMs),
-      (t: number, _tick?: number, isLast?: boolean) => {
-        setOpacity(fromGroup, 1 - t)
-        setOpacity(toGroup, t)
-        if (isLast) {
-          setOpacity(fromGroup, 0)
-          setOpacity(toGroup, 1)
-        }
-      }
-    )
-  }
-
-  // Spatially sort both sets so index i ↔ i is a "nearby" mapping
-  startPositions = sortPositions(startPositions)
-  endPositions   = sortPositions(endPositions)
-
-  // Create the particle geometry and material
-  const geometry = new THREE.BufferGeometry()
-  const currentPositions = new Float32Array(startPositions) // copy
-  geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3))
-
-  const particleSize = estimateParticleSize(fromGroup, toGroup)
-
-  // pick a color from the "from" group (or white if nothing found)
-    const baseColor = pickColorFromGroup(fromGroup)
-
-    const material = new THREE.PointsMaterial({
-    size: particleSize,
-    color: baseColor,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false
-})
-
-  const particles = new THREE.Points(geometry, material)
-  particles.name = 'LatexParticleTransition'
-
-  const parent = fromGroup.parent || toGroup.parent
-  if (parent) parent.add(particles)
-  else console.warn('latexParticleTransition: fromGroup and toGroup have no parent; particles not added')
-
-  setOpacity(fromGroup, 1)
-  setOpacity(toGroup, 0)
-
-  // Precompute deltas for lerp
-  const deltas = new Float32Array(startPositions.length)
-  for (let i = 0; i < startPositions.length; i++) {
-    deltas[i] = endPositions[i] - startPositions[i]
-  }
-
-  const phase1End = 0.2
-  const phase2End = 0.8
-
-  const interpolation = easeInOutQuad(0, 1, durationMs)
-
-  return new UserAnimation(
-    interpolation,
-    (t: number, _tick?: number, isLast?: boolean) => {
-      const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute
-      const arr = posAttr.array as Float32Array
-
-      const tt = easeInOut(t)
-      for (let i = 0; i < arr.length; i += 3) {
-        arr[i + 0] = startPositions[i + 0] + deltas[i + 0] * tt
-        arr[i + 1] = startPositions[i + 1] + deltas[i + 1] * tt
-        arr[i + 2] = startPositions[i + 2] + deltas[i + 2] * tt
-      }
-      posAttr.needsUpdate = true
-
-      if (t < phase1End) {
-        const s = t / phase1End
-        setOpacity(fromGroup, 1 - s)
-        setOpacity(toGroup, 0)
-        material.opacity = s
-      } else if (t < phase2End) {
-        setOpacity(fromGroup, 0)
-        setOpacity(toGroup, 0)
-        material.opacity = 1
-      } else {
-        const s = (t - phase2End) / (1 - phase2End)
-        setOpacity(fromGroup, 0)
-        setOpacity(toGroup, s)
-        material.opacity = 1 - s
-      }
-
-      if (isLast) {
-        setOpacity(fromGroup, 0)
-        setOpacity(toGroup, 1)
-        material.opacity = 0
-
-        if (parent) parent.remove(particles)
-        geometry.dispose()
-        material.dispose()
-      }
-    }
-  )
-}
-
 
 function pickColorFromGroup(group: THREE.Group): THREE.Color {
   let picked: THREE.Color | null = null
@@ -365,3 +246,132 @@ function pickColorFromGroup(group: THREE.Group): THREE.Color {
 
   return picked ?? new THREE.Color(0xffffff) // fallback
 }
+
+/**
+ * DEFERRED VERSION
+ *
+ * Returns a factory () => UserAnimation so you can use:
+ *
+ *   dm.addDeferredAnims(
+ *     latexParticleTransitionAnim(groupA, groupB, { durationMs: 1500, particleCount: 3000 })
+ *   )
+ *
+ * No scene side-effects happen until the animation's updater runs.
+ */
+export function latexParticleTransitionAnim(
+  fromGroup: THREE.Group,
+  toGroup: THREE.Group,
+  cfg: { durationMs?: number; particleCount?: number } = {}
+): () => UserAnimation {
+  const { durationMs = 1000, particleCount = 2500 } = cfg
+
+  return () => {
+    // Surface-sampled positions for both formulas (runtime, after layout)
+    let startPositions = buildSurfaceSamples(fromGroup, particleCount)
+    let endPositions   = buildSurfaceSamples(toGroup,   particleCount)
+
+    if (startPositions.length === 0 || endPositions.length === 0) {
+      const I = easeInOutQuad(0, 1, durationMs)
+      return new UserAnimation(
+        I,
+        (t: number, _tick?: number, isLast?: boolean) => {
+          setOpacity(fromGroup, 1 - t)
+          setOpacity(toGroup, t)
+          if (isLast) {
+            setOpacity(fromGroup, 0)
+            setOpacity(toGroup, 1)
+          }
+        }
+      )
+    }
+
+    // Spatially sort both sets so index i ↔ i is a "nearby" mapping
+    startPositions = sortPositions(startPositions)
+    endPositions   = sortPositions(endPositions)
+
+    // Create the particle geometry and material
+    const geometry = new THREE.BufferGeometry()
+    const currentPositions = new Float32Array(startPositions) // copy
+    geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3))
+
+    const particleSize = estimateParticleSize(fromGroup, toGroup)
+    const baseColor    = pickColorFromGroup(fromGroup)
+
+    const material = new THREE.PointsMaterial({
+      size:        particleSize,
+      color:       baseColor,
+      transparent: true,
+      opacity:     0,
+      depthWrite:  false
+    })
+
+    const particles = new THREE.Points(geometry, material)
+    particles.name = 'LatexParticleTransition'
+
+    const parent = fromGroup.parent || toGroup.parent || null
+
+    // Precompute deltas for lerp
+    const deltas = new Float32Array(startPositions.length)
+    for (let i = 0; i < startPositions.length; i++) {
+      deltas[i] = endPositions[i] - startPositions[i]
+    }
+
+    const phase1End = 0.15
+    const phase2End = 0.85
+    const interpolation = easeInOutQuad(0, 1, durationMs)
+
+    // Lazy init so the "planning" call in addDeferredAnims doesn't touch the scene
+    let initialized = false
+
+    return new UserAnimation(
+      interpolation,
+      (t: number, _tick?: number, isLast?: boolean) => {
+        // One-time scene setup, only on first actual tick
+        if (!initialized) {
+          if (parent) parent.add(particles)
+          setOpacity(fromGroup, 1)
+          setOpacity(toGroup, 0)
+          initialized = true
+        }
+
+        const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute
+        const arr = posAttr.array as Float32Array
+
+        const tt = easeInOut(t)
+        for (let i = 0; i < arr.length; i += 3) {
+          arr[i + 0] = startPositions[i + 0] + deltas[i + 0] * tt
+          arr[i + 1] = startPositions[i + 1] + deltas[i + 1] * tt
+          arr[i + 2] = startPositions[i + 2] + deltas[i + 2] * tt
+        }
+        posAttr.needsUpdate = true
+
+        if (t < phase1End) {
+          const s = t / phase1End
+          setOpacity(fromGroup, 1 - s)
+          setOpacity(toGroup, 0)
+          material.opacity = s
+        } else if (t < phase2End) {
+          setOpacity(fromGroup, 0)
+          setOpacity(toGroup, 0)
+          material.opacity = 1
+        } else {
+          const s = (t - phase2End) / (1 - phase2End)
+          setOpacity(fromGroup, 0)
+          setOpacity(toGroup, s)
+          material.opacity = 1 - s
+        }
+
+        if (isLast) {
+          setOpacity(fromGroup, 0)
+          setOpacity(toGroup, 1)
+          material.opacity = 0
+
+          if (parent) parent.remove(particles)
+          geometry.dispose()
+          material.dispose()
+        }
+      }
+    )
+  }
+}
+

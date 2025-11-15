@@ -8,7 +8,7 @@ import {
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransition } from '$renderer/lib/animation/latexParticleTransition'
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition'
 
 export const test_latex_particle_transition_super_complex = (): AnimatedScene => {
   return new AnimatedScene(
@@ -77,7 +77,7 @@ export const test_latex_particle_transition_super_complex = (): AnimatedScene =>
       // --- 5) Particle transition ---
       //    - 2200 ms duration
       //    - particleCount controlled inside helper (default 2000)
-      dm.addAnims(latexParticleTransition(groupA, groupB, 2200))
+      dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // Leave a short pause when done
       dm.addWait(400)

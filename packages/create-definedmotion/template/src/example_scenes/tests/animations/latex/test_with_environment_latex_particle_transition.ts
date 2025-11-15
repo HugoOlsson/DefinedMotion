@@ -4,7 +4,7 @@ import { AnimatedScene, HotReloadSetting, SpaceSetting } from '$renderer/lib/sce
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransition } from '$renderer/lib/animation/latexParticleTransition' // <- your new helper
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition' // <- your new helper
 import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/lighting3d'
 
 
@@ -70,9 +70,7 @@ export const test_with_environment_latex_particle_transition = (): AnimatedScene
       dm.camera.lookAt(new THREE.Vector3(0, 0, 0))
 
       // 5) Add the particle transition animation
-      //    - 1500 ms duration
-      //    - 4000 particles
-      dm.addAnims(latexParticleTransition(groupA, groupB, 1500))
+      dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // Optionally: leave a bit of time after the morph finishes
       dm.addWait(300)

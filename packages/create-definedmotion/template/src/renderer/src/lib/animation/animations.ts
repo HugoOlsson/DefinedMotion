@@ -9,20 +9,37 @@ import { updateSVGShape } from '../rendering/svg/svgObjectHelpers'
 export const setOpacity = <T extends THREE.Object3D>(
   object: T,
   opacity: number,
-  enableTransparency: boolean = true
+  enableTransparency: boolean = true,
+  hideWhenZero: boolean = true      // <- new optional flag
 ) => {
-  // Apply opacity to the object and all its children recursively
-  object.traverse((child: any) => {
-    if (child.material) {
-      const materials = child.material instanceof Array ? child.material : [child.material]
+  const epsilon = 0.001
+  const isVisible = opacity > epsilon
 
-      materials.forEach((mat) => {
-        if (enableTransparency && !mat.transparent) {
-          mat.transparent = true
-        }
-        mat.opacity = opacity
-      })
-    }
+  if (hideWhenZero) {
+    object.visible = isVisible
+  }
+
+  object.traverse((child: any) => {
+    if (!child.material) return
+
+    const materials = Array.isArray(child.material)
+      ? child.material
+      : [child.material]
+
+    materials.forEach((mat: any) => {
+      if (!mat) return
+
+      if (enableTransparency && !mat.transparent) {
+        mat.transparent = true
+      }
+
+      mat.opacity = opacity
+
+      // 🔑 key line: invisible things don't affect depth
+      if ('depthWrite' in mat) {
+        mat.depthWrite = isVisible
+      }
+    })
   })
 
   return object
