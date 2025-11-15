@@ -32,9 +32,6 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 - 🎥 **One-click rendering**  
   When you’re happy with the result, click **Render** in the viewer. You only need FFmpeg installed when you’re ready for the final video.
 
-- 🗓️ **Ready for production use**  
-  Build your animation with DM today, it's ready.
-
 
 <table>
   <tbody>
@@ -48,6 +45,7 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
     </tr>
     <tr>
     <td><img src="resources/animation1.gif" alt="Math surface animation" width="200" loading="lazy" decoding="async" /></td>
+    <td><img src="resources/animation6.gif" alt="Functions transition animation" width="200" loading="lazy" decoding="async" /></td>
      </tr>
   </tbody>
 </table>
