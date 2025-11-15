@@ -117,9 +117,7 @@ function updateUIImmediate() {
         updateUIImmediate()
       }
     }
-    const currentWidth = animationWindow.clientWidth
-    animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
-
+   
     setStateInScene(scene)
     lastSetFrame = scene.sceneRenderTick
 
@@ -127,11 +125,7 @@ function updateUIImmediate() {
       updateStateInUrl(scene.sceneRenderTick)
     }, 500)
 
-    // Add listener to handle window resize events
-    window.addEventListener('resize', () => {
-      const currentWidth = animationWindow.clientWidth
-      animationWindow.style.height = `${currentWidth / scene.getAspectRatio()}px`
-    })
+  
 
    screenRefreshRate = screenFPS
 

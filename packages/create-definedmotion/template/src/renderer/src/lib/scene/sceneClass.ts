@@ -125,6 +125,8 @@ export class AnimatedScene {
   private renderingAudioGather: AudioInScene[] = []
 
   private playbackTargetDistance: number | null = null
+
+  private resizeObserver?: ResizeObserver
   
 
   constructor(
@@ -151,12 +153,11 @@ export class AnimatedScene {
       this.farLimitRender
     )
 
-    this.buildFunction = async () => {
-      await buildFunctionGiven(this)
-      this.end()
-    }
+    this.scene = scene
+    this.camera = camera
+    this.renderer = renderer
+    this.controls = controls
 
-    this.attachScreenSizeListener(globalContainerRef, threeDim)
     // Store initial state
     this.initialSceneChildren = [...scene.children]
     this.initialCameraState = this.captureCameraState(camera)
@@ -166,11 +167,14 @@ export class AnimatedScene {
       shadowMapEnabled: renderer.shadowMap.enabled
     }
 
-    this.scene = scene
-    this.camera = camera
-    this.renderer = renderer
-    this.controls = controls
 
+    this.buildFunction = async () => {
+      await buildFunctionGiven(this)
+      this.end()
+    }
+
+    this.attachScreenSizeListener(globalContainerRef, threeDim)
+   
     // Cap viewer pixel ratio, without this HDRIs become super slow on MacBooks for example
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
 
@@ -393,25 +397,52 @@ export class AnimatedScene {
   }
 
   private attachScreenSizeListener(container: HTMLElement, threeDim: boolean) {
-    const internalAspect = this.pixelsWidth / this.pixelsHeight
-    // Resize handler
-    const handleResize = () => {
-      const newWidth = container.clientWidth
-      const newHeight = container.clientHeight
+  const targetAspect = this.pixelsWidth / this.pixelsHeight
 
-      if (threeDim && this.camera instanceof THREE.PerspectiveCamera) {
-        this.camera.aspect = internalAspect
-      } else if (this.camera instanceof THREE.OrthographicCamera) {
-        this.camera.left = -this.zoom * internalAspect
-        this.camera.right = this.zoom * internalAspect
-      }
+  const handleResize = (width: number) => {
+    if (!width) return
 
-      this.camera.updateProjectionMatrix()
-      this.renderer.setSize(newWidth, newHeight)
-      this.renderer.render(this.scene, this.camera)
+    // Respect the animation's logical aspect ratio
+    const height = width / targetAspect
+
+    // Set container size manually
+    container.style.height = `${height}px`
+
+    // Update camera based on that aspect
+    const aspect = width / height
+
+    if (threeDim && this.camera instanceof THREE.PerspectiveCamera) {
+      this.camera.aspect = aspect
+    } else if (this.camera instanceof THREE.OrthographicCamera) {
+      this.camera.left   = -this.zoom * aspect
+      this.camera.right  =  this.zoom * aspect
+      this.camera.top    =  this.zoom
+      this.camera.bottom = -this.zoom
     }
-    window.addEventListener('resize', handleResize)
+
+    this.camera.updateProjectionMatrix()
+    this.renderer.setSize(width, height)
+    this.renderer.render(this.scene, this.camera)
   }
+
+  // Initial sizing
+  handleResize(container.clientWidth)
+
+  // React to container size changes (e.g. inspector open/close)
+  this.resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const { width } = entry.contentRect
+      handleResize(width)
+    }
+  })
+
+  this.resizeObserver.observe(container)
+
+  // Clean up on destroy / hot reload
+  addDestroyFunction(() => {
+    this.resizeObserver?.disconnect()
+  })
+}
 
   pause() {
     this.isPlaying = false
