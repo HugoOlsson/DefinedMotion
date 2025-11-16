@@ -1,4 +1,3 @@
-// latexParticleTransition.ts
 import * as THREE from 'three'
 import { UserAnimation } from './protocols'
 import { easeInOutQuad } from './interpolations'
@@ -375,3 +374,185 @@ export function latexParticleTransitionAnim(
   }
 }
 
+
+type SavedMaterialState = {
+  mat: THREE.Material & { opacity?: number; transparent?: boolean };
+  opacity: number;
+  transparent: boolean;
+};
+
+type GlyphEntry = {
+  centerX: number;
+  mats: SavedMaterialState[];
+};
+
+/**
+ * Deferred "Write" animation for a LaTeX SVG group.
+ *
+ * Usage:
+ *   dm.addDeferredAnims(
+ *     latexWriteAnim(latexGroup, {
+ *       durationMs: 1200,
+ *       direction: 'ltr',   // or 'rtl'
+ *       penWidth: 0.18      // relative brush width (0.0–1.0-ish)
+ *     })
+ *   );
+ */
+export function latexWriteAnim(
+  targetGroup: THREE.Group,
+  cfg: {
+    durationMs?: number;
+    direction?: 'ltr' | 'rtl';
+    penWidth?: number; // relative width of the "pen" over [minX,maxX]
+  } = {}
+): () => UserAnimation {
+  const {
+    durationMs = 1000,
+    direction = 'ltr',
+    penWidth = 0.15,
+  } = cfg;
+
+  return () => {
+    targetGroup.updateMatrixWorld(true);
+
+    const glyphs: GlyphEntry[] = [];
+    const tmpBox = new THREE.Box3();
+    const tmpCenter = new THREE.Vector3();
+
+    let minX = +Infinity;
+    let maxX = -Infinity;
+
+    // Collect glyphs + save original material state
+    targetGroup.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      // @ts-ignore
+      if (!mesh.isMesh) return;
+      if (!mesh.geometry) return;
+
+      tmpBox.setFromObject(mesh);
+      tmpBox.getCenter(tmpCenter);
+      const cx = tmpCenter.x;
+
+      const mat = mesh.material as any;
+      const mats: SavedMaterialState[] = [];
+
+      if (Array.isArray(mat)) {
+        for (const m of mat) {
+          if (!m) continue;
+          const anyMat = m as any;
+          mats.push({
+            mat: anyMat,
+            opacity: anyMat.opacity ?? 1,
+            transparent: anyMat.transparent ?? false,
+          });
+        }
+      } else if (mat) {
+        const anyMat = mat as any;
+        mats.push({
+          mat: anyMat,
+          opacity: anyMat.opacity ?? 1,
+          transparent: anyMat.transparent ?? false,
+        });
+      }
+
+      if (!mats.length) return;
+
+      glyphs.push({ centerX: cx, mats });
+
+      if (cx < minX) minX = cx;
+      if (cx > maxX) maxX = cx;
+    });
+
+    // Degenerate fallback: simple fade-in
+    if (!glyphs.length || !isFinite(minX) || !isFinite(maxX)) {
+      const I = easeInOutQuad(0, 1, durationMs);
+      return new UserAnimation(
+        I,
+        (t: number, _tick?: number, isLast?: boolean) => {
+          setOpacity(targetGroup, t);
+          if (isLast) setOpacity(targetGroup, 1);
+        }
+      );
+    }
+
+    const span = Math.max(maxX - minX, 1e-6);
+    const brushHalf = span * Math.max(0.01, penWidth * 0.5);
+
+  
+   const startX = minX - brushHalf;
+    const endX   = maxX + brushHalf;
+    const totalPath = endX - startX;
+
+    const hideAllGlyphs = () => {
+      for (const g of glyphs) {
+        for (const s of g.mats) {
+          const m: any = s.mat;
+          m.transparent = true;
+          m.opacity = 0;
+        }
+      }
+    };
+
+    const restoreAllGlyphs = () => {
+      for (const g of glyphs) {
+        for (const s of g.mats) {
+          const m: any = s.mat;
+          m.opacity = s.opacity;
+          m.transparent = s.transparent;
+        }
+      }
+    };
+
+    const interpolation = easeInOutQuad(0, 1, durationMs);
+    let initialized = false;
+
+    return new UserAnimation(
+      interpolation,
+      (t: number, _tick?: number, isLast?: boolean) => {
+        if (!initialized) {
+          hideAllGlyphs();
+          initialized = true;
+        }
+
+        // smooth progress 0..1
+        const tt = t//easeInOut(t);
+
+        // Pen center moves on the extended path [startX, endX]
+        const penCenter =
+          direction === 'ltr'
+            ? startX + totalPath * tt
+            : endX   - totalPath * tt;
+
+        for (const g of glyphs) {
+          const dist = g.centerX - penCenter;
+
+          let alpha: number;
+          if (dist <= -brushHalf) {
+            // far behind the pen -> fully visible
+            alpha = 1;
+          } else if (dist >= brushHalf) {
+            // far ahead of the pen -> fully invisible
+            alpha = 0;
+          } else {
+            // inside soft pen window, fade 0..1
+            const u = (dist + brushHalf) / (2 * brushHalf); // 0..1
+            alpha = 1 - u; // 1 at back edge, 0 at front edge
+          }
+
+          alpha = Math.max(0, Math.min(1, alpha));
+
+          for (const s of g.mats) {
+            const m: any = s.mat;
+            m.transparent = true;
+            m.opacity = s.opacity * alpha;
+          }
+        }
+
+        if (isLast) {
+          // By now everything should already be ~1.0, this just restores exact originals
+          restoreAllGlyphs();
+        }
+      }
+    );
+  };
+}

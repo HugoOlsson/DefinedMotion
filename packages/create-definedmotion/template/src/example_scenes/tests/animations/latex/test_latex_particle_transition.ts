@@ -4,7 +4,7 @@ import { AnimatedScene, HotReloadSetting, SpaceSetting } from '$renderer/lib/sce
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition' // <- your new helper
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexTransitionsAndWrite' // <- your new helper
 
 export const test_latex_particle_transition = (): AnimatedScene => {
   return new AnimatedScene(

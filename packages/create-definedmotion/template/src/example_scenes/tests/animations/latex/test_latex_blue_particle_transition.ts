@@ -8,7 +8,7 @@ import {
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition'
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexTransitionsAndWrite'
 
 export const test_latex_blue_particle_transition = (): AnimatedScene => {
   return new AnimatedScene(

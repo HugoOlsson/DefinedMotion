@@ -8,7 +8,7 @@ import {
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
-import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexParticleTransition'
+import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexTransitionsAndWrite'
 
 export const test_latex_particle_transition_super_complex = (): AnimatedScene => {
   return new AnimatedScene(
