@@ -959,19 +959,3 @@ export function tutorial_easy2(): AnimatedScene {
 ## Contact
 
  If you have any questions, feel free to contact me Hugo Olsson at hugo.contact01@gmail.com
-<!--
-## Created with DefinedMotion
-
-### Fourier series scenes:
-* https://www.reddit.com/r/manim/comments/1k53byc/what_do_you_guys_think_of_my_animation/
-* https://www.youtube.com/shorts/sF5wHVjqrGA
-* https://www.youtube.com/shorts/2vC4DHrBxas
-
-### Animated function plots:
-* https://www.youtube.com/shorts/Pi6R351Vi5s
-  
-### Keyboard animation:
-* https://www.youtube.com/shorts/4efvamUyjxU
-
-
--->
