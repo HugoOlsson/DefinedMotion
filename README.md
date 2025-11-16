@@ -50,10 +50,18 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
   </tbody>
 </table>
 
+## Why the need for a new animation solution?
+
+**Manim** (community) has great **LaTeX capabilities**, ease of use, and community, but a relatively **weak 3d engine**, slow performance and slow iterations.
+
+**Motion Canvas** is great but is **mostly 2D** and its heavy use of **generator functions** can be a bit unconventional.
+
+**Remotion** fits the niche of making scenes with **React**, but is more for **motion graphics** than general technical animations, it is also based on a custom **free/commercial license** depending on use case.
+
 
 ## How does it compare?
 
-| Feature                  | **DefinedMotion**                                                                                               | **Manim (Community)**                                                                  | **Motion Canvas**                                                                                           |
+| Feature                  | **DefinedMotion**                                                                                               | **Manim (Community)**                                                                  | **Motion_Canvas**                                                                                           |
 |--------------------------|-----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | **Performance**          | ⚡ Realtime playback in the viewer, even for heavy 3D scenes – no video render needed while iterating.          | Built for offline renders; seeing scenes often means waiting for a render             | ⚡ Realtime 2D playback in the viewer. No video render needed while iterating. However, no built-in 3D engine.                             |
 | **Hot reload**           | ✅ Hot reload on save as a core workflow with timeline scrubbing.                                                                        | File-watch/CLI loops exist, but you still wait for each render (no true live hot reload) | ✅ Hot reload on save as a core workflow with timeline scrubbing.                                                    |
@@ -64,7 +72,7 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 | **LaTeX & math text**    | 🧮 LaTeX → SVG → 3D, plus APIs to query positions of substrings (for precise highlights, braces, arrows, etc.). LaTeX becomes true 3D. | Excellent LaTeX support out of the box, huge example base; finer spatial control is more manual | Great 2D LaTeX support with transitions.                     |
 | **Install & first run**  | 🚀 `npx create-definedmotion my-project` – one line and you have it set up                                  | Python env + Manim install,  well-documented, lots of community resources. Very heavy LaTeX dependecy (~3–5GB).         | Nice easy setup. Uses npm like DM                             |
 | **Rendering to video**   | 🎥 One-click render in the viewer, you only need `ffmpeg` when you’re ready for the final video                | Mature CLI rendering. Requires ffmpeg.                    | Easily rendering from the viewer. Requires ffmpeg.                                       |
-| **Chatbot / AI support** | 🤖 Excellent: all major chatbots understand **TypeScript + Three.js**, so they can help with almost everything even though DefinedMotion is new | 🤖 Very good: Manim has a huge footprint; plus Python is well supported by chatbots | 🤖 Good; smaller ecosystem than Three.js means fewer pre-existing examples for assistants to draw from. |
+| **Chatbot / AI support** | 🤖 Very good: all major chatbots understand **TypeScript + Three.js**, so they can help with almost everything even though DefinedMotion is new | 🤖 Very good: Manim has a huge footprint; plus Python is well supported by chatbots | 🤖 Good; smaller ecosystem than Three.js means fewer pre-existing examples for assistants to draw from. |
 | **Best fit for…**        | Technical animations in general, complex heavy scenes, math/CS/physics visuals, and Three.js-native workflows with fast iteration & hot reload | Math lectures, proofs, blackboard-style animations, especially in Python-centric stacks | 2D explainers with a visual timeline and audio sync. Nice primitives for building flexbox-like layouts and showing code |
 
 ## A dead-easy architecture
@@ -85,7 +93,7 @@ export const yourSceneName = (): AnimatedScene => {
 
 ```
 
-### Scene tasks
+### Scene tasks (cheatsheet)
 ```ts
 
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
