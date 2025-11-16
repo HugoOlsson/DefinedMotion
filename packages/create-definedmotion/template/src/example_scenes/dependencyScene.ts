@@ -1,16 +1,14 @@
+import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 import { setOpacity } from '../renderer/src/lib/animation/animations'
 import { hexColor } from '../renderer/src/lib/rendering/helpers'
 import {
   addBackgroundGradient,
-  addHDRI,
-  HDRIs,
-  loadHDRIData
 } from '../renderer/src/lib/rendering/lighting3d'
 import { createLine } from '../renderer/src/lib/rendering/objects2d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
 
-const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2, 1)
+const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2)
 
 export const dependencyScene = (): AnimatedScene => {
   return new AnimatedScene(

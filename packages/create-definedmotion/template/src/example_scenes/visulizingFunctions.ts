@@ -1,10 +1,7 @@
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import {
   addBackgroundGradient,
-  addHDRI,
   addSceneLighting,
-  HDRIs,
-  loadHDRIData
 } from '../renderer/src/lib/rendering/lighting3d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
@@ -19,6 +16,7 @@ import {
   setOpacity
 } from '../renderer/src/lib/animation/animations'
 import { createFastText, updateText } from '../renderer/src/lib/rendering/objects2d'
+import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 
 const functions: [string, (x: number) => number][] = [
   // ──────────── Start Simple & Recognizable ────────────
@@ -95,9 +93,9 @@ const morphAnimation = (
     line.setPoints(interpolate(vecFunc1, vecFunc2, value))
   })
 }
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 1, 1)
+const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
 
-export const functionsAnimation = (): AnimatedScene => {
+export const animatedFunctionsScene = (): AnimatedScene => {
   return new AnimatedScene(
     1080,
     2160,

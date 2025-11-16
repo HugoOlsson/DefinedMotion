@@ -12,12 +12,10 @@ import { AnimatedScene, HotReloadSetting, SpaceSetting } from '$renderer/lib/sce
 // If your helpers live elsewhere, tweak these paths:
 import {
   addBackgroundGradient,
-  addHDRI,
-  loadHDRIData,
-  HDRIs
 } from '$renderer/lib/rendering/lighting3d'
 import { setOpacity } from '$renderer/lib/animation/animations'
 import { createLine } from '$renderer/lib/rendering/objects2d'
+import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 0: Scene constants and materials
@@ -67,8 +65,8 @@ export function tutorial_medium1(): AnimatedScene {
       // Step 3: Lighting & background
       // HDRI gives nice reflections/IBL; gradient provides a subtle backdrop.
       // ───────────────────────────────────────────────────────────────────────
-      const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2, 0.5) // (lods, intensity normalization)
-      await addHDRI(scene, hdriData, 0.3) // envMap intensity
+      const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2) // (lods, intensity normalization)
+      await addHDRI(scene, hdriData, 0.3, 0.5) // envMap intensity
 
       addBackgroundGradient({
         scene,

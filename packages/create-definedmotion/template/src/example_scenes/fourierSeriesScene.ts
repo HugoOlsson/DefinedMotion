@@ -239,9 +239,6 @@ export const fourierSeriesScene = (): AnimatedScene => {
     HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.registerAudio(tickSound)
-      //scene.registerAudio(interstellar)
-      //scene.playAudio(interstellar)
-      //await addHDRI({ scene, hdriPath: HDRIs.outdoor1, useAsBackground: true, blurAmount: 2 })
       addBackgroundGradient({
         scene,
         topColor: '#000000',

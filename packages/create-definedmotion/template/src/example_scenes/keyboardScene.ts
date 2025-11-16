@@ -1,9 +1,6 @@
 import {
   addBackgroundGradient,
-  addHDRI,
   addSceneLighting,
-  HDRIs,
-  loadHDRIData
 } from '../renderer/src/lib/rendering/lighting3d'
 import { loadGLB } from '../renderer/src/lib/rendering/objects/import'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
@@ -17,6 +14,7 @@ import { createFastText, createLine, updateText } from '../renderer/src/lib/rend
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import tickSound from '$assets/audio/tick_sound.mp3'
 import keyboard1 from '$assets/audio/keyboard1.mp3'
+import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 
 const strokeColor = '#ff0000'
 const backCharacter = 'Ď'
@@ -295,7 +293,7 @@ const typeAnimation = (scene: AnimatedScene, characters: string, textNode: any, 
   return animation
 }
 
-const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2, 0.5)
+const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2)
 
 export const keyboardScene = (): AnimatedScene => {
   return new AnimatedScene(
@@ -309,7 +307,7 @@ export const keyboardScene = (): AnimatedScene => {
       addSceneLighting(scene.scene, { intensity: 1, colorScheme: 'cool' })
 
       scene.renderer.shadowMap.enabled = true
-      await addHDRI(scene, hdriData, 0.65)
+      await addHDRI(scene, hdriData, 0.65, 0.5)
       addBackgroundGradient({
         scene,
         topColor: COLORS.blue,

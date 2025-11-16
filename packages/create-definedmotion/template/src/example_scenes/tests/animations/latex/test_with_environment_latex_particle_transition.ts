@@ -5,11 +5,12 @@ import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { setOpacity } from '$renderer/lib/animation/animations'
 import { latexParticleTransitionAnim } from '$renderer/lib/animation/latexTransitionsAndWrite' // <- your new helper
-import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/lighting3d'
+import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 
 
 
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 1, 1)
+
+const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
 
 export const test_with_environment_latex_particle_transition = (): AnimatedScene => {
   return new AnimatedScene(

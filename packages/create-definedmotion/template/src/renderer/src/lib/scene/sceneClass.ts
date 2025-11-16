@@ -174,9 +174,6 @@ export class AnimatedScene {
     }
 
     this.attachScreenSizeListener(globalContainerRef, threeDim)
-   
-    // Cap viewer pixel ratio, without this HDRIs become super slow on MacBooks for example
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
 
     this.startControls()
 

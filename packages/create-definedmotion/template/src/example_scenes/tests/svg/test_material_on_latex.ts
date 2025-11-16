@@ -1,12 +1,13 @@
 import { createBumpMap } from "$renderer/lib/rendering/bumpMaps/noise";
-import { addHDRI, addSceneLighting, HDRIs, loadHDRIData } from "$renderer/lib/rendering/lighting3d";
+import { addHDRI, HDRIs, loadHDRIData } from "$renderer/lib/rendering/hdri";
+import {  addSceneLighting,  } from "$renderer/lib/rendering/lighting3d";
 import { latexToSVG } from "$renderer/lib/rendering/svg/latexToSVG";
 import { createSVGShape } from "$renderer/lib/rendering/svg/svgRendering";
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from "$renderer/lib/scene/sceneClass";
 import * as THREE from 'three';
 
 
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 1, 1)
+const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
 
 
 export const test_material_on_latex = (): AnimatedScene => {
@@ -17,7 +18,7 @@ export const test_material_on_latex = (): AnimatedScene => {
     async (dm) => {
 
         
-        await addHDRI(dm, hdriData, 6)
+     await addHDRI(dm, hdriData, 6)
       const svg = latexToSVG(String.raw`\nabla \cdot \vec{E} = \frac{\rho}{\varepsilon_0}`);
       const group = createSVGShape(svg, 20);
 

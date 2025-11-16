@@ -1,11 +1,9 @@
+import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 import { linspace } from '../renderer/src/lib/mathHelpers/vectors'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import {
   addBackgroundGradient,
-  addHDRI,
   addSceneLighting,
-  HDRIs,
-  loadHDRIData
 } from '../renderer/src/lib/rendering/lighting3d'
 import { createFastText } from '../renderer/src/lib/rendering/objects2d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
@@ -41,7 +39,7 @@ export const field: VectorField3D = (x, y, z, time) => {
   }
 }
 
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 2, 1)
+const hdriData = await loadHDRIData(HDRIs.outdoor1, 2)
 
 export const vectorFieldScene = (): AnimatedScene => {
   return new AnimatedScene(
