@@ -147,6 +147,612 @@ export const yourSceneName = (): AnimatedScene => {
 6. When you want to render your animation, click "Render". You will need to have ffmpeg on your system and available in your system PATH.
 
 
+## The DefinedMotion Scheduler
+
+The scheduler is the core system that manages when animations run, when instructions execute, and how your scene progresses through time. It's designed to be simple and predictable while giving you complete control over timing.
+
+### Planning Phase vs Runtime Phase
+
+DefinedMotion uses a two-phase execution model:
+
+1. **Planning Phase (Build Time)**: When your scene function is called, the entire animation is planned upfront. The scheduler records what should happen at each tick—animations, instructions, dependencies—but doesn't execute anything yet. Think of it like writing a script for a play.
+
+2. **Runtime Phase**: After planning is complete, the scheduler executes the plan tick-by-tick, running animations and updating your scene based on the blueprint created during planning.
+
+This separation is crucial for features like hot reload, timeline scrubbing, and rendering—the scheduler can jump to any frame because it knows the complete plan.
+
+### How It Works
+
+The scheduler operates on a **tick-based timeline**, where each tick represents one frame of your animation. Think of it like a filmstrip—each tick is one frame, and the scheduler decides what happens at each frame.
+```
+Tick:  0    1    2    3    4    5    6    7    8
+       |----|----|----|----|----|----|----|----|
+
+Anim:  [=======animation=======]
+                                     ⚡ instruction
+Deps:  ●----●----●----●----●----●----●----●----●
+       (runs every tick)
+```
+
+**What you see:**
+- `[====]` = Animation spanning multiple ticks
+- `⚡` = Instruction executing at one tick
+- `●----●` = Dependencies updating every tick
+
+### The Timeline Pointer
+
+The scheduler maintains an internal **calculation tick** that tracks where you are in the scene setup during the planning phase. When you add animations or instructions, they're scheduled relative to this pointer:
+```typescript
+// You're at tick 0
+scene.addAnims(animation1)  // Runs from tick 0–499
+// Now you're at tick 500
+scene.addAnims(animation2)  // Runs from tick 500–999
+// Now you're at tick 1000
+```
+
+The calculation tick **only moves forward** when you add animations or a wait (just an animation that does nothing). Instructions (`do()`, `doAt()`) and dependencies (`onEachTick()`) don't move it.
+
+### Core Scheduling Functions
+
+#### `addAnims(...animations)`
+Schedules animations to run in parallel starting at the current tick, then advances the timeline by the longest animation's duration.
+```typescript
+// Both fade in together, scene advances by 800 ticks (longest duration)
+scene.addAnims(
+  fadeIn(sphere, 800),
+  fadeIn(cube, 500)
+)
+```
+
+#### `addDeferredAnims(...animationFactories)`
+Like `addAnims()`, but animations are created when they actually run (at runtime), not during scene setup (at plan/build time). This lets you use live values instead of values captured at plan time.
+```typescript
+// BAD: easeInOutQuad is called during planning phase
+// It reads sphere.position.x at plan time (probably 0)
+// Creates interpolation from 0 → 10
+scene.addAnims(
+  createAnim(easeInOutQuad(sphere.position.x, 10, 500), (value) => {
+    sphere.position.x = value
+  })
+)
+
+// GOOD: easeInOutQuad is called at runtime when animation starts
+// It reads sphere.position.x at runtime (after previous animations moved it)
+// Creates interpolation from current position → 10
+scene.addDeferredAnims(
+  () => createAnim(easeInOutQuad(sphere.position.x, 10, 500), (value) => {
+    sphere.position.x = value
+  })
+)
+```
+
+**Important:** The scheduler still needs to know duration at planning time, so it calls each factory once during the planning phase just to measure duration, then calls it again at runtime to get the actual animation with current values.
+
+#### `insertAnimsAt(tick, ...animations)`
+Inserts animations at any specific tick, even from inside `onEachTick()`. This is powerful for complex conditional logic.
+```typescript
+scene.onEachTick((tick) => {
+  if (collision detected at tick 500) {
+    // Dynamically insert an explosion animation
+    scene.insertAnimsAt(500, explosionAnim)
+  }
+})
+```
+
+#### `do(instruction)`
+Executes a function at the current tick. Doesn't advance the timeline.
+```typescript
+scene.do(() => {
+  scene.add(newObject)
+  console.log('Added at tick', scene.getCurrentTimeMs())
+})
+```
+
+#### `doAt(tick, instruction)`
+Executes a function at a specific tick (not limited to the schedulers current position).
+```typescript
+scene.doAt(1000, () => {
+  object.material.color.set(0xff0000)
+})
+```
+
+#### `onEachTick(updater)`
+Registers a function that runs every single tick throughout the entire animation. Great to produce calculated movements or update dependencies like the line ends below.
+```typescript
+// Keep line endpoints synced with moving spheres
+scene.onEachTick((tick, timeMs) => {
+  line.updatePositions(sphereA.position, sphereB.position)
+})
+```
+
+#### `addSequentialBackgroundAnims(...animations)`
+Runs animations in sequence but **doesn't advance the timeline**. Useful for background activity.
+```typescript
+// Timeline stays at 0, but background sequence runs for 1500 ticks
+scene.addSequentialBackgroundAnims(
+  animation1,  // 0–499
+  animation2,  // 500–999
+  animation3   // 1000–1499
+)
+
+// Next addAnims() still starts at tick 0
+scene.addAnims(mainAnimation)
+```
+
+#### `addWait(durationMs)`
+Advances the timeline without any visible changes. Useful for pacing.
+```typescript
+scene.addAnims(fadeIn(object, 500))
+scene.addWait(2000)  // Hold for 2 seconds
+scene.addAnims(fadeOut(object, 500))
+```
+
+### Execution Order Within a Tick
+
+When the scheduler processes a single tick at runtime, it executes in this order:
+
+1. **Instructions** (`do()`, `doAt()`) — Scene modifications
+2. **Animations** (`addAnims()`, `insertAnimsAt()`) — Property updates
+3. **Dependencies** (`onEachTick()`) — Derived updates
+
+This ordering ensures dependencies always see the latest state from animations.
+
+### Hot Reload Behavior
+
+The scheduler supports three hot reload modes:
+
+- **TraceFromStart**: Replays values updates for all ticks from 0 to current when you save. Accurate but slow for long scenes.
+- **BeginFromCurrent**: Jumps directly to current tick using only instructions before it. Fast but may miss accumulated state (like `angle += 0.01`).
+- **BeginFreshOnSave**: Restarts from tick 0 when you save.
+
+Example of accumulated state issue:
+```typescript
+let angle = 0
+scene.onEachTick(() => {
+  angle += 0.01  // Accumulates over time
+  sphere.rotation.y = angle
+})
+// With BeginFromCurrent, angle won't be correct at tick 500
+// With TraceFromStart, it will be
+```
+
+### Audio Scheduling
+
+Audio is scheduled alongside animations:
+```typescript
+scene.registerAudio(audioPath)  // Load first
+
+scene.do(() => {
+  scene.playAudio(audioPath, volume)  // Plays at current tick
+})
+```
+
+During rendering, audio events are collected and exported as a soundtrack synced to the video.
+
+### Timeline Conversion
+
+The scheduler provides helpers for converting between ticks and time:
+```typescript
+const ms = ticksToMillis(ticks)    // Ticks → milliseconds
+const t = millisToTicks(ms)         // Milliseconds → ticks
+const fps = renderOutputFps()       // Final render frame rate
+```
+
+
+### Key Takeaways
+
+- The entire animation is **planned upfront** during the planning phase, then executed tick-by-tick at runtime
+- The scheduler is **deterministic**: same code always produces same animation
+- Use `addDeferredAnims()` when you need values at runtime, not values at plan/build time
+- `onEachTick()` runs every frame and sees all prior updates
+- `insertAnimsAt()` enables dynamic, conditional animations
+- Background sequences let you layer independent timelines
+- Hot reload modes trade accuracy for speed during development
+
+## Interpolations and Animations
+
+DefinedMotion's animation system is built on a simple but powerful concept: **interpolations are just arrays of numbers**, and **animations pair those arrays with updater functions**.
+
+### What is an Interpolation?
+
+An interpolation is simply a `number[]` — an array of pre-calculated values, one per frame. That's it. During the planning phase, these arrays are generated once and stored. At runtime, the scheduler walks through them tick-by-tick.
+```typescript
+// This creates an array like [0, 0.02, 0.08, 0.18, ..., 9.82, 9.92, 9.98, 10]
+const interpolation = easeInOutQuad(0, 10, 500)  // 500ms from 0 to 10
+
+console.log(interpolation.length)  // Number of frames (ticks)
+console.log(interpolation[0])      // 0
+console.log(interpolation[100])    // Some intermediate value
+```
+
+This approach has major advantages:
+- **Predictable**: Same input always produces same output
+- **Fast**: No expensive easing calculations at runtime
+- **Flexible**: Easy to combine, reverse, or modify
+- **Debuggable**: You can inspect the exact values
+
+### Built-in Interpolation Functions
+
+DefinedMotion provides several interpolation generators:
+
+#### `easeLinear(start, end, durationMs)`
+Linear interpolation from start to end.
+```typescript
+const linear = easeLinear(0, 100, 1000)  // [0, 1, 2, 3, ..., 98, 99, 100]
+```
+
+#### `easeInOutQuad(start, end, durationMs)`
+Smooth quadratic easing (slow start, fast middle, slow end).
+```typescript
+const smooth = easeInOutQuad(0, 10, 800)  // Smooth acceleration and deceleration
+```
+
+#### `easeConstant(value, durationMs)`
+Holds a constant value for a duration (useful for waits or holds).
+```typescript
+const hold = easeConstant(5, 2000)  // Stays at 5 for 2 seconds
+```
+
+#### `rubberband(start, end, durationMs)`
+Overshoots the target then settles (elastic effect).
+```typescript
+const bounce = rubberband(0, 100, 1000)  // Goes past 100, then settles back
+```
+
+### Combining Interpolations
+
+Since interpolations are just arrays, you can manipulate them:
+```typescript
+// Concatenate: move, hold, return
+const sequence = concatInterpols(
+  easeInOutQuad(0, 10, 500),   // Move right
+  easeConstant(10, 1000),       // Hold
+  easeInOutQuad(10, 0, 500)    // Move back
+)
+
+// Or use array methods
+const reversed = easeLinear(0, 10, 500).reverse()
+const doubled = [...interpolation, ...interpolation]  // Play twice
+```
+
+### Creating Animations
+
+An animation pairs an interpolation with an **updater function** that applies each value:
+```typescript
+// Basic pattern: createAnim(interpolation, updater)
+const animation = createAnim(
+  easeInOutQuad(0, 10, 1000),  // The interpolation (what values)
+  (value) => {                  // The updater (what to do with them)
+    sphere.position.x = value
+  }
+)
+```
+
+The updater function receives three parameters:
+- `value`: Current interpolation value for this tick
+- `tick`: Current scene tick (frame number)
+- `isLast`: Boolean indicating if this is the final frame
+```typescript
+const animation = createAnim(interpolation, (value, tick, isLast) => {
+  sphere.position.x = value
+  
+  if (tick % 10 === 0) {
+    console.log('Every 10th frame:', value)
+  }
+  
+  if (isLast) {
+    console.log('Animation finished!')
+  }
+})
+```
+
+### The UserAnimation Class
+
+`createAnim()` returns a `UserAnimation` object with helpful methods:
+```typescript
+const anim = createAnim(easeInOutQuad(0, 10, 1000), (v) => sphere.position.x = v)
+
+// Reverse the animation
+const backward = anim.copy().reverse()
+
+anim.scaleLength(2.0)  // Now takes 2 seconds instead of 1
+
+// Add noise/jitter to the values
+anim.addNoise(0.5)  // Adds random variation up to ±0.5
+
+// Chain modifications
+const modified = anim.copy()
+  .scaleLength(1.5)
+  .addNoise(0.2)
+  .reverse()
+
+// Always copy before modifying to preserve the original
+scene.addAnims(anim.copy().reverse())  // Don't affect original anim
+```
+
+### Custom Interpolations
+
+You can create your own interpolation functions:
+```typescript
+// Custom exponential easing
+function easeExponential(start: number, end: number, durationMs: number): number[] {
+  const numFrames = millisToTicks(durationMs)
+  const values: number[] = []
+  
+  for (let i = 0; i < numFrames; i++) {
+    const t = i / (numFrames - 1)  // Normalize to 0..1
+    const eased = Math.pow(t, 3)   // Apply easing formula
+    const value = start + (end - start) * eased
+    values.push(value)
+  }
+  
+  return values
+}
+
+// Use it like any built-in interpolation
+const anim = createAnim(
+  easeExponential(0, 100, 1000),
+  (value) => object.scale.setScalar(value)
+)
+```
+
+### Pre-built Animation Helpers
+
+DefinedMotion includes common animations that use this system:
+```typescript
+// These all return UserAnimation objects
+fadeIn(sphere, 800)                // Opacity 0 → 1
+fadeOut(sphere, 800)               // Opacity 1 → 0
+zoomIn(sphere, 800)                // Scale 0 → 1
+fade(sphere, 800, 0.5, 1)          // Custom opacity range
+
+// Camera animations (return deferred factories)
+moveCameraToAnim(camera, { position: new THREE.Vector3(10, 0, 0) }, 1000)
+rotateCameraToAnim(camera, { rotation: quaternion }, 1000)
+flyCameraToAnim(camera, { position: pos, rotation: quat }, 1500)
+
+// LaTeX animations (return deferred factories)
+latexHighlightAnim(latexGroup, 'myClass', { durationMs: 1000 })
+latexMarkAnim(latexGroup, ['lhs', 'rhs'], { pulses: 3 })
+latexParticleTransitionAnim(fromGroup, toGroup, { particleCount: 3000 })
+latexWriteAnim(latexGroup, { direction: 'ltr', penWidth: 0.15 })
+```
+
+
+### Key Takeaways
+
+- Interpolations are just `number[]` — simple, predictable, and fast
+- Animations = interpolation + updater function
+- Built during the planning phase, executed at runtime
+- Easy to modify: reverse, scale, add noise, concatenate
+- Custom interpolations are just functions that return `number[]`
+- The `UserAnimation` class provides helpful methods for manipulation
+- All high-level animations (fade, zoom, camera moves) are built on this same simple system
+
+
+## LaTeX Ecosystem
+
+DefinedMotion provides a complete toolkit for creating, animating, and transforming LaTeX expressions in 3D space. The system converts LaTeX to SVG to Three.js meshes, with full support for positioning, styling, and animation.
+
+### System Overview
+
+The LaTeX pipeline follows this flow:
+1. **LaTeX string** → `latexToSVG()` → **SVG markup** (via MathJax)
+2. **SVG markup** → `createSVGShape()` → **Three.js Group** with geometry
+3. **Three.js Group** → animate, transform, query, or update in your scene
+
+All LaTeX is rendered as true 3D geometry that inherits Three.js capabilities (materials, lights, shadows, transformations).
+
+### Core Functions
+
+**Rendering & Creation**
+- `latexToSVG(latex: string, { display?: boolean }): string` — Convert LaTeX to SVG markup using MathJax
+- `createSVGShape(svg: string, targetWidth: number, detail?: number): THREE.Group` — Convert SVG to 3D geometry with normalized sizing
+- `updateSVGShape(group: THREE.Group, svg: string, opts?): THREE.Group` — Update existing LaTeX group with new content (preserves transforms)
+
+**Querying & Positioning**
+- `queryLaTeXClass(root: THREE.Object3D, className: string): ClassQueryResult | null` — Find meshes by class, returns `{ meshes, box, center }` for positioning overlays or animations
+
+**Animation Helpers** *(all return deferred animation factories for use with `addDeferredAnims`)*
+- `latexMarkAnim(root, classNames, { durationMs?, color?, padding?, pulses?, scaleAmp? })` — Pulsating bracket overlay around specified classes
+- `latexHighlightAnim(root, classNames, { durationMs?, highlightColor?, pulses?, minMix?, maxMix? })` — Color pulse animation on specified classes
+- `latexParticleTransitionAnim(fromGroup, toGroup, { durationMs?, particleCount? })` — Morphs one formula into another via particle dispersion
+- `latexWriteAnim(targetGroup, { durationMs?, direction?, penWidth? })` — Reveals formula with writing effect (left-to-right or right-to-left)
+
+### Class Tagging with `\dmClass`
+
+Use the `\dmClass{tag}{content}` macro to mark parts of your LaTeX for querying or targeted animation:
+```latex
+\dmClass{lhs}{\int_0^\infty e^{-x^2}\,dx} = \dmClass{rhs}{\frac{\sqrt{\pi}}{2}}
+```
+
+Then query or animate by class name:
+```typescript
+const result = queryLaTeXClass(group, 'lhs')
+// result is general spatial information of the left-hand side, tagged with "lhs". Functions like "latexHighlightAnim" are built on top of "queryLaTeXClass"
+
+dm.addDeferredAnims(
+  latexHighlightAnim(group, 'rhs', { highlightColor: 0xff0000 })
+)
+```
+
+## Lighting and HDRIs
+
+### Traditional Lighting
+
+**Quick setup with pre-configured lighting:**
+```typescript
+import { addSceneLighting } from '$renderer/lib/rendering/lighting3d'
+
+addSceneLighting(scene.scene, {
+  colorScheme: 'cool',  // 'cool' | 'warm' | 'contrast' | 'studio' | 'dramatic'
+  intensity: 1.0
+})
+```
+
+**Simple gradient backgrounds:**
+```typescript
+import { addBackgroundGradient } from '$renderer/lib/rendering/lighting3d'
+
+addBackgroundGradient({
+  scene,
+  topColor: 0x87ceeb,
+  bottomColor: 0xffffff,
+  lightingIntensity: 1.0
+})
+```
+
+### HDRI Lighting (Image-Based Lighting)
+
+HDRIs provide realistic environment lighting and reflections. Use a two-step approach for performance:
+
+**Step 1: Load once at module scope**
+```typescript
+import { loadHDRIData, addHDRI, HDRIs } from '$renderer/lib/rendering/hdri'
+
+const hdriData = await loadHDRIData(
+  HDRIs.outdoor1,  // photoStudio1/2/3, outdoor1, indoor1, metro1
+  2                // blur amount (0=sharp, 5+=very blurred)
+)
+```
+
+**Step 2: Apply in your scene**
+```typescript
+export function myScene(): AnimatedScene {
+  return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
+    HotReloadSetting.TraceFromStart, async (scene) => {
+    
+    await addHDRI(
+      scene,
+      hdriData,
+      1.0,  // lighting intensity
+      1.0   // background opacity (0=invisible, 1=fully visible)
+    )
+    
+  })
+}
+```
+
+**Why two steps?** Loading HDRIs is expensive. Loading it outside the scene build function, it doesn't have to reload when it doesn't need to which produces a smoother viewer.
+
+**Mix techniques:**
+```typescript
+// HDRI for lighting only (no visible background)
+await addHDRI(scene, hdriData, 1.0, 0.0)
+
+// Add custom background
+addBackgroundGradient({ scene, topColor: 0x000033, bottomColor: 0x000000 })
+
+// Add accent lights
+const light = new THREE.DirectionalLight(0xffffff, 2.0)
+light.position.set(5, 5, 5)
+scene.add(light)
+```
+
+**Key points:**
+- Load HDRIs at module scope, not inside scene functions
+- Higher blur = softer background, better performance
+- Use `MeshStandardMaterial` or `MeshPhysicalMaterial` for PBR
+- Combine HDRIs with gradients and traditional lights as needed
+
+
+## Audio
+
+DefinedMotion syncs audio to your timeline automatically. Audio is scheduled at specific ticks and stays perfectly in sync during playback, scrubbing, and rendering.
+
+### Basic Usage
+
+**Step 1: Register audio files (once, early in scene)**
+```typescript
+import tickSound from '$assets/audio/tick_sound.mp3'
+
+scene.registerAudio(tickSound)  // Tell the scene about this audio file
+```
+
+**Step 2: Play audio at any point**
+```typescript
+scene.do(() => {
+  scene.playAudio(tickSound, 1.0)  // Play at current tick, volume 1.0
+})
+
+// Or play at a specific tick
+scene.doAt(500, () => {
+  scene.playAudio(tickSound, 0.5)  // Play at tick 500, volume 0.5
+})
+```
+
+### Audio in Animations
+
+Trigger sounds during animations:
+```typescript
+scene.registerAudio(tickSound)
+
+let lastIndex = -1
+const switchAnimation = createAnim(
+  easeLinear(0, 1, 3000),
+  (value) => {
+    const index = Math.floor(value * 10)
+    if (index !== lastIndex) {
+      lastIndex = index
+      scene.playAudio(tickSound)  // Play on each change
+    }
+  }
+)
+
+scene.addAnims(switchAnimation)
+```
+
+### How It Works
+
+**During playback:**
+- Audio plays immediately when its tick is reached
+- Pause/resume works seamlessly (audio resumes from correct position)
+- Timeline scrubbing automatically seeks audio to the correct time
+
+**During rendering:**
+- Audio events are collected with their frame numbers
+- Exported as a synchronized audio track in the final video
+- No need to manually sync audio in post-production
+
+**During planning:**
+- `registerAudio()` tells the scene which files to load
+- `playAudio()` schedules the sound at the current tick
+- Audio loads asynchronously before playback starts
+
+### Key Points
+
+- Always `registerAudio()` before using `playAudio()`
+- Audio is tick-synchronized (stays in sync with animations)
+- Volume range: 0.0 (silent) to 1.0 (full volume)
+- Audio automatically handles: playback, pause/resume, seeking, and render export
+- Multiple sounds can play simultaneously
+
+## Import Path Shortcuts
+
+DefinedMotion provides convenient path aliases to avoid messy relative imports like `../../../../assets/`.
+
+### Available Shortcuts
+
+**`$renderer/*`** - Access any file in `src/renderer/src/`
+```typescript
+// Instead of: import { AnimatedScene } from '../../../../renderer/src/lib/scene/sceneClass'
+import { AnimatedScene } from '$renderer/lib/scene/sceneClass'
+import { fadeIn } from '$renderer/lib/animation/animations'
+import { createCircle } from '$renderer/lib/rendering/objects2d'
+import { addHDRI, HDRIs } from '$renderer/lib/rendering/hdri'
+```
+
+**`$assets/*`** - Access any file in `src/assets/`
+```typescript
+// Instead of: import tickSound from '../../../../assets/audio/tick_sound.mp3'
+import tickSound from '$assets/audio/tick_sound.mp3'
+import myImage from '$assets/images/photo.jpg'
+import customHDRI from '$assets/hdri/custom-environment.hdr'
+```
+
+These shortcuts work throughout your project—no configuration needed. They're defined in `tsconfig.json` and work automatically.
+
+
 ## Easy example
 ```ts
 // Goal for this animation:
