@@ -79,7 +79,7 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 <img src="resources/scheduler2.png" alt="Image of the tick-based scheduler"  />
 
 ## Look at example scenes
-Visit /src/example_scenes and look how scenes are made, this is likely a good way to learn the library. The entrypoint that specifies what scene that should be shown in the viewer is src/entry.ts.
+DefinedMotion includes **12 example scenes** and **34 tests** to help you learn and verify functionality. Browse `/src/example_scenes` to see complete, working animations you can run immediately.
 
 
 ### Create Scene 
@@ -484,17 +484,17 @@ You can create your own interpolation functions:
 ```typescript
 // Custom exponential easing
 function easeExponential(start: number, end: number, durationMs: number): number[] {
-  const numFrames = millisToTicks(durationMs)
-  const values: number[] = []
-  
-  for (let i = 0; i < numFrames; i++) {
-    const t = i / (numFrames - 1)  // Normalize to 0..1
-    const eased = Math.pow(t, 3)   // Apply easing formula
-    const value = start + (end - start) * eased
-    values.push(value)
-  }
-  
-  return values
+  const n = millisToTicks(durationMs)
+  if (n <= 1) return [end]
+
+  const k = 5
+  const ek = Math.exp(k)
+
+  return Array.from({ length: n }, (_, i) => {
+    const t = i / (n - 1)
+    const eased = (Math.exp(k * t) - 1) / (ek - 1) // 0..1 → 0..1
+    return start + (end - start) * eased
+  })
 }
 
 // Use it like any built-in interpolation
