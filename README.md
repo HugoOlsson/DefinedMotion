@@ -1,3 +1,10 @@
+<p align="center">
+  <img src="resources/repo_banner.jpeg" alt="DefinedMotion banner" width="100%">
+</p>
+
+
+[![npm version](https://img.shields.io/npm/v/create-definedmotion.svg)](https://www.npmjs.com/package/create-definedmotion)
+
 # DefinedMotion - Programmatic Animations
 
 ###  Animate Three.js with all its power
@@ -6,32 +13,22 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 
 
 
-### Quick overview
+### Overview
 
-- ⚡ **Hot-reload on save**  
-  Tweak something, hit save, and see the change instantly in the viewer. No “render first, see later”. Saves minutes per iteration on heavy scenes.
+- **Hot-reload on save**  
+  Tweak code, hit save, and see the change instantly in the viewer instead of re-rendering videos between iterations.
 
-- 🌌 **Full Three.js ecosystem**  
-  Use *any* Three.js primitive or addon: PBR materials, lights, HDRI, helpers, post-processing, model loaders, controls — if it works in Three.js, you can animate it.
+- **Built on Three.js**  
+  Your scene is a Three.js scene. This allows you to use any Three.js feature and its entire ecosystem. Instead of reinveting the wheel, the users have access to 15 years of collaborative graphics work.
 
-- 🚀 **One-line project setup**  
-  Create a ready-to-run project with `npx create-definedmotion my-project` 
+- **Quick project setup**  
+  Create a ready-to-run project with `npx create-definedmotion my-project`.
 
-- 🔐 **Type-safe animations with TypeScript**  
-  Build reusable helpers and scenes with full IDE support, refactors, and autocomplete.
+- **Timeline you can reason about**  
+  The animation scheduler simply walks a linear timeline. The exposed animation primitives just places functions that are called at each tick/frame.
 
-- 🧭 **Interactive viewer**  
-  Navigate your scene, orbit the camera, and copy the current position/rotation so you don’t have to guess values in code.
-
-- 🧱 **Simple, low-level animation scheduler**  
-  A small set of primitives (`addAnims`, `addDeferredAnims`, `onEachTick`, `doAt`, background sequences…) that stays easy to reason about and makes it trivial to build your own higher-level components and animation primitives.
-
-- 🤖 **Great chatbot / AI assistant compatibility**  
-  Because it uses standard TypeScript + Three.js, modern coding assistants already “understand” your scenes, shaders, loaders, cameras, and math, and can help you write and debug DefinedMotion code even though the library is new.
-
-- 🎥 **One-click rendering**  
-  When you’re happy with the result, click **Render** in the viewer. You only need FFmpeg installed when you’re ready for the final video.
-
+- **Interactive viewer and rendering**  
+  Navigate the scene. Position the camera and copy its position to avoid guessing values. When you are happy with your animation, click render to get a video file.
 
 <table>
   <tbody>
@@ -63,16 +60,16 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 
 | Feature                  | **DefinedMotion**                                                                                               | **Manim (Community)**                                                                  | **Motion_Canvas**                                                                                           |
 |--------------------------|-----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| **Performance**          | ⚡ Realtime playback in the viewer, even for heavy 3D scenes – no video render needed while iterating.          | Built for offline renders; seeing scenes often means waiting for a render             | ⚡ Realtime 2D playback in the viewer. No video render needed while iterating. However, no built-in 3D engine.                             |
-| **Hot reload**           | ✅ Hot reload on save as a core workflow with timeline scrubbing.                                                                        | File-watch/CLI loops exist, but you still wait for each render (no true live hot reload) | ✅ Hot reload on save as a core workflow with timeline scrubbing.                                                    |
-| **3D & rendering engine**| 🌌 Full **Three.js ecosystem**: PBR materials, lights, HDRI, helpers, post-processing, addons etc                  | Custom engine, 2D-first; 3D is possible but with less engine/ecosystem depth than Three.js | Designed for 2D Canvas. Great toolkit for this.             |
-| **3D model import**      | 📦 Use any Three.js loader (GLTF/GLB, OBJ, FBX, STL, etc.) – imported models become first-class scene objects   | 3D object support is more limited; importing arbitrary 3D formats is possible but not a core focus | No native 3D mesh import; typically you work with shapes, images, and SVG in 2D                             |
-| **Viewer & interaction** | 🧭 Interactive 3D and 2D viewer with timeline and helpers for camera handling.                            | A preview window. Often rendering to video and watching that.    | Great UI. Interactive 2D viewer with timeline and many helpers    |
-| **Low-level control**    | 🧱 Low-level access: you work directly with Three.js objects and it's easy to build your own animation primitives      | Object model is extensible but more opinionated, deeper engine changes take more work. | Somewhat modular. Possibly awkward due to heavy use of generator functions and custom made engine.             |
-| **LaTeX & math text**    | 🧮 LaTeX → SVG → 3D, plus APIs to query positions of substrings (for precise highlights, braces, arrows, etc.). LaTeX becomes true 3D. | Excellent LaTeX support out of the box, huge example base; finer spatial control is more manual | Great 2D LaTeX support with transitions.                     |
-| **Install & first run**  | 🚀 `npx create-definedmotion my-project` – one line and you have it set up                                  | Python env + Manim install,  well-documented, lots of community resources. Very heavy LaTeX dependecy (~3–5GB).         | Nice easy setup. Uses npm like DM                             |
-| **Rendering to video**   | 🎥 One-click render in the viewer, you only need `ffmpeg` when you’re ready for the final video                | Mature CLI rendering. Requires ffmpeg.                    | Easily rendering from the viewer. Requires ffmpeg.                                       |
-| **Chatbot / AI support** | 🤖 Very good: all major chatbots understand **TypeScript + Three.js**, so they can help with almost everything even though DefinedMotion is new | 🤖 Very good: Manim has a huge footprint; plus Python is well supported by chatbots | 🤖 Good; smaller ecosystem than Three.js means fewer pre-existing examples for assistants to draw from. |
+| **Performance**          |  Realtime playback in the viewer, even for heavy 3D scenes – no video render needed while iterating.          | Built for offline renders; seeing scenes often means waiting for a render             |  Realtime 2D playback in the viewer. No video render needed while iterating. However, no built-in 3D engine.                             |
+| **Hot reload**           |  Hot reload on save as a core workflow with timeline scrubbing.                                                                        | File-watch/CLI loops exist, but you still wait for each render (no true live hot reload) |  Hot reload on save as a core workflow with timeline scrubbing.                                                    |
+| **3D & rendering engine**|  Full **Three.js ecosystem**: PBR materials, lights, HDRI, helpers, post-processing, addons etc                  | Custom engine, 2D-first; 3D is possible but with less engine/ecosystem depth than Three.js | Designed for 2D Canvas. Great toolkit for this.             |
+| **3D model import**      |  Use any Three.js loader (GLTF/GLB, OBJ, FBX, STL, etc.) – imported models become first-class scene objects   | 3D object support is more limited; importing arbitrary 3D formats is possible but not a core focus | No native 3D mesh import; typically you work with shapes, images, and SVG in 2D                             |
+| **Viewer & interaction** |  Interactive 3D and 2D viewer with timeline and helpers for camera handling.                            | A preview window. Often rendering to video and watching that.    | Great UI. Interactive 2D viewer with timeline and many helpers    |
+| **Low-level control**    |  Low-level access: you work directly with Three.js objects and it's easy to build your own animation primitives      | Object model is extensible but more opinionated, deeper engine changes take more work. | Somewhat modular. Possibly awkward due to heavy use of generator functions and custom made engine.             |
+| **LaTeX & math text**    |  LaTeX → SVG → 3D, plus APIs to query positions of substrings (for precise highlights, braces, arrows, etc.). LaTeX becomes true 3D. | Excellent LaTeX support out of the box, huge example base; finer spatial control is more manual | Great 2D LaTeX support with transitions.                     |
+| **Install & first run**  |  `npx create-definedmotion my-project` – one line and you have it set up                                  | Python env + Manim install,  well-documented, lots of community resources. Very heavy LaTeX dependecy (~3–5GB).         | Nice easy setup. Uses npm like DM                             |
+| **Rendering to video**   |  One-click render in the viewer, you only need `ffmpeg` when you’re ready for the final video                | Mature CLI rendering. Requires ffmpeg.                    | Easily rendering from the viewer. Requires ffmpeg.                                       |
+| **Chatbot / AI support** |  Very good: all major chatbots understand **TypeScript + Three.js**, so they can help with almost everything even though DefinedMotion is new |  Very good: Manim has a huge footprint; plus Python is well supported by chatbots |  Good; smaller ecosystem than Three.js means fewer pre-existing examples for assistants to draw from. |
 | **Best fit for…**        | Technical animations in general, complex heavy scenes, math/CS/physics visuals, and Three.js-native workflows with fast iteration & hot reload | Math lectures, proofs, blackboard-style animations, especially in Python-centric stacks | 2D explainers with a visual timeline and audio sync. Nice primitives for building flexbox-like layouts and showing code |
 
 ## A dead-easy architecture
