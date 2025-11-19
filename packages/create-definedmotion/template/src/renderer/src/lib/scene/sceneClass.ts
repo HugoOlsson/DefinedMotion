@@ -399,6 +399,10 @@ export class AnimatedScene {
   const handleResize = (width: number) => {
     if (!width) return
 
+    if (this.isRendering) {
+      return
+    }
+
     // Respect the animation's logical aspect ratio
     const height = width / targetAspect
 
@@ -459,7 +463,12 @@ export class AnimatedScene {
     this.isRendering = true
     this.isPlaying = true
     this.stopControls()
+    
+    const ro = this.resizeObserver
+    ro?.disconnect()
+
     const renderName = generateID(10)
+
 
     const cpu_free_time = 5
     const div = this.container
@@ -513,6 +522,8 @@ export class AnimatedScene {
     div.style.zIndex = originalZIndex
 
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
+    ro?.observe(this.container)
+
     this.isPlaying = false
     await this.jumpToFrameAtIndex(0)
     this.renderCurrentFrame()

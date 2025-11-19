@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/repo_banner.jpeg" alt="DefinedMotion banner" width="100%">
+  <img src="resources/repo_banner.jpg" alt="DefinedMotion banner" width="100%">
 </p>
 
 
@@ -72,8 +72,6 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 | **Chatbot / AI support** |  Very good: all major chatbots understand **TypeScript + Three.js**, so they can help with almost everything even though DefinedMotion is new |  Very good: Manim has a huge footprint; plus Python is well supported by chatbots |  Good; smaller ecosystem than Three.js means fewer pre-existing examples for assistants to draw from. |
 | **Best fit for…**        | Technical animations in general, complex heavy scenes, math/CS/physics visuals, and Three.js-native workflows with fast iteration & hot reload | Math lectures, proofs, blackboard-style animations, especially in Python-centric stacks | 2D explainers with a visual timeline and audio sync. Nice primitives for building flexbox-like layouts and showing code |
 
-## A dead-easy architecture
-<img src="resources/scheduler2.png" alt="Image of the tick-based scheduler"  />
 
 ## Look at example scenes
 DefinedMotion includes **12 example scenes** and **34 tests** to help you learn and verify functionality. Browse `/src/example_scenes` to see complete, working animations you can run immediately.
