@@ -1,7 +1,8 @@
 import type { AutomationRequest, AutomationResult } from '../../automation/types'
 import { SceneRuntimeError } from './lib/scene/sceneClass'
 import { AssetRuntimeError } from './lib/assets/assetReference'
-import { AutomationCommandError, RenderSession } from './renderSession'
+import { AutomationCommandError } from './automationError'
+import { RenderSession } from './renderSession'
 
 const automationApi = window.api
 

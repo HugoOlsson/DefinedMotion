@@ -1,4 +1,4 @@
-export type AutomationCommand = 'scenes' | 'still'
+export type AutomationCommand = 'scenes' | 'still' | 'timeline-grid'
 
 export interface ScenesAutomationRequest {
   command: 'scenes'
@@ -12,7 +12,20 @@ export interface StillAutomationRequest {
   output: string
 }
 
-export type AutomationRequest = ScenesAutomationRequest | StillAutomationRequest
+export interface TimelineGridAutomationRequest {
+  command: 'timeline-grid'
+  scene: string
+  frames?: number[]
+  count?: number
+  columns?: number
+  cellWidth: number
+  output: string
+}
+
+export type AutomationRequest =
+  | ScenesAutomationRequest
+  | StillAutomationRequest
+  | TimelineGridAutomationRequest
 
 export interface AutomationSceneSummary {
   id: string
@@ -21,18 +34,38 @@ export interface AutomationSceneSummary {
   isTest: boolean
 }
 
+export interface TimelineGridCell {
+  frame: number
+  timeMs: number
+  row: number
+  column: number
+  x: number
+  y: number
+  width: number
+  height: number
+  label: string
+}
+
 export interface AutomationSuccessResult {
   success: true
   command: AutomationCommand
   scenes?: AutomationSceneSummary[]
   scene?: string
   frame?: number
+  frames?: number[]
+  cells?: TimelineGridCell[]
   timeMs?: number
   durationInFrames?: number
   fps?: number
   seed?: number | string
   width?: number
   height?: number
+  sceneWidth?: number
+  sceneHeight?: number
+  columns?: number
+  rows?: number
+  cellWidth?: number
+  cellHeight?: number
   output?: string
   renderTimeMs?: number
   runtimeId?: string

@@ -6,6 +6,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import sharp from 'sharp'
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const projectRoot = dirname(scriptDirectory)
@@ -92,6 +93,34 @@ try {
   }
   if (sha256(firstOutput) !== sha256(secondOutput)) {
     throw new Error('Repeated still renders were not byte-identical')
+  }
+
+  const timelineGridOutput = join(temporaryDirectory, 'timeline-grid.png')
+  const timelineGrid = run([
+    'timeline-grid',
+    'tutorial-easy-1',
+    '--cell-width',
+    '180',
+    '--output',
+    timelineGridOutput,
+    '--no-build'
+  ])
+  const timelineGridImage = await sharp(timelineGridOutput).metadata()
+  if (
+    timelineGrid.command !== 'timeline-grid' ||
+    timelineGrid.cells.length !== 9 ||
+    JSON.stringify(timelineGrid.frames) !== JSON.stringify([0, 7, 15, 22, 30, 37, 44, 52, 59]) ||
+    timelineGrid.columns !== 3 ||
+    timelineGrid.rows !== 3 ||
+    timelineGrid.width !== 572 ||
+    timelineGrid.height !== 1088 ||
+    timelineGridImage.width !== timelineGrid.width ||
+    timelineGridImage.height !== timelineGrid.height ||
+    timelineGrid.cells[4].frame !== 30 ||
+    timelineGrid.cells[4].timeMs !== 500 ||
+    timelineGrid.cells[8].label !== 'Frame 59 · 983 ms'
+  ) {
+    throw new Error('Timeline grid image or structured cell metadata was incorrect')
   }
 
   process.stdout.write('DefinedMotion automation smoke test passed\n')

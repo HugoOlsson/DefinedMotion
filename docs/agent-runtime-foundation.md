@@ -39,6 +39,11 @@ npm run dm -- still tutorial-easy-1 \
   --frame 30 \
   --output .definedmotion/frame-30.png \
   --json
+
+npm run dm -- timeline-grid tutorial-easy-1 \
+  --columns 3 \
+  --output .definedmotion/tutorial-timeline.png \
+  --json
 ```
 
 The default still path is
@@ -60,20 +65,31 @@ npm run dm -- session status --json
 
 npm run dm -- scenes --json
 npm run dm -- still tutorial-easy-1 --frame 30 --json
-npm run dm -- still tutorial-easy-1 --frame 60 --json
+npm run dm -- still tutorial-easy-1 --frame 59 --json
+npm run dm -- timeline-grid tutorial-easy-1 --json
 
 npm run dm -- session stop
 ```
 
-`scenes` and `still` prefer the session when it exists. `--standalone` forces a
-one-shot renderer, while `--require-session` fails instead of falling back. Use
-`session start --foreground` when the caller should own and observe the runtime
-process directly, such as in CI or an agent-controlled terminal.
+`scenes`, `still`, and `timeline-grid` prefer the session when it exists.
+`--standalone` forces a one-shot renderer, while `--require-session` fails
+instead of falling back. Use `session start --foreground` when the caller should
+own and observe the runtime process directly, such as in CI or an
+agent-controlled terminal.
 
 The persistent boundary is deliberately the renderer environment, not a scene
 instance. Electron, Vite, WebGL initialization, loaded fonts, and browser caches
 remain warm. Every command creates a clean scene and disposes the previous
 scene, renderer, canvas, and WebGL context.
+
+`timeline-grid` seeks deterministically to each requested frame and composes a
+single labeled PNG inside the renderer without creating temporary still files.
+With no selection flags it samples nine evenly distributed frames, including
+the first and last valid frame. `--count` changes the sample count and `--frames`
+selects exact frames; the two flags cannot be combined. The result reports grid
+dimensions and structured cell metadata, including each frame's exact time and
+pixel bounds. Requests accept at most 100 frames, and output dimensions are
+bounded to prevent accidental memory exhaustion.
 
 ### Freshness contract
 
@@ -157,8 +173,7 @@ and exact source revision.
 The foundation intentionally precedes AI-specific protocols. Planned clients
 and capabilities can build on the same runtime:
 
-1. Multi-frame requests and contact sheets that reuse the persistent renderer.
-2. Semantic inspectable-object registration and response-budgeted snapshots.
-3. Validation, debug overlays, and object-ID renders.
-4. Extracted versioned runtime/CLI packages for upgrading generated projects.
-5. An agent skill and, if useful, a thin MCP wrapper.
+1. Semantic inspectable-object registration and response-budgeted snapshots.
+2. Validation, debug overlays, and object-ID renders.
+3. Extracted versioned runtime/CLI packages for upgrading generated projects.
+4. An agent skill and, if useful, a thin MCP wrapper.

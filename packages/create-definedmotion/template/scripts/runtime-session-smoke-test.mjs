@@ -70,9 +70,11 @@ async function waitForReady() {
 }
 
 async function centerPixel(path) {
-  return Array.from(
-    await sharp(path).extract({ left: 160, top: 90, width: 1, height: 1 }).raw().toBuffer()
-  )
+  return pixelAt(path, 160, 90)
+}
+
+async function pixelAt(path, left, top) {
+  return Array.from(await sharp(path).extract({ left, top, width: 1, height: 1 }).raw().toBuffer())
 }
 
 function sha256(path) {
@@ -130,6 +132,35 @@ try {
     throw new Error('Runtime identity or source-generation metadata was not preserved correctly')
   }
 
+  const shortGridOutput = join(temporaryDirectory, 'short-grid.png')
+  const shortGridResult = run([
+    'timeline-grid',
+    'runtime-freshness',
+    '--count',
+    '5',
+    '--cell-width',
+    '120',
+    '--output',
+    shortGridOutput,
+    '--require-session'
+  ])
+  if (
+    JSON.stringify(shortGridResult.frames) !== JSON.stringify([0]) ||
+    shortGridResult.columns !== 1 ||
+    shortGridResult.rows !== 1 ||
+    JSON.stringify(await pixelAt(shortGridOutput, 68, 42)) !== JSON.stringify([0, 0, 255])
+  ) {
+    throw new Error('Count-based sampling did not adapt to a shorter scene')
+  }
+
+  const conflictingSelection = run(
+    ['timeline-grid', 'tutorial-easy-1', '--frames', '0,30', '--count', '2'],
+    false
+  )
+  if (conflictingSelection.success || conflictingSelection.error?.code !== 'INVALID_ARGUMENTS') {
+    throw new Error('Timeline grid accepted conflicting frame selection flags')
+  }
+
   const firstSessionOutput = join(temporaryDirectory, 'session-1.png')
   const secondSessionOutput = join(temporaryDirectory, 'session-2.png')
   const standaloneOutput = join(temporaryDirectory, 'standalone.png')
@@ -172,6 +203,44 @@ try {
     firstSessionResult.generation !== secondSessionResult.generation
   ) {
     throw new Error('Unchanged source did not reuse the same runtime generation')
+  }
+
+  const sessionGridOutput = join(temporaryDirectory, 'session-grid.png')
+  const standaloneGridOutput = join(temporaryDirectory, 'standalone-grid.png')
+  const sessionGridResult = run([
+    'timeline-grid',
+    'tutorial-easy-1',
+    '--frames',
+    '0,30,59',
+    '--columns',
+    '2',
+    '--cell-width',
+    '180',
+    '--output',
+    sessionGridOutput,
+    '--require-session'
+  ])
+  const standaloneGridResult = run([
+    'timeline-grid',
+    'tutorial-easy-1',
+    '--frames',
+    '0,30,59',
+    '--columns',
+    '2',
+    '--cell-width',
+    '180',
+    '--output',
+    standaloneGridOutput,
+    '--standalone',
+    '--no-build'
+  ])
+  if (
+    sha256(sessionGridOutput) !== sha256(standaloneGridOutput) ||
+    sessionGridResult.runtimeId !== initialStatus.runtimeId ||
+    standaloneGridResult.runtimeId !== undefined ||
+    JSON.stringify(sessionGridResult.cells) !== JSON.stringify(standaloneGridResult.cells)
+  ) {
+    throw new Error('Persistent and standalone timeline grids were not deterministic equivalents')
   }
 
   rmSync(fixturePath, { force: true })
