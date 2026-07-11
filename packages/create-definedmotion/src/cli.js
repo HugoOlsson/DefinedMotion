@@ -60,6 +60,8 @@ async function createProject() {
   console.log('  ' + chalk.cyan('npm install'));
   console.log(chalk.gray('\n  Start development:'));
   console.log('  ' + chalk.cyan('npm run dev'));
+  console.log(chalk.gray('\n  List scenes available to automation:'));
+  console.log('  ' + chalk.cyan('npm run dm -- scenes'));
   console.log(chalk.gray('\n  Create your animations in:'));
   console.log('  ' + chalk.cyan('src/renderer/src/scenes/'));
   console.log('\n' + chalk.gray('Need help? Check out the docs:'));

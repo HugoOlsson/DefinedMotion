@@ -9,9 +9,10 @@ import { generateID } from '../general/helpers'
 import { sleep } from '../rendering/helpers'
 import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
+import Alea from 'alea'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
-import { animationFPSDivider, renderSkip } from '../../../../entry'
+import { definedMotionConfig } from '../../../../definedmotion.config'
 import { addDestroyFunction } from '../general/onDestory'
 import {
   AudioInScene,
@@ -26,7 +27,8 @@ import {
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
-const timelineFPS = screenFPS / animationFPSDivider;
+export const timelineFPS = definedMotionConfig.timelineFps
+export const renderSkip = definedMotionConfig.renderEveryNthFrame
 
 // Convert ticks (frames) to milliseconds
 export const ticksToMillis = (ticks: number) => (ticks / timelineFPS) * 1000
@@ -48,6 +50,16 @@ export enum HotReloadSetting {
   BeginFreshOnSave
 }
 
+export class SceneRuntimeError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string
+  ) {
+    super(message)
+    this.name = 'SceneRuntimeError'
+  }
+}
+
 export const hotreloadNameLookup = (mode: HotReloadSetting) => {
   switch (mode) {
     case HotReloadSetting.TraceFromStart:
@@ -62,9 +74,18 @@ export const hotreloadNameLookup = (mode: HotReloadSetting) => {
 type SceneInstruction = (tick: number) => any
 
 export let globalContainerRef: HTMLElement
+let globalInteractiveMode = true
 
 export const setGlobalContainerRef = (ref: HTMLElement) => {
   globalContainerRef = ref
+}
+
+/**
+ * Configures whether newly-created scenes attach editor-only behavior such as
+ * OrbitControls, ResizeObserver and a continuous requestAnimationFrame loop.
+ */
+export const setGlobalInteractiveMode = (interactive: boolean): void => {
+  globalInteractiveMode = interactive
 }
 
 export class AnimatedScene {
@@ -127,6 +148,8 @@ export class AnimatedScene {
   private playbackTargetDistance: number | null = null
 
   private resizeObserver?: ResizeObserver
+  private interactive: boolean
+  private randomGenerator = Alea(definedMotionConfig.seed)
   
 
   constructor(
@@ -141,6 +164,7 @@ export class AnimatedScene {
     this.pixelsWidth = pixelsWidth
     this.hotReloadSetting = hotReloadSetting
     this.traceFromStart = hotReloadSetting !== HotReloadSetting.BeginFromCurrent
+    this.interactive = globalInteractiveMode
 
     const threeDim = spaceSetting === SpaceSetting.ThreeDim
 
@@ -173,9 +197,12 @@ export class AnimatedScene {
       this.end()
     }
 
-    this.attachScreenSizeListener(globalContainerRef, threeDim)
-
-    this.startControls()
+    if (this.interactive) {
+      this.attachScreenSizeListener(globalContainerRef, threeDim)
+      this.startControls()
+    } else {
+      this.controls.enabled = false
+    }
 
     addDestroyFunction(() => this.onDestroy())
   }
@@ -201,6 +228,19 @@ export class AnimatedScene {
   getCurrentTimeMs() {
     return ticksToMillis(this.sceneRenderTick)
   }
+
+  get width(): number {
+    return this.pixelsWidth
+  }
+
+  get height(): number {
+    return this.pixelsHeight
+  }
+
+  /** Deterministic scene-local replacement for Math.random(). */
+  random = (): number => this.randomGenerator()
+
+  randomBetween = (min: number, max: number): number => min + this.random() * (max - min)
 
   addAnims(...animations: UserAnimation[]) {
     const longest = Math.max(...animations.map((a) => a.interpolation.length))
@@ -251,7 +291,19 @@ export class AnimatedScene {
   }
 
   end() {
-    this.totalSceneTicks = this.sceneCalculationTick 
+    const lastAnimationTick = this.sceneAnimations.reduce(
+      (latest, animation) => Math.max(latest, animation.endTick + 1),
+      0
+    )
+    const lastInstructionTick = Array.from(this.sceneInstructions.keys()).reduce(
+      (latest, tick) => Math.max(latest, tick + 1),
+      0
+    )
+    this.totalSceneTicks = Math.max(
+      this.sceneCalculationTick,
+      lastAnimationTick,
+      lastInstructionTick
+    )
   }
 
   registerAudio(audioPath: string) {
@@ -294,15 +346,9 @@ export class AnimatedScene {
   }
 
   async jumpToFrameAtIndex(index: number, notSize: boolean = false) {
-    this.doNotPlayAudio = true
-    this.resetComponents(notSize)
-    this.isBuilding = true
-    await this.buildFunction(this)
-    this.isBuilding = false
+    await this.prepareSceneForSeek(notSize, true)
 
-    await loadAllAudio()
-
-    if (index > this.totalSceneTicks - 1) {
+    if (index > this.totalSceneTicks - 1 || index < 0) {
       index = 0
     }
 
@@ -316,8 +362,8 @@ export class AnimatedScene {
       await this.traceCurrentFrame(index, false, false)
     }
 
-    this.renderCurrentFrame()
     this.sceneRenderTick = index
+    this.renderCurrentFrame()
     await this.playEffectFunction()
 
     this.doNotPlayAudio = false
@@ -325,6 +371,75 @@ export class AnimatedScene {
     // Only (re)start audio when actively playing or rendering
     if (this.isPlaying && !this.doNotPlayAudio && !this.isRendering) {
       audioSeekToTick(this.sceneRenderTick, this.planedSounds, timelineFPS)
+    }
+  }
+
+  /**
+   * Rebuilds the scene and deterministically traces every tick through the
+   * requested frame. Unlike editor scrubbing, this never uses a hot-reload
+   * shortcut and rejects invalid frame numbers instead of wrapping to zero.
+   */
+  async seekExact(index: number): Promise<void> {
+    if (!Number.isInteger(index) || index < 0) {
+      throw new SceneRuntimeError(
+        'INVALID_FRAME',
+        `Frame must be a non-negative integer, received ${index}`
+      )
+    }
+
+    await this.prepareSceneForSeek(true, false)
+
+    if (this.totalSceneTicks <= 0) {
+      throw new SceneRuntimeError('EMPTY_SCENE', 'Scene has no frames')
+    }
+
+    if (index >= this.totalSceneTicks) {
+      throw new SceneRuntimeError(
+        'FRAME_OUT_OF_RANGE',
+        `Frame ${index} is outside scene range 0-${this.totalSceneTicks - 1}`
+      )
+    }
+
+    await this.traceToFrameIndex(index, false)
+    this.sceneRenderTick = index
+    this.prepareOutputViewport()
+    this.renderCurrentFrame()
+    await this.playEffectFunction()
+    this.doNotPlayAudio = false
+  }
+
+  /** Sets the WebGL drawing buffer to the scene's logical output resolution. */
+  prepareOutputViewport(): void {
+    this.resizeObserver?.disconnect()
+    this.renderer.setPixelRatio(1)
+    this.renderer.setSize(this.pixelsWidth, this.pixelsHeight, false)
+    this.renderer.setViewport(0, 0, this.pixelsWidth, this.pixelsHeight)
+    this.camera.updateProjectionMatrix()
+  }
+
+  async capturePng(): Promise<Blob> {
+    this.renderCurrentFrame()
+    const canvas = this.renderer.domElement
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+    if (!blob) throw new Error('Could not encode the WebGL canvas as PNG')
+    return blob
+  }
+
+  private async prepareSceneForSeek(
+    notSize: boolean,
+    loadAudioAssets: boolean
+  ): Promise<void> {
+    this.doNotPlayAudio = true
+    this.resetComponents(notSize)
+    this.isBuilding = true
+    try {
+      await this.withSeededRandom(() => this.buildFunction(this))
+    } finally {
+      this.isBuilding = false
+    }
+
+    if (loadAudioAssets) {
+      await loadAllAudio()
     }
   }
 
@@ -455,7 +570,7 @@ export class AnimatedScene {
     this.syncControlsWithCamera();
     this.playbackTargetDistance = null;
 
-    this.startControls();
+    if (this.interactive) this.startControls()
   }
 
   async render() {
@@ -483,7 +598,7 @@ export class AnimatedScene {
     div.style.zIndex = '999' // Optional, to ensure it's on top
     div.style.opacity = '0'
 
-    this.renderer.setSize(this.pixelsWidth, this.pixelsHeight, true)
+    this.prepareOutputViewport()
 
     window.scrollTo(0, 0)
     const startFrame = 0
@@ -521,6 +636,7 @@ export class AnimatedScene {
     div.style.left = originalLeft
     div.style.zIndex = originalZIndex
 
+    this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
     ro?.observe(this.container)
 
@@ -529,7 +645,7 @@ export class AnimatedScene {
     this.renderCurrentFrame()
 
     
-    this.startControls()
+    if (this.interactive) this.startControls()
     this.renderingEventFunction(false)
   }
 
@@ -550,15 +666,21 @@ export class AnimatedScene {
     this.controls.target.distanceTo(this.camera.position)
 
     let currentFrame = fromFrame
-    let numberCalledAnimate = 0
-    const animate = async (trace: boolean) => {
+    let firstFrameInCycle = true
+    let cycleStartedAt = performance.now()
+    const frameDurationMs = 1000 / timelineFPS
+
+    const animate = async (now: number): Promise<void> => {
       if (!this.isPlaying) return
       if (currentFrame <= toFrame) {
-        // Still modulus since the requestAnimationFrame runs at the screenFPS rate, not timelineFPS rate
-        if (numberCalledAnimate % animationFPSDivider === 0) {
+        const elapsedFrames = Math.floor((now - cycleStartedAt) / frameDurationMs)
+        const targetFrame = Math.min(toFrame, fromFrame + elapsedFrames)
+
+        while (currentFrame <= targetFrame && this.isPlaying) {
           this.sceneRenderTick = currentFrame
-          //To not apply trace twice if we just jumped to startframe (and thus tranced it)
-          await this.traceCurrentFrame(this.sceneRenderTick, true, !trace)
+          // jumpToFrameAtIndex() already traced the first visual frame.
+          await this.traceCurrentFrame(this.sceneRenderTick, true, firstFrameInCycle)
+          firstFrameInCycle = false
 
           // --- Keep controls.target aligned with the animated camera ---
           if (this.playbackTargetDistance != null) {
@@ -574,16 +696,18 @@ export class AnimatedScene {
           currentFrame++
           await this.playEffectFunction()
         }
-        numberCalledAnimate++
-        this.animationFrameId = requestAnimationFrame(async () => await animate(true))
+
+        this.animationFrameId = requestAnimationFrame(animate)
       } else {
         await this.jumpToFrameAtIndex(0)
         currentFrame = 0
-        this.animationFrameId = requestAnimationFrame(async () => await animate(false))
+        firstFrameInCycle = true
+        cycleStartedAt = performance.now()
+        this.animationFrameId = requestAnimationFrame(animate)
       }
     }
 
-    this.animationFrameId = requestAnimationFrame(() => animate(false))
+    this.animationFrameId = requestAnimationFrame(animate)
   }
 
   renderCurrentFrame() {
@@ -600,35 +724,37 @@ export class AnimatedScene {
   }
 
   private async traceCurrentFrame(index: number, withAudio: boolean, onlyAudio: boolean) {
-    if (withAudio) {
-      const soundsForTick = this.planedSounds.get(index)
-      if (soundsForTick) {
-        for (const sound of soundsForTick) {
-          this.playAudio(sound.audioPath, sound.volume)
+    return this.withSeededRandom(async () => {
+      if (withAudio) {
+        const soundsForTick = this.planedSounds.get(index)
+        if (soundsForTick) {
+          for (const sound of soundsForTick) {
+            this.playAudio(sound.audioPath, sound.volume)
+          }
         }
       }
-    }
-    if (onlyAudio) return
-    //Trace all actions
-    const frameInstructions = this.sceneInstructions.get(index)
-    if (frameInstructions) {
-      for (let i = 0; i < frameInstructions.length; i++) {
-        await frameInstructions[i](index)
+      if (onlyAudio) return
+      //Trace all actions
+      const frameInstructions = this.sceneInstructions.get(index)
+      if (frameInstructions) {
+        for (let i = 0; i < frameInstructions.length; i++) {
+          await frameInstructions[i](index)
+        }
       }
-    }
-    const animationsForFrame = this.getActiveAnimationsForTick(index)
-    for (let a = 0; a < animationsForFrame.length; a++) {
-      const localInterpolationIndex = index - animationsForFrame[a].startTick
-      await animationsForFrame[a].updater(
-        animationsForFrame[a].interpolation[localInterpolationIndex],
-        index,
-        localInterpolationIndex === animationsForFrame[a].interpolation.length - 1
-      )
-    }
+      const animationsForFrame = this.getActiveAnimationsForTick(index)
+      for (let a = 0; a < animationsForFrame.length; a++) {
+        const localInterpolationIndex = index - animationsForFrame[a].startTick
+        await animationsForFrame[a].updater(
+          animationsForFrame[a].interpolation[localInterpolationIndex],
+          index,
+          localInterpolationIndex === animationsForFrame[a].interpolation.length - 1
+        )
+      }
 
-    for (let d = 0; d < this.sceneDependencies.length; d++) {
-      await this.sceneDependencies[d](index, ticksToMillis(index))
-    }
+      for (let d = 0; d < this.sceneDependencies.length; d++) {
+        await this.sceneDependencies[d](index, ticksToMillis(index))
+      }
+    })
   }
 
   private getActiveAnimationsForTick(sceneTick: number): InternalAnimation[] {
@@ -676,6 +802,17 @@ export class AnimatedScene {
     this.sceneDependencies = []
     this.sceneInstructions = new Map()
     this.planedSounds = new Map()
+    this.randomGenerator = Alea(definedMotionConfig.seed)
+  }
+
+  private async withSeededRandom<T>(operation: () => Promise<T> | T): Promise<T> {
+    const originalRandom = Math.random
+    Math.random = this.random
+    try {
+      return await operation()
+    } finally {
+      Math.random = originalRandom
+    }
   }
 
   private captureCameraState(camera: THREE.Camera) {

@@ -2,9 +2,9 @@
   import './app.css'
   import { generateID, setStateInScene, updateStateInUrl } from './lib/general/helpers'
   import { onDestroy, onMount } from 'svelte'
-  import { hotreloadNameLookup, screenFPS, setGlobalContainerRef, type AnimatedScene } from './lib/scene/sceneClass'
+  import { hotreloadNameLookup, renderOutputFps, screenFPS, setGlobalContainerRef, timelineFPS, type AnimatedScene } from './lib/scene/sceneClass'
   import { loadFonts } from './lib/rendering/objects2d'
-  import { animationFPSDivider, entryScene, renderSkip } from '../../entry'
+  import { entryScene, renderSkip } from '../../entry'
   import { callAllDestroyFunctions } from './lib/general/onDestory'
   import rotateIcon from "./application_assets/360.svg"
   import moveIcon from "./application_assets/move.svg"
@@ -262,11 +262,10 @@ export async function copyToClipboard(text: string): Promise<void> {
    <div class="h-6"></div>
   <p class="font-bold text-sm">Details</p>
   <div class="h-2"></div>
-  <p class="text-xs">Animation playback FPS: <strong>{(screenRefreshRate/animationFPSDivider).toFixed(2)}</strong> Hz, rendered video FPS: <strong>{(screenRefreshRate/animationFPSDivider/renderSkip).toFixed(2)}</strong> Hz</p>
+  <p class="text-xs">Animation timeline FPS: <strong>{timelineFPS.toFixed(2)}</strong> Hz, rendered video FPS: <strong>{renderOutputFps().toFixed(2)}</strong> Hz</p>
 <div class="h-2"></div>
  <p class="text-[0.7rem] opacity-50">Hot reload mode: <strong>{hotreloadNameLookup(scene.hotReloadSetting)}</strong></p>
   <p class="text-[0.7rem] opacity-50">Screen refresh rate: <strong>{screenRefreshRate.toFixed(2)}</strong> Hz</p>
-  <p class="text-[0.7rem] opacity-50">Animation FPS divider <strong>{animationFPSDivider}</strong></p>
   <p class="text-[0.7rem] opacity-50">Render skip constant <strong>{renderSkip}</strong></p>
   {/if}
 

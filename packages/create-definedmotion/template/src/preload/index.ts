@@ -1,12 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { RenderOptions } from '../main/rendering'
-
+import type { AutomationRequest, AutomationResult } from '../automation/types'
 
 // ---- NEW helpers for event subscription
-function onDisplayHzChanged(cb: (hz: number) => void) {
+function onDisplayHzChanged(cb: (hz: number) => void): () => void {
   const channel = 'display-hz-changed'
-  const listener = (_: unknown, hz: number) => cb(hz)
+  const listener = (_: unknown, hz: number): void => cb(hz)
   ipcRenderer.on(channel, listener)
   // return an unsubscribe fn
   return () => ipcRenderer.removeListener(channel, listener)
@@ -16,6 +16,15 @@ const customAPI = {
   startVideoRender: (options: RenderOptions) => ipcRenderer.invoke('start-video-render', options),
 
   getDisplayHz: (): Promise<number> => ipcRenderer.invoke('get-display-hz'),
+
+  getAutomationRequest: (): Promise<AutomationRequest> =>
+    ipcRenderer.invoke('definedmotion:get-automation-request'),
+
+  writeAutomationFile: (outputPath: string, bytes: Uint8Array): Promise<string> =>
+    ipcRenderer.invoke('definedmotion:write-automation-file', outputPath, bytes),
+
+  completeAutomation: (result: AutomationResult) =>
+    ipcRenderer.send('definedmotion:automation-complete', result),
 
   onDisplayHzChanged
 }

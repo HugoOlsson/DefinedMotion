@@ -23,10 +23,13 @@ export async function deleteRenderedContent() {
       })
     )
 
-    fsSync.readdirSync(audioRendersDir).forEach((item) => {
-      const itemPath = path.join(audioRendersDir, item)
-      fsSync.rmSync(itemPath, { recursive: true, force: true })
-    })
+    fsSync
+      .readdirSync(audioRendersDir)
+      .filter((item) => !item.startsWith('.'))
+      .forEach((item) => {
+        const itemPath = path.join(audioRendersDir, item)
+        fsSync.rmSync(itemPath, { recursive: true, force: true })
+      })
 
     console.log('All render cache have been deleted.')
   } catch (error) {

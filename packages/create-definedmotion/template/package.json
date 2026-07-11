@@ -4,11 +4,16 @@
   "private": true,
   "description": "An Electron application with Svelte and TypeScript",
   "main": "./out/main/index.js",
+  "bin": {
+    "definedmotion": "./scripts/definedmotion.mjs"
+  },
   "author": "example.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --plugin prettier-plugin-svelte --write .",
     "lint": "eslint --cache .",
+    "dm": "node ./scripts/definedmotion.mjs",
+    "test:automation": "node ./scripts/automation-smoke-test.mjs",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",

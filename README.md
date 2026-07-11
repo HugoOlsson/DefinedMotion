@@ -149,6 +149,30 @@ export const yourSceneName = (): AnimatedScene => {
 5. Update the src/entry.ts file to use your animation.
 6. When you want to render your animation, click "Render". You will need to have ffmpeg on your system and available in your system PATH.
 
+## Automation CLI
+
+DefinedMotion projects include a headless automation path for tools, scripts, CI, and coding agents. It uses the same scene definitions and timeline runtime as the interactive Studio, but runs in a hidden Electron renderer.
+
+List the registered scenes:
+
+```bash
+npm run dm -- scenes
+npm run dm -- scenes --json
+```
+
+Render an exact frame as a lossless PNG:
+
+```bash
+npm run dm -- still tutorial-easy-1 \
+  --frame 30 \
+  --output .definedmotion/frame-30.png \
+  --json
+```
+
+The animation timeline FPS and deterministic random seed live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Scenes exposed to Studio and the CLI are registered in `src/entry.ts`.
+
+See [`docs/agent-runtime-foundation.md`](docs/agent-runtime-foundation.md) for the runtime boundaries, result contract, and planned inspection layers.
+
 
 ## The DefinedMotion Scheduler
 

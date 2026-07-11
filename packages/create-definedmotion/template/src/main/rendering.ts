@@ -125,10 +125,12 @@ export function renderVideo(options: RenderOptions): Promise<string> {
 
       // Delete the render directory with all its images.
       fs.rmSync(latestDir, { recursive: true, force: true })
-      fs.readdirSync(audioRendersDir).forEach((item) => {
-        const itemPath = path.join(audioRendersDir, item)
-        fs.rmSync(itemPath, { recursive: true, force: true })
-      })
+      fs.readdirSync(audioRendersDir)
+        .filter((item) => !item.startsWith('.'))
+        .forEach((item) => {
+          const itemPath = path.join(audioRendersDir, item)
+          fs.rmSync(itemPath, { recursive: true, force: true })
+        })
       console.log(`Deleted render folder: ${latestDir}`)
 
       resolve(outputFile)
