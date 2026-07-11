@@ -10,16 +10,16 @@ import { preloadFont, configureTextBuilder } from 'troika-three-text'
 import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
 import { Vector3 } from 'three'
 
-let hasLoadedFonts = false
+let fontLoadPromise: Promise<void> | undefined
 const fontTroika = createAssetReference('fonts/Montserrat-Medium.woff').url
 
 export const loadFonts = (): Promise<void> => {
-  if (hasLoadedFonts) new Promise((resolve) => resolve)
+  if (fontLoadPromise) return fontLoadPromise
   configureTextBuilder({
     useWorker: false
   })
 
-  return new Promise((resolve) => {
+  fontLoadPromise = new Promise((resolve) => {
     preloadFont(
       {
         font: fontTroika,
@@ -27,11 +27,11 @@ export const loadFonts = (): Promise<void> => {
       },
       () => {
         console.log('preload font complete')
-        hasLoadedFonts = true
         resolve()
       }
     )
   })
+  return fontLoadPromise
 }
 
 export interface ObjectOptions {

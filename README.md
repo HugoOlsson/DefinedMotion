@@ -182,6 +182,31 @@ npm run dm -- still tutorial-easy-1 \
   --json
 ```
 
+For a sequence of agent or script queries, start a persistent runtime once:
+
+```bash
+npm run dm -- session start
+npm run dm -- session status
+
+# These now reuse the running Electron, Vite, WebGL, and font environment.
+npm run dm -- scenes --json
+npm run dm -- still tutorial-easy-1 --frame 30 --json
+
+npm run dm -- session stop
+```
+
+Normal `scenes` and `still` commands automatically use the project session when
+one is running and otherwise retain the one-shot behavior. Pass `--standalone`
+to force an isolated process, or `--require-session` when falling back would be
+undesirable. `session start --foreground` is useful in CI and agent terminals
+that own the runtime process lifecycle.
+
+The session does not serve an old scene after source changes. The CLI hashes the
+current `src` tree, Vite fully reloads the renderer, and the runtime waits for
+that exact source revision to report ready before executing the request. A
+renderer generation is reused only while the source stays unchanged; each
+request still constructs and disposes its own scene.
+
 The animation timeline FPS, deterministic random seed, and default scene live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
 
 Project media is referenced lazily through `scene.asset('path/inside/src/assets')`. Listing scenes therefore loads scene code and metadata, but does not read or bundle every scene's videos, models, HDRIs, audio, or data files.

@@ -9,11 +9,15 @@ import { deleteRenderedContent } from './storage'
 import ElectronStore from 'electron-store'
 import type { AutomationRequest, AutomationResult } from '../automation/types'
 import { registerAssetProtocol } from './assets'
+import { getPersistentRuntimeConfig, PersistentRuntimeHost } from './runtimeHost'
 
 const store = new ElectronStore()
 const automationRequestRaw = process.env['DEFINEDMOTION_AUTOMATION_REQUEST']
 const automationResultPath = process.env['DEFINEDMOTION_AUTOMATION_RESULT']
 const isAutomation = Boolean(automationRequestRaw && automationResultPath)
+const persistentRuntimeConfig = getPersistentRuntimeConfig()
+const isPersistentRuntime = Boolean(persistentRuntimeConfig)
+const isRuntimeMode = isAutomation || isPersistentRuntime
 
 let automationRequest: AutomationRequest | undefined
 if (automationRequestRaw) {
@@ -24,7 +28,7 @@ if (automationRequestRaw) {
   }
 }
 
-if (isAutomation) {
+if (isRuntimeMode) {
   app.commandLine.appendSwitch('force-device-scale-factor', '1')
   app.commandLine.appendSwitch('disable-renderer-backgrounding')
 }
@@ -33,6 +37,7 @@ if (isAutomation) {
 nativeTheme.themeSource = 'light'
 
 let mainWindow: BrowserWindow
+let persistentRuntimeHost: PersistentRuntimeHost | undefined
 
 interface WindowBounds {
   width: number
@@ -57,7 +62,7 @@ function createWindow(): void {
 
   const defaultBounds = { width: 1000, height: 1300 }
   const savedBounds = (
-    isAutomation ? defaultBounds : store.get('windowBounds', defaultBounds)
+    isRuntimeMode ? defaultBounds : store.get('windowBounds', defaultBounds)
   ) as WindowBounds
   mainWindow = new BrowserWindow({
     width: savedBounds.width,
@@ -76,11 +81,11 @@ function createWindow(): void {
       allowRunningInsecureContent: false,
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      backgroundThrottling: !isAutomation
+      backgroundThrottling: !isRuntimeMode
     }
   })
 
-  if (!isAutomation) {
+  if (!isRuntimeMode) {
     mainWindow.on('resize', () => {
       store.set('windowBounds', mainWindow.getBounds())
     })
@@ -91,7 +96,7 @@ function createWindow(): void {
   }
 
   mainWindow.on('ready-to-show', () => {
-    if (!isAutomation) mainWindow.show()
+    if (!isRuntimeMode) mainWindow.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -104,10 +109,11 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     const rendererUrl = new URL(process.env['ELECTRON_RENDERER_URL'])
     if (isAutomation) rendererUrl.searchParams.set('automation', '1')
+    if (isPersistentRuntime) rendererUrl.searchParams.set('session', '1')
     mainWindow.loadURL(rendererUrl.toString())
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'), {
-      query: isAutomation ? { automation: '1' } : undefined
+      query: isAutomation ? { automation: '1' } : isPersistentRuntime ? { session: '1' } : undefined
     })
   }
 }
@@ -170,7 +176,7 @@ app.whenReady().then(() => {
   ipcMain.handle(
     'definedmotion:write-automation-file',
     async (_event, outputPath: string, bytes: Uint8Array) => {
-      if (!isAutomation) throw new Error('File output is only available in automation mode')
+      if (!isRuntimeMode) throw new Error('File output is only available in automation mode')
       const absolutePath = resolve(outputPath)
       await mkdir(dirname(absolutePath), { recursive: true })
       await writeFile(absolutePath, Buffer.from(bytes))
@@ -182,6 +188,18 @@ app.whenReady().then(() => {
     void finishAutomation(result)
   })
 
+  ipcMain.on('definedmotion:runtime-ready', (event, sourceRevision: string) => {
+    if (event.sender === mainWindow?.webContents) {
+      persistentRuntimeHost?.rendererReady(sourceRevision)
+    }
+  })
+
+  ipcMain.on('definedmotion:runtime-result', (event, id: string, result: AutomationResult) => {
+    if (event.sender === mainWindow?.webContents) {
+      persistentRuntimeHost?.rendererResult(id, result)
+    }
+  })
+
   // Listen for resize requests from the renderer
   ipcMain.on('resize-window', (_event, { width, height }) => {
     if (mainWindow) {
@@ -190,6 +208,14 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  if (persistentRuntimeConfig) {
+    persistentRuntimeHost = new PersistentRuntimeHost(mainWindow, persistentRuntimeConfig)
+    void persistentRuntimeHost.start().catch((error) => {
+      console.error('Could not start DefinedMotion persistent runtime:', error)
+      app.exit(1)
+    })
+  }
 
   if (isAutomation) {
     mainWindow.webContents.on('did-fail-load', (_event, code, description) => {
@@ -211,7 +237,7 @@ app.whenReady().then(() => {
       },
       5 * 60 * 1000
     )
-  } else {
+  } else if (!isPersistentRuntime) {
     void deleteRenderedContent()
   }
 
@@ -266,6 +292,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  persistentRuntimeHost?.stop()
 })
 
 // In this file you can include the rest of your app's specific main process

@@ -14,6 +14,7 @@
     "lint": "eslint --cache .",
     "dm": "node ./scripts/definedmotion.mjs",
     "test:automation": "node ./scripts/automation-smoke-test.mjs",
+    "test:runtime-session": "npm run build && node ./scripts/runtime-session-smoke-test.mjs",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",

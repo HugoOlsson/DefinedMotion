@@ -1,4 +1,5 @@
-const isAutomation = new URLSearchParams(window.location.search).get('automation') === '1'
+const parameters = new URLSearchParams(window.location.search)
+const isAutomation = parameters.get('automation') === '1' || parameters.get('session') === '1'
 
 if (isAutomation) {
   const { runAutomation } = await import('./automation')

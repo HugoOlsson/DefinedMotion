@@ -1,7 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { RenderOptions } from '../main/rendering'
-import type { AutomationRequest, AutomationResult } from '../automation/types'
+import type {
+  AutomationRequest,
+  AutomationResult,
+  RuntimeRendererRequest
+} from '../automation/types'
 
 // ---- NEW helpers for event subscription
 function onDisplayHzChanged(cb: (hz: number) => void): () => void {
@@ -9,6 +13,13 @@ function onDisplayHzChanged(cb: (hz: number) => void): () => void {
   const listener = (_: unknown, hz: number): void => cb(hz)
   ipcRenderer.on(channel, listener)
   // return an unsubscribe fn
+  return () => ipcRenderer.removeListener(channel, listener)
+}
+
+function onRuntimeRequest(cb: (request: RuntimeRendererRequest) => void): () => void {
+  const channel = 'definedmotion:runtime-request'
+  const listener = (_: unknown, request: RuntimeRendererRequest): void => cb(request)
+  ipcRenderer.on(channel, listener)
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
@@ -25,6 +36,14 @@ const customAPI = {
 
   completeAutomation: (result: AutomationResult) =>
     ipcRenderer.send('definedmotion:automation-complete', result),
+
+  runtimeReady: (sourceRevision: string): void =>
+    ipcRenderer.send('definedmotion:runtime-ready', sourceRevision),
+
+  onRuntimeRequest,
+
+  completeRuntimeRequest: (id: string, result: AutomationResult): void =>
+    ipcRenderer.send('definedmotion:runtime-result', id, result),
 
   onDisplayHzChanged
 }
