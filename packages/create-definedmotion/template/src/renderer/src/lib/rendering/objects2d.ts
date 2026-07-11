@@ -3,7 +3,7 @@ import { COLORS } from './helpers'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { FontLoader, LineGeometry, LineMaterial, ThreeMFLoader } from 'three/examples/jsm/Addons.js'
 import fontJSON from '../fonts/montserrat.json'
-import fontTroika from '$assets/fonts/Montserrat-Medium.woff'
+import { createAssetReference } from '../assets/assetReference'
 
 import { Text } from 'troika-three-text'
 import { preloadFont, configureTextBuilder } from 'troika-three-text'
@@ -11,6 +11,7 @@ import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
 import { Vector3 } from 'three'
 
 let hasLoadedFonts = false
+const fontTroika = createAssetReference('fonts/Montserrat-Medium.woff').url
 
 export const loadFonts = (): Promise<void> => {
   if (hasLoadedFonts) new Promise((resolve) => resolve)

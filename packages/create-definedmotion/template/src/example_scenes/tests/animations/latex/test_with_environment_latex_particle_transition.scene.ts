@@ -18,8 +18,6 @@ export default defineScene({
   isTest: true,
   create: test_with_environment_latex_particle_transition
 })
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
-
 export function test_with_environment_latex_particle_transition(): AnimatedScene {
   return new AnimatedScene(
     1000,
@@ -27,6 +25,7 @@ export function test_with_environment_latex_particle_transition(): AnimatedScene
     SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart,
     async (dm) => {
+      const hdriData = await loadHDRIData(dm.asset(HDRIs.outdoor1), 1)
 
         await addHDRI(dm, hdriData, 6)
 

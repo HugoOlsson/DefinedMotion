@@ -184,6 +184,8 @@ npm run dm -- still tutorial-easy-1 \
 
 The animation timeline FPS, deterministic random seed, and default scene live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
 
+Project media is referenced lazily through `scene.asset('path/inside/src/assets')`. Listing scenes therefore loads scene code and metadata, but does not read or bundle every scene's videos, models, HDRIs, audio, or data files.
+
 See [`docs/agent-runtime-foundation.md`](docs/agent-runtime-foundation.md) for the runtime boundaries, result contract, and planned inspection layers.
 
 
@@ -646,22 +648,18 @@ addBackgroundGradient({
 
 HDRIs provide realistic environment lighting and reflections. Use a two-step approach for performance:
 
-**Step 1: Load once at module scope**
+**Load and apply inside the scene build function**
 ```typescript
 import { loadHDRIData, addHDRI, HDRIs } from '$renderer/lib/rendering/hdri'
 
-const hdriData = await loadHDRIData(
-  HDRIs.outdoor1,  // photoStudio1/2/3, outdoor1, indoor1, metro1
-  2                // blur amount (0=sharp, 5+=very blurred)
-)
-```
-
-**Step 2: Apply in your scene**
-```typescript
 export function myScene(): AnimatedScene {
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart, async (scene) => {
-    
+    const hdriData = await loadHDRIData(
+      scene.asset(HDRIs.outdoor1), // photoStudio1/2/3, outdoor1, indoor1, metro1
+      2                            // blur amount (0=sharp, 5+=very blurred)
+    )
+
     await addHDRI(
       scene,
       hdriData,
@@ -673,7 +671,7 @@ export function myScene(): AnimatedScene {
 }
 ```
 
-**Why two steps?** Loading HDRIs is expensive. Loading it outside the scene build function, it doesn't have to reload when it doesn't need to which produces a smoother viewer.
+HDRI decoding is cached by asset URL, so rebuilding the selected scene can reuse it. Keeping the call inside the build function is important: scene discovery remains lightweight and an unselected scene does not load the HDRI.
 
 **Mix techniques:**
 ```typescript
@@ -690,7 +688,7 @@ scene.add(light)
 ```
 
 **Key points:**
-- Load HDRIs at module scope, not inside scene functions
+- Create and load assets inside the scene build function, never at module scope
 - Higher blur = softer background, better performance
 - Use `MeshStandardMaterial` or `MeshPhysicalMaterial` for PBR
 - Combine HDRIs with gradients and traditional lights as needed
@@ -704,8 +702,7 @@ DefinedMotion syncs audio to your timeline automatically. Audio is scheduled at 
 
 **Step 1: Register audio files (once, early in scene)**
 ```typescript
-import tickSound from '$assets/audio/tick_sound.mp3'
-
+const tickSound = scene.asset('audio/tick_sound.mp3')
 scene.registerAudio(tickSound)  // Tell the scene about this audio file
 ```
 
@@ -767,11 +764,46 @@ scene.addAnims(switchAnimation)
 - Audio automatically handles: playback, pause/resume, seeking, and render export
 - Multiple sounds can play simultaneously
 
+## Project Assets
+
+Put project media under `src/assets` and create references from the scene:
+
+```typescript
+const video = scene.asset('videos/demo.mp4')
+const model = scene.asset('models/car.glb')
+const texture = scene.asset('textures/metal.png')
+const data = scene.asset('data/measurements.json')
+```
+
+Creating these references performs no file I/O. A reference exposes:
+
+- `path`: its stable path relative to `src/assets`
+- `url`: a browser- and Three.js-compatible URL
+- `text()`, `arrayBuffer()`, `blob()`, and `json<T>()`: explicit lazy reads
+
+DefinedMotion's loaders accept references directly where possible:
+
+```typescript
+import * as THREE from 'three'
+import { loadGLB } from '$renderer/lib/rendering/objects/import'
+
+const car = await loadGLB(model)
+const metal = await new THREE.TextureLoader().loadAsync(texture.url)
+const measurements = await data.json<number[]>()
+
+const videoElement = document.createElement('video')
+videoElement.src = video.url
+```
+
+The same URLs work in Studio and hidden CLI rendering. The Electron asset protocol validates containment below `src/assets`, returns correct content types, supports byte-range requests for video/audio seeking, and preserves relative URLs used by GLTF files. Missing and invalid assets produce structured automation errors.
+
+Do not statically import project media or load it at module scope. Scene modules are discovered eagerly, so module-scope work would run during `dm scenes`; `scene.asset()` keeps discovery cheap while only the selected scene consumes its resources.
+
 ## Import Path Shortcuts
 
-DefinedMotion provides convenient path aliases to avoid messy relative imports like `../../../../assets/`.
+DefinedMotion provides a renderer path alias to avoid deeply nested relative imports.
 
-### Available Shortcuts
+### Available Shortcut
 
 **`$renderer/*`** - Access any file in `src/renderer/src/`
 ```typescript
@@ -782,15 +814,7 @@ import { createCircle } from '$renderer/lib/rendering/objects2d'
 import { addHDRI, HDRIs } from '$renderer/lib/rendering/hdri'
 ```
 
-**`$assets/*`** - Access any file in `src/assets/`
-```typescript
-// Instead of: import tickSound from '../../../../assets/audio/tick_sound.mp3'
-import tickSound from '$assets/audio/tick_sound.mp3'
-import myImage from '$assets/images/photo.jpg'
-import customHDRI from '$assets/hdri/custom-environment.hdr'
-```
-
-These shortcuts work throughout your project—no configuration needed. They're defined in `tsconfig.json` and work automatically.
+Use `scene.asset()` for files in `src/assets`; there is intentionally no static media-import alias.
 
 
 ## Easy example

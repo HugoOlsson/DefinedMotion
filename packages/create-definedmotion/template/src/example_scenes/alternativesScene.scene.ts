@@ -7,7 +7,6 @@ import {
   updateText
 } from '../renderer/src/lib/rendering/objects2d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
-import tickSound from '../assets/audio/tick_sound.mp3'
 import * as THREE from 'three'
 
 
@@ -72,6 +71,7 @@ export function alternativesScene(): AnimatedScene {
     SpaceSetting.TwoDim,
     HotReloadSetting.BeginFromCurrent,
     async (scene) => {
+      const tickSound = scene.asset('audio/tick_sound.mp3')
       const background = createRectangle(200, 200)
       const textElement = await createFastText('', 1.5)
       scene.add(background, textElement)

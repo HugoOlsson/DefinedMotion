@@ -3,13 +3,13 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { AnimatedScene } from '../scene/sceneClass';
-
-import _photoStudio1 from '$assets/hdri/photo-studio1.hdr?url';
-import _photoStudio2 from '$assets/hdri/photo-studio2.hdr?url';
-import _photoStudio3 from '$assets/hdri/photo-studio3.hdr?url';
-import _outdoor1 from '$assets/hdri/outdoor1.hdr?url';
-import _indoor1 from '$assets/hdri/indoor1.hdr?url';
-import _metro1 from '$assets/hdri/metro1.hdr?url';
+import {
+  AssetRuntimeError,
+  assetPath,
+  assetUrl,
+  createAssetReference,
+  type AssetSource
+} from '../assets/assetReference';
 
 import vert_blur_hdri from '../shaders/hdri_blur/vert.glsl?raw';
 import frag_blur_hdri from '../shaders/hdri_blur/frag.glsl?raw';
@@ -19,12 +19,12 @@ import frag_blur_hdri from '../shaders/hdri_blur/frag.glsl?raw';
 // ---------------------------------------------------------------------------
 
 export enum HDRIs {
-  photoStudio1 = _photoStudio1 as any,
-  photoStudio2 = _photoStudio2 as any,
-  photoStudio3 = _photoStudio3 as any,
-  outdoor1 = _outdoor1 as any,
-  indoor1 = _indoor1 as any,
-  metro1 = _metro1 as any
+  photoStudio1 = 'hdri/photo-studio1.hdr',
+  photoStudio2 = 'hdri/photo-studio2.hdr',
+  photoStudio3 = 'hdri/photo-studio3.hdr',
+  outdoor1 = 'hdri/outdoor1.hdr',
+  indoor1 = 'hdri/indoor1.hdr',
+  metro1 = 'hdri/metro1.hdr'
 }
 
 /**
@@ -75,21 +75,27 @@ function blurKey(
 }
 
 // ---------------------------------------------------------------------------
-// 1) Load HDRI file at module scope (no renderer needed)
+// 1) Load HDRI file lazily (no renderer needed)
 // ---------------------------------------------------------------------------
 
 /**
- * Load and decode the HDRI once (per path). Intended for top-level usage:
+ * Load and decode the HDRI once per asset URL. Call this from the selected
+ * scene's build function; subsequent rebuilds reuse the cached decode.
  *
- *   const hdriData = await loadHDRIData(HDRIs.outdoor1, 2, 1);
+ *   const hdriData = await loadHDRIData(scene.asset(HDRIs.outdoor1), 2);
  *
  * Then you can reuse hdriData across many AnimatedScene instances.
  */
 export const loadHDRIData = async (
-  path: HDRIs | string,
+  path: AssetSource,
   blurAmount: number,
 ): Promise<HDRIData> => {
-  const key = String(path);
+  const source =
+    typeof path === 'string' && Object.values(HDRIs).includes(path as HDRIs)
+      ? createAssetReference(path)
+      : path;
+  const key = assetUrl(source);
+  const projectPath = assetPath(source);
 
   let texturePromise = sourceCache.get(key);
   if (!texturePromise) {
@@ -107,7 +113,14 @@ export const loadHDRIData = async (
         undefined,
         (error) => {
           console.error('Error loading HDRI:', error);
-          reject(error);
+          reject(
+            projectPath
+              ? new AssetRuntimeError(
+                  'ASSET_LOAD_FAILED',
+                  `Could not load HDRI asset "${projectPath}": ${error instanceof Error ? error.message : String(error)}`
+                )
+              : error
+          );
         }
       );
     });

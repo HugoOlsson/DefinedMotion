@@ -73,7 +73,7 @@ export function tutorial_medium1(): AnimatedScene {
       // Step 3: Lighting & background
       // HDRI gives nice reflections/IBL; gradient provides a subtle backdrop.
       // ───────────────────────────────────────────────────────────────────────
-      const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2) // (lods, intensity normalization)
+      const hdriData = await loadHDRIData(scene.asset(HDRIs.photoStudio1), 2) // (lods, intensity normalization)
       await addHDRI(scene, hdriData, 0.3, 0.5) // envMap intensity
 
       addBackgroundGradient({

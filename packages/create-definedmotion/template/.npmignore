@@ -2,6 +2,7 @@ node_modules
 .vite
 .svelte-kit
 .svelte2tsx-language-server-files
+.definedmotion
 out
 image_renders
 rendered_videos

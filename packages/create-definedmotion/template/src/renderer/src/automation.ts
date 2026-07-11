@@ -8,6 +8,7 @@ import {
   setGlobalInteractiveMode,
   timelineFPS
 } from './lib/scene/sceneClass'
+import { AssetRuntimeError } from './lib/assets/assetReference'
 
 const automationApi = window.api
 
@@ -24,7 +25,9 @@ class AutomationCommandError extends Error {
 const failure = (request: AutomationRequest | undefined, error: unknown): AutomationResult => {
   const normalized = error instanceof Error ? error : new Error(String(error))
   const code =
-    error instanceof AutomationCommandError || error instanceof SceneRuntimeError
+    error instanceof AutomationCommandError ||
+    error instanceof SceneRuntimeError ||
+    error instanceof AssetRuntimeError
       ? error.code
       : 'AUTOMATION_FAILED'
   return {

@@ -15,15 +15,13 @@ import { AnimatedScene, HotReloadSetting, SpaceSetting } from "$renderer/lib/sce
 import * as THREE from 'three';
 
 
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
-
-
 export function test_material_on_latex(): AnimatedScene {
   return new AnimatedScene(
     1000, 1000,
     SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart,
     async (dm) => {
+      const hdriData = await loadHDRIData(dm.asset(HDRIs.outdoor1), 1)
 
         
      await addHDRI(dm, hdriData, 6)

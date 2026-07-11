@@ -6,7 +6,6 @@ import * as THREE from 'three'
 import { addBackgroundGradient } from '../renderer/src/lib/rendering/lighting3d'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import { fade, setOpacity, zoomOut } from '../renderer/src/lib/animation/animations'
-import tickSound from '$assets/audio/tick_sound.mp3'
 import { linspace } from '../renderer/src/lib/mathHelpers/vectors'
 import { createSVGShape } from '$renderer/lib/rendering/svg/svgRendering'
 import { latexToSVG } from '$renderer/lib/rendering/svg/latexToSVG'
@@ -245,6 +244,7 @@ export function fourierSeriesScene(): AnimatedScene {
     SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart,
     async (scene) => {
+      const tickSound = scene.asset('audio/tick_sound.mp3')
       scene.registerAudio(tickSound)
       addBackgroundGradient({
         scene,

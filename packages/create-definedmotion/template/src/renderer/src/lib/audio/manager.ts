@@ -1,4 +1,6 @@
 // audio/loader.ts
+import { AssetRuntimeError, assetPath } from '../assets/assetReference'
+
 export interface AudioInScene {
   audioPath: string
   volume: number
@@ -47,7 +49,17 @@ export const loadAllAudio = async (): Promise<void> => {
         })
         .then(buf => audioContext.decodeAudioData(buf))
         .then(decoded => { loadedAudio.set(path, decoded) })
-        .catch(err => console.error('Audio load error', path, err))
+        .catch((error) => {
+          console.error('Audio load error', path, error)
+          const projectPath = assetPath(path)
+          if (projectPath) {
+            throw new AssetRuntimeError(
+              'ASSET_LOAD_FAILED',
+              `Could not load audio asset "${projectPath}": ${error instanceof Error ? error.message : String(error)}`
+            )
+          }
+          throw error
+        })
       tasks.push(p)
     }
   }

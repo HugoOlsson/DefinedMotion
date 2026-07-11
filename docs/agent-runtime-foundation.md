@@ -18,6 +18,10 @@ renderer. Automation must not reimplement scene execution.
 - The Electron main process supports a hidden automation mode. Requests and
   results use typed IPC, PNG files are written by the main process, and the
   process exits after one command.
+- `AnimatedScene.asset()` creates validated lazy references below `src/assets`.
+  A standard Electron protocol streams selected assets in Studio and automation,
+  including MIME types and byte ranges, while packaged projects copy the same
+  asset tree to their resources directory.
 - `scripts/definedmotion.mjs` builds current source and invokes that hidden
   renderer. JSON mode reserves stdout for the final machine-readable result.
 
@@ -64,9 +68,20 @@ when a module has an invalid default export or two modules use the same ID.
 Choose the initial Studio scene through `defaultScene` in
 `src/definedmotion.config.ts`.
 
-Scene modules are currently imported eagerly. Keep costly asset loading inside
-the scene creation/build path rather than at module scope. Lazy scene loading is
-a future optimization.
+Scene modules are currently imported eagerly, but their project media is not.
+Create references and load assets inside the scene build path rather than at
+module scope. A production build no longer emits scene audio, HDRIs, models, or
+fonts into the renderer bundle merely because their scenes are discoverable.
+
+```ts
+const video = scene.asset('videos/demo.mp4')
+const model = scene.asset('models/car.glb')
+const data = await scene.asset('data/measurements.json').json<number[]>()
+```
+
+References expose browser-safe URLs and explicit text, binary, blob, and JSON
+reads. DefinedMotion's audio, GLB, and HDRI helpers accept them directly. Invalid
+paths, missing files, and loader failures use stable asset error codes.
 
 Visual tests use the same scene abstraction and are included in discovery:
 
@@ -93,7 +108,7 @@ non-zero exit status and a JSON object with a stable error shape.
 The foundation intentionally precedes AI-specific protocols. Planned clients
 and capabilities can build on the same runtime:
 
-1. Multi-frame sessions and contact sheets that reuse one renderer.
+1. Multi-frame sessions and contact sheets that reuse one renderer and selected assets.
 2. Semantic inspectable-object registration and response-budgeted snapshots.
 3. Validation, debug overlays, and object-ID renders.
 4. Extracted versioned runtime/CLI packages for upgrading generated projects.

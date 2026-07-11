@@ -24,7 +24,6 @@
     ],
 	 "baseUrl": ".",
     "paths": {
-      "$assets/*": ["src/assets/*"],
 	  "$renderer/*": ["src/renderer/src/*"],
     }
   

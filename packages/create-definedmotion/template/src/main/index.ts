@@ -8,6 +8,7 @@ import { renderVideo } from './rendering'
 import { deleteRenderedContent } from './storage'
 import ElectronStore from 'electron-store'
 import type { AutomationRequest, AutomationResult } from '../automation/types'
+import { registerAssetProtocol } from './assets'
 
 const store = new ElectronStore()
 const automationRequestRaw = process.env['DEFINEDMOTION_AUTOMATION_REQUEST']
@@ -144,6 +145,8 @@ function automationFailure(code: string, error: unknown): AutomationResult {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  registerAssetProtocol()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 

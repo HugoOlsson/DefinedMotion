@@ -13,10 +13,6 @@ import { createAnim } from '$renderer/lib/animation/protocols'
 import { createFastText, createRectangle, updateText } from '$renderer/lib/rendering/objects2d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '$renderer/lib/scene/sceneClass'
 
-// Adjust this path if your assets are elsewhere:
-import tickSound from '$assets/audio/tick_sound.mp3'
-
-
 export default defineScene({
   id: 'tutorial-easy-3',
   name: 'Tutorial: Easy 3',
@@ -88,6 +84,7 @@ export function tutorial_easy3(): AnimatedScene {
     SpaceSetting.TwoDim,
     HotReloadSetting.BeginFromCurrent,
     async (scene) => {
+      const tickSound = scene.asset('audio/tick_sound.mp3')
       // ───────────────────────────────────────────────────────────────────────
       // Step 2: Create a background card and a headline text
       // The rectangle acts like a slide background; we’ll change its color.

@@ -2,6 +2,12 @@ import * as THREE from 'three'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import {
+  AssetRuntimeError,
+  assetPath,
+  assetUrl,
+  type AssetSource
+} from '../../assets/assetReference'
 
 // Helper function to load an MTL file using a Promise
 function loadMTL(mtlPath, mtlFile) {
@@ -111,14 +117,16 @@ export async function loadOBJWithMTLPaths(
 
 // Generic async function that loads a GLB file given its full path/URL
 export async function loadGLB(
-  glbPath: string,
+  glbPath: AssetSource,
   overrideMaterial?: THREE.Material
 ): Promise<THREE.Object3D> {
+  const url = assetUrl(glbPath)
+  const projectPath = assetPath(glbPath)
   try {
     const gltf: GLTF = await new Promise((resolve, reject) => {
       const loader = new GLTFLoader()
       loader.load(
-        glbPath,
+        url,
         (gltfData) => resolve(gltfData),
         undefined,
         (error) => reject(new Error(`Error loading GLB file: ${error}`))
@@ -143,6 +151,12 @@ export async function loadGLB(
     return gltf.scene
   } catch (error) {
     console.error(error)
+    if (projectPath) {
+      throw new AssetRuntimeError(
+        'ASSET_LOAD_FAILED',
+        `Could not load GLB asset "${projectPath}": ${error instanceof Error ? error.message : String(error)}`
+      )
+    }
     throw error
   }
 }

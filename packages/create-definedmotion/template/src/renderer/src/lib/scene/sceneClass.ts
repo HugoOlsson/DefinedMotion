@@ -15,6 +15,12 @@ import { easeConstant } from '../animation/interpolations'
 import { definedMotionConfig } from '../../../../definedmotion.config'
 import { addDestroyFunction } from '../general/onDestory'
 import {
+  assetUrl,
+  createAssetReference,
+  type AssetSource,
+  type SceneAsset
+} from '../assets/assetReference'
+import {
   AudioInScene,
   loadAllAudio,
   playAudio,
@@ -242,6 +248,14 @@ export class AnimatedScene {
 
   randomBetween = (min: number, max: number): number => min + this.random() * (max - min)
 
+  /**
+   * Creates a validated, lazy reference to a file below `src/assets`.
+   * No file is read until a loader or one of the reference's read methods uses it.
+   */
+  asset(path: string): SceneAsset {
+    return createAssetReference(path)
+  }
+
   addAnims(...animations: UserAnimation[]) {
     const longest = Math.max(...animations.map((a) => a.interpolation.length))
     for (const animation of animations) {
@@ -306,11 +320,12 @@ export class AnimatedScene {
     )
   }
 
-  registerAudio(audioPath: string) {
-    registerAudio(audioPath)
+  registerAudio(audio: AssetSource) {
+    registerAudio(assetUrl(audio))
   }
 
-  playAudio(audioPath: string, volume: number = 1) {
+  playAudio(audio: AssetSource, volume: number = 1) {
+    const audioPath = assetUrl(audio)
     if (this.isBuilding) {
       const listForFrame = this.planedSounds.get(this.sceneCalculationTick)
 

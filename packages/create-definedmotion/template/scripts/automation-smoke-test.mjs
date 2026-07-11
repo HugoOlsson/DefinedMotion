@@ -2,12 +2,13 @@
 
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
+const projectRoot = dirname(scriptDirectory)
 const cli = join(scriptDirectory, 'definedmotion.mjs')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'definedmotion-smoke-'))
 
@@ -31,11 +32,11 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 46) {
-    throw new Error(`Expected 46 automatically discovered scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 47) {
+    throw new Error(`Expected 47 automatically discovered scenes, received ${scenes.scenes.length}`)
   }
-  if (!scenes.scenes.some((scene) => scene.id === 'tutorial-easy-1' && scene.isDefault)) {
-    throw new Error('Default tutorial scene was not discoverable')
+  if (!scenes.scenes.some((scene) => scene.id === 'fourier-series' && scene.isDefault)) {
+    throw new Error('Configured default scene was not discoverable')
   }
   if (
     !scenes.scenes.some((scene) => scene.id === 'test-camera-waypoints-sequential' && scene.isTest)
@@ -49,6 +50,27 @@ try {
     scenesWithoutTests.scenes.some((scene) => scene.isTest)
   ) {
     throw new Error('--exclude-tests did not return exactly the 12 non-test scenes')
+  }
+
+  const emittedMedia = readdirSync(join(projectRoot, 'out', 'renderer', 'assets')).filter((file) =>
+    /\.(?:glb|gltf|hdr|mp3|mp4|webm|woff2?|ttf)$/i.test(file)
+  )
+  if (emittedMedia.length > 0) {
+    throw new Error(`Scene media was eagerly emitted by Vite: ${emittedMedia.join(', ')}`)
+  }
+
+  const assetOutput = join(temporaryDirectory, 'asset-reference.png')
+  const assetResult = run([
+    'still',
+    'test-asset-references',
+    '--frame',
+    '0',
+    '--output',
+    assetOutput,
+    '--no-build'
+  ])
+  if (assetResult.durationInFrames !== 1) {
+    throw new Error('Asset reference test did not render its expected one-frame scene')
   }
 
   const firstOutput = join(temporaryDirectory, 'first.png')

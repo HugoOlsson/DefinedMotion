@@ -5,7 +5,7 @@
     font-family: "Montserrat";
     font-style: normal;
     font-weight: 100 900; /* Variable font with a range of weights */
-    src: url("./assets/fonts/Montserrat-VariableFont_wght.woff2") format("woff2");
+    src: url("definedmotion-asset://project/fonts/Montserrat-VariableFont_wght.woff2") format("woff2");
     font-display: swap;
   }
   
@@ -13,7 +13,7 @@
     font-family: "Montserrat";
     font-style: italic;
     font-weight: 100 900; /* Variable font with a range of weights for italic style */
-    src: url("./assets/fonts/Montserrat-Italic-VariableFont_wght.woff2") format("woff2");
+    src: url("definedmotion-asset://project/fonts/Montserrat-Italic-VariableFont_wght.woff2") format("woff2");
     font-display: swap;
   }
   

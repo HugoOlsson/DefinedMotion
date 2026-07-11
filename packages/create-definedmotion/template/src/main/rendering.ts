@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
+import { assetUrlToFilePath } from './assets'
 
 export interface AudioInScene {
   audioPath: string
@@ -143,6 +144,9 @@ export function renderVideo(options: RenderOptions): Promise<string> {
 
 function toFsPath(p: string): string {
   if (!p) throw new Error('empty path')
+
+  const projectAssetPath = assetUrlToFilePath(p)
+  if (projectAssetPath) return projectAssetPath
 
     // Handle Vite dev absolute path
   if (p.startsWith('/@fs/')) {

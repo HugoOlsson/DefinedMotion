@@ -15,8 +15,6 @@ export default defineScene({
   name: 'Dependency Scene',
   create: dependencyScene
 })
-const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2)
-
 export function dependencyScene(): AnimatedScene {
   return new AnimatedScene(
     1080,
@@ -24,6 +22,7 @@ export function dependencyScene(): AnimatedScene {
     SpaceSetting.ThreeDim,
     HotReloadSetting.BeginFromCurrent,
     async (scene) => {
+      const hdriData = await loadHDRIData(scene.asset(HDRIs.photoStudio1), 2)
       //addSceneLighting(scene.scene)
 
       await addHDRI(scene, hdriData, 0.3)

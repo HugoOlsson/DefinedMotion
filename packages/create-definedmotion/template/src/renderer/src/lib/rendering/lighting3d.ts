@@ -1,17 +1,6 @@
 import * as THREE from 'three'
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
-import _photoStudio1 from '$assets/hdri/photo-studio1.hdr?url'
-import _photoStudio2 from '$assets/hdri/photo-studio2.hdr?url'
-import _photoStudio3 from '$assets/hdri/photo-studio3.hdr?url'
-
-import _outdoor1 from '$assets/hdri/outdoor1.hdr?url'
-import _indoor1 from '$assets/hdri/indoor1.hdr?url'
-
-import _metro1 from '$assets/hdri/metro1.hdr?url'
 
 import { AnimatedScene } from '../scene/sceneClass'
-import vert_blur_hdri from '../shaders/hdri_blur/vert.glsl?raw'
-import frag_blur_hdri from '../shaders/hdri_blur/frag.glsl?raw'
 
 import vert_background_gradient from '../shaders/background_gradient/vert.glsl?raw'
 import frag_background_gradient from '../shaders/background_gradient/frag.glsl?raw'

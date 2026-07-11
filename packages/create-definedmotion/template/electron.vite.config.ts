@@ -16,7 +16,6 @@ export default defineConfig({
   },
   renderer: {
     plugins: [svelte(), tailwindcss(), glsl()],
-    assetsInclude: ['**/*.hdr'],
     // Add Node.js built-in modules to the renderer process
     resolve: {
       // Ensure these modules can be used in the renderer
@@ -25,7 +24,6 @@ export default defineConfig({
         path: 'node:path',
         os: 'node:os',
         crypto: 'node:crypto',
-        $assets: r('src/assets'),
         $renderer: r('src/renderer/src')
         // Add other Node.js modules you need
       }

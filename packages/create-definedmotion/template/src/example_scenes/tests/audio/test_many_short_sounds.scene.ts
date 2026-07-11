@@ -6,7 +6,6 @@ import { easeLinear } from '$renderer/lib/animation/interpolations'
 import { createAnim } from '$renderer/lib/animation/protocols'
 import { createRectangle } from '$renderer/lib/rendering/objects2d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '$renderer/lib/scene/sceneClass'
-import tickSound from '$assets/audio/tick_sound.mp3'
 import * as THREE from 'three'
 
 
@@ -36,6 +35,7 @@ export function test_many_short_sounds(): AnimatedScene {
     SpaceSetting.TwoDim,
     HotReloadSetting.BeginFromCurrent,
     async (scene) => {
+      const tickSound = scene.asset('audio/tick_sound.mp3')
       const background = createRectangle(200, 200)
       scene.add(background)
       scene.registerAudio(tickSound)

@@ -1,6 +1,5 @@
 import { defineScene } from '../../../project'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from "$renderer/lib/scene/sceneClass";
-import song from '$assets/audio/testing_shadow_glow_song.mp3'
 
 
 export default defineScene({
@@ -11,6 +10,7 @@ export default defineScene({
 })
 export function test_long_audio(): AnimatedScene {
     return new AnimatedScene(1000, 1000, SpaceSetting.TwoDim, HotReloadSetting.TraceFromStart, (dm) => {
+        const song = dm.asset('audio/testing_shadow_glow_song.mp3')
         dm.registerAudio(song)
         dm.playAudio(song)
 

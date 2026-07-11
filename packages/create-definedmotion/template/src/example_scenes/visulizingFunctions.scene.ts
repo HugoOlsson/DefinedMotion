@@ -100,8 +100,6 @@ const morphAnimation = (
     line.setPoints(interpolate(vecFunc1, vecFunc2, value))
   })
 }
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
-
 export function animatedFunctionsScene(): AnimatedScene {
   return new AnimatedScene(
     1080,
@@ -109,6 +107,7 @@ export function animatedFunctionsScene(): AnimatedScene {
     SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart,
     async (scene) => {
+      const hdriData = await loadHDRIData(scene.asset(HDRIs.outdoor1), 1)
       // scene.registerAudio(fadeSound)
       scene.add(
         create2DAxis({ xmin: -10, xmax: 10, ymin: -10, ymax: 10, ticks: 10, tickSize: 0.5 })

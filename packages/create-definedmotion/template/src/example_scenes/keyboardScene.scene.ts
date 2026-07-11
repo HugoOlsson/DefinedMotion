@@ -5,16 +5,14 @@ import {
 } from '../renderer/src/lib/rendering/lighting3d'
 import { loadGLB } from '../renderer/src/lib/rendering/objects/import'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
+import type { SceneAsset } from '../renderer/src/lib/assets/assetReference'
 import * as THREE from 'three'
-import ibmKeyboard from '$assets/objects/keyboardScene/ibm-keyboard.glb?url'
 import { createBumpMap } from '../renderer/src/lib/rendering/bumpMaps/noise'
 import { moveRotateCameraAnimation3D } from '../renderer/src/lib/animation/animations'
 import { createAnim } from '../renderer/src/lib/animation/protocols'
 import { easeLinear } from '../renderer/src/lib/animation/interpolations'
 import { createFastText, createLine, updateText } from '../renderer/src/lib/rendering/objects2d'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
-import tickSound from '$assets/audio/tick_sound.mp3'
-import keyboard1 from '$assets/audio/keyboard1.mp3'
 import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 
 
@@ -176,8 +174,6 @@ const bumpMap = createBumpMap({
   intensity: 0.1
 })
 
-const keyboard = await loadGLB(ibmKeyboard)
-
 const createPlane = (width: number, height: number, bumpMap?: THREE.CanvasTexture) => {
   // Create the plane geometry
   const geometry = new THREE.PlaneGeometry(width, height)
@@ -261,7 +257,13 @@ const setText = async (textNode: any, addedCharacter: string) => {
   // Update the text node
   await updateText(textNode, textNode.text)
 }
-const typeAnimation = (scene: AnimatedScene, characters: string, textNode: any, speed: number) => {
+const typeAnimation = (
+  scene: AnimatedScene,
+  characters: string,
+  textNode: any,
+  speed: number,
+  sounds: { tick: SceneAsset; key: SceneAsset }
+) => {
   let lastIndex = -1
   let keyStroke: THREE.Mesh | undefined
   let pointLight: THREE.PointLight | undefined
@@ -278,8 +280,8 @@ const typeAnimation = (scene: AnimatedScene, characters: string, textNode: any, 
         await setText(textNode, character)
         if (lastCharacter === backCharacter && character === backCharacter) {
         } else {
-          scene.playAudio(keyboard1, character === backCharacter || character === ' ' ? 0.5 : 0.2)
-          scene.playAudio(tickSound, character === ' ' ? 0.2 : 0.05)
+          scene.playAudio(sounds.key, character === backCharacter || character === ' ' ? 0.5 : 0.2)
+          scene.playAudio(sounds.tick, character === ' ' ? 0.2 : 0.05)
         }
         lastCharacter = character
       }
@@ -300,8 +302,6 @@ const typeAnimation = (scene: AnimatedScene, characters: string, textNode: any, 
   return animation
 }
 
-const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2)
-
 export function keyboardScene(): AnimatedScene {
   return new AnimatedScene(
     1080,
@@ -309,6 +309,12 @@ export function keyboardScene(): AnimatedScene {
     SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart,
     async (scene) => {
+      const tickSound = scene.asset('audio/tick_sound.mp3')
+      const keyboard1 = scene.asset('audio/keyboard1.mp3')
+      const sounds = { tick: tickSound, key: keyboard1 }
+      const keyboard = await loadGLB(scene.asset('objects/keyboardScene/ibm-keyboard.glb'))
+      const hdriData = await loadHDRIData(scene.asset(HDRIs.photoStudio1), 2)
+
       scene.registerAudio(tickSound)
       scene.registerAudio(keyboard1)
       addSceneLighting(scene.scene, { intensity: 1, colorScheme: 'cool' })
@@ -400,43 +406,43 @@ export function keyboardScene(): AnimatedScene {
       const deleteSpeed = 30
 
       const line1 = 'Hello Instagram!'
-      scene.addAnims(typeAnimation(scene, line1, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line1, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed)
+        typeAnimation(scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
       )
 
       scene.addWait(300)
       const line2 = 'I am just testing my programmatic animation library!'
-      scene.addAnims(typeAnimation(scene, line2, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line2, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed)
+        typeAnimation(scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
       )
 
       scene.addWait(300)
       const line3 = `It is inspired by 3Blue1Brown's Manim and Motion Canvas. It is meant for technical and mathematical animations!`
-      scene.addAnims(typeAnimation(scene, line3, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line3, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed)
+        typeAnimation(scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
       )
 
       scene.addWait(300)
       const line4 =
         'One of its features is that when you save your code, the animation updates immediately in the viewport. No need to render the video, open the file and then see the result!'
-      scene.addAnims(typeAnimation(scene, line4, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line4, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed)
+        typeAnimation(scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
       )
 
       scene.addWait(300)
       const line5 = `Use the project by visiting "DefinedMotion" by Hugo Olsson on GitHub, thanks!`
-      scene.addAnims(typeAnimation(scene, line5, text, typeSpeed))
+      scene.addAnims(typeAnimation(scene, line5, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed)
+        typeAnimation(scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
       )
 
       const initialZoom = scene.camera.zoom

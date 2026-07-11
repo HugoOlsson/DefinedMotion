@@ -46,8 +46,6 @@ export const field: VectorField3D = (x, y, z, time) => {
   }
 }
 
-const hdriData = await loadHDRIData(HDRIs.outdoor1, 2)
-
 export function vectorFieldScene(): AnimatedScene {
   return new AnimatedScene(
     1080,
@@ -55,6 +53,7 @@ export function vectorFieldScene(): AnimatedScene {
     SpaceSetting.ThreeDim,
     HotReloadSetting.BeginFromCurrent,
     async (scene) => {
+      const hdriData = await loadHDRIData(scene.asset(HDRIs.outdoor1), 2)
       addSceneLighting(scene.scene)
       await addHDRI(scene, hdriData, 1)
       addBackgroundGradient({
