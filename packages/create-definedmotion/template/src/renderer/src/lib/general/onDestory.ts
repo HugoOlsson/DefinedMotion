@@ -1,10 +1,16 @@
-let allDestroyFunctionsToCall: (() => any)[] = []
+type DestroyFunction = () => unknown | Promise<unknown>
 
-export const addDestroyFunction = (func: () => any) => allDestroyFunctionsToCall.push(func)
+const allDestroyFunctionsToCall = new Set<DestroyFunction>()
 
-export const callAllDestroyFunctions = async () => {
-  for (let i = 0; i < allDestroyFunctionsToCall.length; i++) {
-    await allDestroyFunctionsToCall[i]()
+export const addDestroyFunction = (func: DestroyFunction): (() => void) => {
+  allDestroyFunctionsToCall.add(func)
+  return () => allDestroyFunctionsToCall.delete(func)
+}
+
+export const callAllDestroyFunctions = async (): Promise<void> => {
+  const functions = [...allDestroyFunctionsToCall]
+  allDestroyFunctionsToCall.clear()
+  for (const destroy of functions) {
+    await destroy()
   }
-  allDestroyFunctionsToCall = []
 }

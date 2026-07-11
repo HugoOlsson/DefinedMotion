@@ -197,6 +197,24 @@ first and last. Use `--count 5` to choose another sample count or
 frames and each cell's time, row, column, and pixel bounds. Omit `--columns` for
 a square-ish layout or `--cell-width` to use 360-pixel thumbnails.
 
+Expose meaningful scene objects to agent inspection with one stable ID:
+
+```ts
+const title = scene.expose('main-title', createMeshText('DefinedMotion'))
+scene.add(title)
+```
+
+Then inspect exact-frame camera, transform, visibility, and geometry data:
+
+```bash
+npm run dm -- inspect tutorial-easy-1 --frame 30 --json
+```
+
+`expose()` only registers the current object reference; descriptions, tags, and
+primitive metadata are optional. Geometry and screen bounds are calculated only
+when `inspect` runs. Registrations are cleared before every deterministic scene
+rebuild and when the scene is destroyed.
+
 For a sequence of agent or script queries, start a persistent runtime once:
 
 ```bash
@@ -207,15 +225,17 @@ npm run dm -- session status
 npm run dm -- scenes --json
 npm run dm -- still tutorial-easy-1 --frame 30 --json
 npm run dm -- timeline-grid tutorial-easy-1 --json
+npm run dm -- inspect tutorial-easy-1 --frame 30 --json
 
 npm run dm -- session stop
 ```
 
-Normal `scenes`, `still`, and `timeline-grid` commands automatically use the
-project session when one is running and otherwise retain the one-shot behavior.
-Pass `--standalone` to force an isolated process, or `--require-session` when
-falling back would be undesirable. `session start --foreground` is useful in CI
-and agent terminals that own the runtime process lifecycle.
+Normal `scenes`, `still`, `timeline-grid`, and `inspect` commands automatically
+use the project session when one is running and otherwise retain the one-shot
+behavior. Pass `--standalone` to force an isolated process, or
+`--require-session` when falling back would be undesirable.
+`session start --foreground` is useful in CI and agent terminals that own the
+runtime process lifecycle.
 
 The session does not serve an old scene after source changes. The CLI hashes the
 current `src` tree, Vite fully reloads the renderer, and the runtime waits for

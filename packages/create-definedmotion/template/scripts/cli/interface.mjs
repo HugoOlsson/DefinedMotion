@@ -13,6 +13,7 @@ Usage:
   definedmotion scenes [--exclude-tests] [--json] [--no-build] [--standalone]
   definedmotion still <scene> --frame <number> [--output <file>] [--json] [--no-build] [--standalone]
   definedmotion timeline-grid <scene> [--frames <list> | --count <number>] [--columns <number>] [--cell-width <pixels>] [--output <file>] [--json] [--no-build] [--standalone]
+  definedmotion inspect <scene> [--frame <number>] [--json] [--no-build] [--standalone]
 
 Session-aware commands use a running persistent runtime automatically.
 Pass --standalone to force a fresh build and Electron process, or
@@ -23,6 +24,7 @@ Examples:
   npm run dm -- scenes
   npm run dm -- still tutorial-easy-1 --frame 30 --output .definedmotion/frame.png
   npm run dm -- timeline-grid tutorial-easy-1
+  npm run dm -- inspect tutorial-easy-1 --frame 30 --json
   npm run dm -- session stop
 `
 
@@ -124,6 +126,18 @@ export function buildAutomationRequest(command, positionals, flags) {
     }
   }
 
+  if (command === 'inspect') {
+    const scene = positionals[1]
+    if (!scene) {
+      throw new CliError('INVALID_ARGUMENTS', 'The inspect command requires a scene id')
+    }
+    const frame = parseOptionalInteger(flags.frame, 0)
+    if (frame < 0) {
+      throw new CliError('INVALID_ARGUMENTS', '--frame must be a non-negative integer')
+    }
+    return { command: 'inspect', scene, frame }
+  }
+
   throw new CliError('UNKNOWN_COMMAND', `Unknown command "${command}"`)
 }
 
@@ -199,6 +213,13 @@ export function emit(result, json) {
   if (result.command === 'timeline-grid') {
     process.stdout.write(
       `Rendered ${result.cells?.length ?? 0} frames from ${result.scene} to ${result.output} (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
+    )
+    return
+  }
+
+  if (result.command === 'inspect') {
+    process.stdout.write(
+      `Inspected ${result.scene} frame ${result.frame}: ${result.objects?.length ?? 0} exposed objects (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
     )
     return
   }

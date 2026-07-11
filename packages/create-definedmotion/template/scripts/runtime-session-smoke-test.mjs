@@ -93,6 +93,33 @@ try {
   })
 
   const initialStatus = await waitForReady()
+  const initialInspection = run(['inspect', 'test-scene-inspection', '--require-session'])
+  const repeatedInspection = run([
+    'inspect',
+    'test-scene-inspection',
+    '--frame',
+    '59',
+    '--require-session'
+  ])
+  const unexposedInspection = run([
+    'inspect',
+    'test-zoom-perspective-sequential',
+    '--require-session'
+  ])
+  if (
+    initialInspection.runtimeId !== initialStatus.runtimeId ||
+    repeatedInspection.runtimeId !== initialStatus.runtimeId ||
+    unexposedInspection.runtimeId !== initialStatus.runtimeId ||
+    initialInspection.generation !== repeatedInspection.generation ||
+    initialInspection.objects.length !== 4 ||
+    repeatedInspection.objects.length !== 4 ||
+    unexposedInspection.objects.length !== 0 ||
+    unexposedInspection.camera.type !== 'perspective' ||
+    unexposedInspection.camera.fov === undefined
+  ) {
+    throw new Error('Persistent inspection retained or lost scene-owned exposed object references')
+  }
+
   writeFileSync(fixturePath, fixtureSource('#ff0000'))
 
   const redOutput = join(temporaryDirectory, 'red.png')

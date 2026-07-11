@@ -22,6 +22,9 @@ renderer. Automation must not reimplement scene execution.
   A standard Electron protocol streams selected assets in Studio and automation,
   including MIME types and byte ranges, while packaged projects copy the same
   asset tree to their resources directory.
+- `AnimatedScene.expose()` gives selected Three.js objects stable semantic IDs.
+  The scene-owned registry is rebuilt with the scene and performs no geometry
+  work until an inspection request.
 - `scripts/definedmotion.mjs` uses a compatible project runtime automatically,
   or builds and invokes an isolated hidden renderer as a fallback. JSON mode
   reserves stdout for the final machine-readable result.
@@ -44,6 +47,8 @@ npm run dm -- timeline-grid tutorial-easy-1 \
   --columns 3 \
   --output .definedmotion/tutorial-timeline.png \
   --json
+
+npm run dm -- inspect tutorial-easy-1 --frame 30 --json
 ```
 
 The default still path is
@@ -67,14 +72,15 @@ npm run dm -- scenes --json
 npm run dm -- still tutorial-easy-1 --frame 30 --json
 npm run dm -- still tutorial-easy-1 --frame 59 --json
 npm run dm -- timeline-grid tutorial-easy-1 --json
+npm run dm -- inspect tutorial-easy-1 --frame 30 --json
 
 npm run dm -- session stop
 ```
 
-`scenes`, `still`, and `timeline-grid` prefer the session when it exists.
-`--standalone` forces a one-shot renderer, while `--require-session` fails
-instead of falling back. Use `session start --foreground` when the caller should
-own and observe the runtime process directly, such as in CI or an
+`scenes`, `still`, `timeline-grid`, and `inspect` prefer the session when it
+exists. `--standalone` forces a one-shot renderer, while `--require-session`
+fails instead of falling back. Use `session start --foreground` when the caller
+should own and observe the runtime process directly, such as in CI or an
 agent-controlled terminal.
 
 The persistent boundary is deliberately the renderer environment, not a scene
@@ -90,6 +96,37 @@ selects exact frames; the two flags cannot be combined. The result reports grid
 dimensions and structured cell metadata, including each frame's exact time and
 pixel bounds. Requests accept at most 100 frames, and output dimensions are
 bounded to prevent accidental memory exhaustion.
+
+### Semantic inspection
+
+Only a stable ID is required to expose an object:
+
+```ts
+const title = scene.expose('main-title', createMeshText('DefinedMotion'))
+scene.add(title)
+```
+
+Optional metadata is deliberately small and JSON-compatible:
+
+```ts
+scene.expose('temperature-curve', curve, {
+  description: 'Temperature measurements from the imported dataset',
+  tags: ['data-series'],
+  data: { unit: 'celsius' }
+})
+```
+
+`inspect <scene> --frame <number>` seeks through the same deterministic runtime
+as still rendering and returns scene duration, camera projection, local and
+world transforms, world bounds, screen bounds, attachment, inherited
+visibility, and in-frame state. Frame zero is the default.
+
+The registry belongs to one `AnimatedScene`. It is cleared before every rebuild
+and on destruction, so newly-created objects replace previous-generation
+references instead of accumulating. Duplicate IDs or duplicate object
+registrations fail during the build. Metadata is copied and limited to strings,
+finite numbers, booleans, null, tags, and an optional description. Inspection
+serializes at most 500 objects and reports when a response is truncated.
 
 ### Freshness contract
 
@@ -173,7 +210,6 @@ and exact source revision.
 The foundation intentionally precedes AI-specific protocols. Planned clients
 and capabilities can build on the same runtime:
 
-1. Semantic inspectable-object registration and response-budgeted snapshots.
-2. Validation, debug overlays, and object-ID renders.
-3. Extracted versioned runtime/CLI packages for upgrading generated projects.
-4. An agent skill and, if useful, a thin MCP wrapper.
+1. Validation, debug overlays, and object-ID renders.
+2. Extracted versioned runtime/CLI packages for upgrading generated projects.
+3. An agent skill and, if useful, a thin MCP wrapper.

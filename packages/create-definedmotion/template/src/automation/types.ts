@@ -1,4 +1,4 @@
-export type AutomationCommand = 'scenes' | 'still' | 'timeline-grid'
+export type AutomationCommand = 'scenes' | 'still' | 'timeline-grid' | 'inspect'
 
 export interface ScenesAutomationRequest {
   command: 'scenes'
@@ -22,10 +22,17 @@ export interface TimelineGridAutomationRequest {
   output: string
 }
 
+export interface InspectAutomationRequest {
+  command: 'inspect'
+  scene: string
+  frame: number
+}
+
 export type AutomationRequest =
   | ScenesAutomationRequest
   | StillAutomationRequest
   | TimelineGridAutomationRequest
+  | InspectAutomationRequest
 
 export interface AutomationSceneSummary {
   id: string
@@ -46,6 +53,85 @@ export interface TimelineGridCell {
   label: string
 }
 
+export type Vector3Tuple = [number, number, number]
+export type QuaternionTuple = [number, number, number, number]
+
+export interface InspectTransform {
+  position: Vector3Tuple
+  rotation: Vector3Tuple
+  quaternion?: QuaternionTuple
+  scale: Vector3Tuple
+}
+
+export interface InspectBounds3D {
+  min: Vector3Tuple
+  max: Vector3Tuple
+  size: Vector3Tuple
+  center: Vector3Tuple
+}
+
+export interface InspectScreenBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface InspectObjectMetadata {
+  description?: string
+  tags?: string[]
+  data?: Record<string, string | number | boolean | null>
+}
+
+export interface InspectObjectResult {
+  id: string
+  type: string
+  name?: string
+  parentId?: string
+  metadata: InspectObjectMetadata
+  attached: boolean
+  visible: boolean
+  inFrame: boolean
+  fullyInFrame: boolean
+  behindCamera: boolean
+  partiallyBehindCamera: boolean
+  localTransform: InspectTransform
+  worldTransform: InspectTransform
+  worldBounds: InspectBounds3D | null
+  screenBounds: InspectScreenBounds | null
+}
+
+export interface InspectCameraResult {
+  type: 'orthographic' | 'perspective'
+  position: Vector3Tuple
+  rotation: Vector3Tuple
+  quaternion: QuaternionTuple
+  direction: Vector3Tuple
+  near: number
+  far: number
+  zoom: number
+  fov?: number
+  aspect?: number
+  left?: number
+  right?: number
+  top?: number
+  bottom?: number
+}
+
+export interface InspectSceneInfo {
+  id: string
+  name: string
+  isDefault: boolean
+  isTest: boolean
+  width: number
+  height: number
+  fps: number
+  durationInFrames: number
+  lastFrame: number
+  durationMs: number
+  seed: number | string
+}
+
 export interface AutomationSuccessResult {
   success: true
   command: AutomationCommand
@@ -54,6 +140,11 @@ export interface AutomationSuccessResult {
   frame?: number
   frames?: number[]
   cells?: TimelineGridCell[]
+  sceneInfo?: InspectSceneInfo
+  camera?: InspectCameraResult
+  objects?: InspectObjectResult[]
+  totalExposedObjects?: number
+  objectsTruncated?: boolean
   timeMs?: number
   durationInFrames?: number
   fps?: number

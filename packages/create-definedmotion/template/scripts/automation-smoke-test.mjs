@@ -33,8 +33,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 47) {
-    throw new Error(`Expected 47 automatically discovered scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 48) {
+    throw new Error(`Expected 48 automatically discovered scenes, received ${scenes.scenes.length}`)
   }
   if (!scenes.scenes.some((scene) => scene.id === 'fourier-series' && scene.isDefault)) {
     throw new Error('Configured default scene was not discoverable')
@@ -93,6 +93,53 @@ try {
   }
   if (sha256(firstOutput) !== sha256(secondOutput)) {
     throw new Error('Repeated still renders were not byte-identical')
+  }
+
+  const inspection = run(['inspect', 'test-scene-inspection', '--frame', '30', '--no-build'])
+  const subject = inspection.objects.find((object) => object.id === 'subject')
+  const hiddenLabel = inspection.objects.find((object) => object.id === 'hidden-label')
+  const detachedGuide = inspection.objects.find((object) => object.id === 'detached-guide')
+  if (
+    inspection.sceneInfo.durationInFrames !== 60 ||
+    inspection.sceneInfo.lastFrame !== 59 ||
+    inspection.timeMs !== 500 ||
+    inspection.camera.type !== 'orthographic' ||
+    JSON.stringify(inspection.camera.direction) !== JSON.stringify([0, 0, -1]) ||
+    inspection.totalExposedObjects !== 4 ||
+    inspection.objectsTruncated ||
+    !subject ||
+    subject.metadata.data?.purpose !== 'inspection-test' ||
+    JSON.stringify(subject.worldTransform.position) !== JSON.stringify([-5, 3, 0]) ||
+    JSON.stringify(subject.worldBounds?.size) !== JSON.stringify([4, 2, 0]) ||
+    JSON.stringify(subject.screenBounds) !==
+      JSON.stringify({ x: 176.666667, y: 86.666667, width: 13.333333, height: 6.666667 }) ||
+    !subject.attached ||
+    !subject.visible ||
+    !subject.fullyInFrame ||
+    !hiddenLabel ||
+    hiddenLabel.parentId !== 'label-group' ||
+    JSON.stringify(hiddenLabel.worldTransform.position) !== JSON.stringify([9, -2, 0]) ||
+    hiddenLabel.visible ||
+    !detachedGuide ||
+    detachedGuide.attached ||
+    detachedGuide.inFrame
+  ) {
+    throw new Error('Semantic inspection metadata or geometry was incorrect')
+  }
+
+  const exposureLifecycleGrid = run([
+    'timeline-grid',
+    'test-scene-inspection',
+    '--frames',
+    '0,30,59',
+    '--cell-width',
+    '120',
+    '--output',
+    join(temporaryDirectory, 'exposure-lifecycle.png'),
+    '--no-build'
+  ])
+  if (exposureLifecycleGrid.cells.length !== 3) {
+    throw new Error('Exposed object registry did not survive repeated clean seeks')
   }
 
   const timelineGridOutput = join(temporaryDirectory, 'timeline-grid.png')

@@ -14,6 +14,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { easeConstant } from '../animation/interpolations'
 import { definedMotionConfig } from '../../../../definedmotion.config'
 import { addDestroyFunction } from '../general/onDestory'
+import { SceneRuntimeError } from './sceneErrors'
+import {
+  SceneExposureRegistry,
+  type ExposedObjectMetadata,
+  type ExposedSceneObject
+} from './sceneExposure'
 import {
   assetUrl,
   createAssetReference,
@@ -56,15 +62,12 @@ export enum HotReloadSetting {
   BeginFreshOnSave
 }
 
-export class SceneRuntimeError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string
-  ) {
-    super(message)
-    this.name = 'SceneRuntimeError'
-  }
-}
+export { SceneRuntimeError } from './sceneErrors'
+export type {
+  ExposedObjectDataValue,
+  ExposedObjectMetadata,
+  ExposedSceneObject
+} from './sceneExposure'
 
 export const hotreloadNameLookup = (mode: HotReloadSetting) => {
   switch (mode) {
@@ -108,6 +111,7 @@ export class AnimatedScene {
   private sceneDependencies: DependencyUpdater[] = []
   private sceneInstructions: Map<number, SceneInstruction[]> = new Map()
   private planedSounds: Map<number, AudioInScene[]> = new Map()
+  private exposureRegistry = new SceneExposureRegistry()
 
   private pixelsWidth
   private pixelsHeight
@@ -156,6 +160,8 @@ export class AnimatedScene {
   private resizeObserver?: ResizeObserver
   private interactive: boolean
   private randomGenerator = Alea(definedMotionConfig.seed)
+  private unregisterDestroy?: () => void
+  private destroyed = false
   
 
   constructor(
@@ -210,12 +216,18 @@ export class AnimatedScene {
       this.controls.enabled = false
     }
 
-    addDestroyFunction(() => this.onDestroy())
+    this.unregisterDestroy = addDestroyFunction(() => this.onDestroy())
   }
 
   onDestroy() {
+    if (this.destroyed) return
+    this.destroyed = true
+    this.unregisterDestroy?.()
+    this.unregisterDestroy = undefined
     this.stopControls()
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
+    this.resizeObserver?.disconnect()
+    this.clearExposedObjects()
   }
 
   add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
@@ -254,6 +266,33 @@ export class AnimatedScene {
    */
   asset(path: string): SceneAsset {
     return createAssetReference(path)
+  }
+
+  /**
+   * Gives an object a stable semantic ID for opt-in agent inspection.
+   * Registration is build-scoped and performs no geometry measurements.
+   */
+  expose<T extends THREE.Object3D>(
+    id: string,
+    object: T,
+    metadata: ExposedObjectMetadata = {}
+  ): T {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'EXPOSE_OUTSIDE_BUILD',
+        'scene.expose() must be called while the scene build function is running'
+      )
+    }
+    return this.exposureRegistry.expose(id, object, metadata)
+  }
+
+  /** Current-build registrations for tooling. The returned array is a snapshot. */
+  getExposedObjects(): ExposedSceneObject[] {
+    return this.exposureRegistry.snapshot()
+  }
+
+  get exposedObjectCount(): number {
+    return this.exposureRegistry.size
   }
 
   addAnims(...animations: UserAnimation[]) {
@@ -569,10 +608,6 @@ export class AnimatedScene {
 
   this.resizeObserver.observe(container)
 
-  // Clean up on destroy / hot reload
-  addDestroyFunction(() => {
-    this.resizeObserver?.disconnect()
-  })
 }
 
   pause() {
@@ -810,6 +845,7 @@ export class AnimatedScene {
   }
 
   private resetSceneVars() {
+    this.clearExposedObjects()
     this.sceneRenderTick = 0
     this.sceneCalculationTick = 0
     this.totalSceneTicks = 0
@@ -818,6 +854,10 @@ export class AnimatedScene {
     this.sceneInstructions = new Map()
     this.planedSounds = new Map()
     this.randomGenerator = Alea(definedMotionConfig.seed)
+  }
+
+  private clearExposedObjects(): void {
+    this.exposureRegistry.clear()
   }
 
   private async withSeededRandom<T>(operation: () => Promise<T> | T): Promise<T> {
