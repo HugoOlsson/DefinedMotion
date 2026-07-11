@@ -365,7 +365,7 @@ const interpolation = easeInOutQuad(0, 10, 500)  // 500ms from 0 to 10
 
 console.log(interpolation.length)  // Number of frames (ticks)
 console.log(interpolation[0])      // 0
-console.log(interpolation[100])    // Some intermediate value
+console.log(interpolation[10])    // Some intermediate value
 ```
 
 This approach has major advantages:
