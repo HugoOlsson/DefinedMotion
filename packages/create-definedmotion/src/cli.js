@@ -63,7 +63,7 @@ async function createProject() {
   console.log(chalk.gray('\n  List scenes available to automation:'));
   console.log('  ' + chalk.cyan('npm run dm -- scenes'));
   console.log(chalk.gray('\n  Create your animations in:'));
-  console.log('  ' + chalk.cyan('src/renderer/src/scenes/'));
+  console.log('  ' + chalk.cyan('src/scenes/'));
   console.log('\n' + chalk.gray('Need help? Check out the docs:'));
   console.log('  ' + chalk.cyan('https://github.com/HugoOlsson/DefinedMotion'));
   console.log('\n' + chalk.bold('Happy animating! 🚀\n'));

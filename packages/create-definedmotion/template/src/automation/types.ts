@@ -5,12 +5,14 @@ export interface AutomationRequest {
   scene?: string
   frame?: number
   output?: string
+  excludeTests?: boolean
 }
 
 export interface AutomationSceneSummary {
   id: string
   name: string
   isDefault: boolean
+  isTest: boolean
 }
 
 export interface AutomationSuccessResult {

@@ -46,10 +46,13 @@ export const runAutomation = async (): Promise<void> => {
     request = await automationApi.getAutomationRequest()
 
     if (request.command === 'scenes') {
+      const scenes = listProjectScenes(project).filter(
+        (scene) => !request?.excludeTests || !scene.isTest
+      )
       automationApi.completeAutomation({
         success: true,
         command: 'scenes',
-        scenes: listProjectScenes(project)
+        scenes
       })
       return
     }

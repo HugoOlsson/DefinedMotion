@@ -31,8 +31,24 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
+  if (scenes.scenes.length !== 46) {
+    throw new Error(`Expected 46 automatically discovered scenes, received ${scenes.scenes.length}`)
+  }
   if (!scenes.scenes.some((scene) => scene.id === 'tutorial-easy-1' && scene.isDefault)) {
     throw new Error('Default tutorial scene was not discoverable')
+  }
+  if (
+    !scenes.scenes.some((scene) => scene.id === 'test-camera-waypoints-sequential' && scene.isTest)
+  ) {
+    throw new Error('Visual test scenes were not discoverable with isTest metadata')
+  }
+
+  const scenesWithoutTests = run(['scenes', '--exclude-tests', '--no-build'])
+  if (
+    scenesWithoutTests.scenes.length !== 12 ||
+    scenesWithoutTests.scenes.some((scene) => scene.isTest)
+  ) {
+    throw new Error('--exclude-tests did not return exactly the 12 non-test scenes')
   }
 
   const firstOutput = join(temporaryDirectory, 'first.png')

@@ -8,8 +8,10 @@ renderer. Automation must not reimplement scene execution.
 
 - `src/definedmotion.config.ts` owns the fixed timeline FPS, render sampling,
   and deterministic seed. Timeline FPS never depends on monitor refresh rate.
-- `src/entry.ts` exports the project scene registry and the backwards-compatible
-  `entryScene` used by Studio.
+- Bundled `src/example_scenes/**/*.scene.ts` modules and user-authored
+  `src/scenes/**/*.scene.ts` modules describe themselves through `defineScene()`.
+  Vite discovers both automatically, while `src/entry.ts` remains a small
+  framework bootstrap with backwards-compatible exports.
 - `AnimatedScene.seekExact(frame)` rebuilds from initial state, resets seeded
   randomness, traces every preceding tick, validates the requested frame, and
   renders at logical output resolution.
@@ -26,6 +28,8 @@ npm run dm -- scenes
 
 npm run dm -- scenes --json
 
+npm run dm -- scenes --exclude-tests
+
 npm run dm -- still tutorial-easy-1 \
   --frame 30 \
   --output .definedmotion/frame-30.png \
@@ -39,6 +43,44 @@ is ignored by Git.
 `--no-build` may be used while repeatedly invoking an unchanged compiled
 project. It is unsafe after editing source because the command will use the
 previous build.
+
+## Adding a scene
+
+Create a default-exported `*.scene.ts` module anywhere under `src/scenes`:
+
+```ts
+import { defineScene } from '../project'
+import { myScene } from './myScene'
+
+export default defineScene({
+  id: 'my-scene',
+  name: 'My Scene',
+  create: myScene
+})
+```
+
+No central registry edit is required. Discovery fails with an actionable error
+when a module has an invalid default export or two modules use the same ID.
+Choose the initial Studio scene through `defaultScene` in
+`src/definedmotion.config.ts`.
+
+Scene modules are currently imported eagerly. Keep costly asset loading inside
+the scene creation/build path rather than at module scope. Lazy scene loading is
+a future optimization.
+
+Visual tests use the same scene abstraction and are included in discovery:
+
+```ts
+export default defineScene({
+  id: 'test-camera-waypoints-sequential',
+  name: 'Camera Waypoints Sequential',
+  isTest: true,
+  create: test_camera_waypoints_sequential
+})
+```
+
+`scenes` returns the complete inventory by default. Pass `--exclude-tests` to
+omit definitions marked with `isTest: true`.
 
 ## Result contract
 

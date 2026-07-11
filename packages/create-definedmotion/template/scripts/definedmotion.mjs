@@ -15,7 +15,7 @@ const require = createRequire(join(projectRoot, 'package.json'))
 const usage = `DefinedMotion automation CLI
 
 Usage:
-  definedmotion scenes [--json] [--no-build]
+  definedmotion scenes [--exclude-tests] [--json] [--no-build]
   definedmotion still <scene> --frame <number> [--output <file>] [--json] [--no-build]
 
 Examples:
@@ -66,7 +66,10 @@ function emit(result, json) {
 
   if (result.command === 'scenes') {
     for (const scene of result.scenes ?? []) {
-      process.stdout.write(`${scene.id}${scene.isDefault ? ' (default)' : ''}\t${scene.name}\n`)
+      const labels = [scene.isDefault ? 'default' : undefined, scene.isTest ? 'test' : undefined]
+        .filter(Boolean)
+        .join(', ')
+      process.stdout.write(`${scene.id}${labels ? ` (${labels})` : ''}\t${scene.name}\n`)
     }
     return
   }
@@ -91,7 +94,7 @@ if (!command || flags.help || command === 'help') {
 
 let request
 if (command === 'scenes') {
-  request = { command: 'scenes' }
+  request = { command: 'scenes', excludeTests: flags['exclude-tests'] === true }
 } else if (command === 'still') {
   const scene = positionals[1]
   const frame = Number(flags.frame)

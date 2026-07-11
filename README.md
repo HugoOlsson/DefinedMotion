@@ -79,6 +79,8 @@ DefinedMotion includes **12 example scenes** and **34 tests** to help you learn 
 
 ### Create Scene 
 ```ts
+import { defineScene } from '../project'
+
 export const yourSceneName = (): AnimatedScene => {
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart, async (dm) => {
@@ -86,7 +88,15 @@ export const yourSceneName = (): AnimatedScene => {
   })
 }
 
+export default defineScene({
+  id: 'your-scene-name',
+  name: 'Your Scene Name',
+  create: yourSceneName
+})
+
 ```
+
+Place scene modules under `src/scenes` and name them `*.scene.ts`. DefinedMotion discovers them automatically, so adding a scene does not require editing a central registry. The `id` is the stable identifier used by Studio and CLI commands. Select the initial Studio scene with `defaultScene` in `src/definedmotion.config.ts`.
 
 ### Scene tasks (cheatsheet)
 ```ts
@@ -145,8 +155,8 @@ export const yourSceneName = (): AnimatedScene => {
 1. Run `npx create-definedmotion project_name`
 2. Install all dependencies with `npm install`
 3. Run the animation viewer with `npm run dev`
-4. Add your scene in src/scenes
-5. Update the src/entry.ts file to use your animation.
+4. Add a default-exported `*.scene.ts` module in `src/scenes`
+5. Select its ID as `defaultScene` in `src/definedmotion.config.ts`
 6. When you want to render your animation, click "Render". You will need to have ffmpeg on your system and available in your system PATH.
 
 ## Automation CLI
@@ -158,7 +168,10 @@ List the registered scenes:
 ```bash
 npm run dm -- scenes
 npm run dm -- scenes --json
+npm run dm -- scenes --exclude-tests
 ```
+
+Visual tests are also renderable scenes and appear in the complete inventory with `isTest: true`. Use `--exclude-tests` when you only want user and example scenes.
 
 Render an exact frame as a lossless PNG:
 
@@ -169,7 +182,7 @@ npm run dm -- still tutorial-easy-1 \
   --json
 ```
 
-The animation timeline FPS and deterministic random seed live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Scenes exposed to Studio and the CLI are registered in `src/entry.ts`.
+The animation timeline FPS, deterministic random seed, and default scene live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
 
 See [`docs/agent-runtime-foundation.md`](docs/agent-runtime-foundation.md) for the runtime boundaries, result contract, and planned inspection layers.
 
