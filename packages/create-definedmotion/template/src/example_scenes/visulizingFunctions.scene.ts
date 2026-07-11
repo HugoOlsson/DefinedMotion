@@ -1,9 +1,6 @@
 import { defineScene } from '../project'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
-import {
-  addBackgroundGradient,
-  addSceneLighting,
-} from '../renderer/src/lib/rendering/lighting3d'
+import { addBackgroundGradient, addSceneLighting } from '../renderer/src/lib/rendering/lighting3d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
@@ -18,7 +15,6 @@ import {
 } from '../renderer/src/lib/animation/animations'
 import { createFastText, updateText } from '../renderer/src/lib/rendering/objects2d'
 import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
-
 
 export default defineScene({
   id: 'functions',
@@ -109,9 +105,15 @@ export function animatedFunctionsScene(): AnimatedScene {
     async (scene) => {
       const hdriData = await loadHDRIData(scene.asset(HDRIs.outdoor1), 1)
       // scene.registerAudio(fadeSound)
-      scene.add(
-        create2DAxis({ xmin: -10, xmax: 10, ymin: -10, ymax: 10, ticks: 10, tickSize: 0.5 })
+      const coordinateAxes = scene.expose(
+        'coordinate-axes',
+        create2DAxis({ xmin: -10, xmax: 10, ymin: -10, ymax: 10, ticks: 10, tickSize: 0.5 }),
+        {
+          description: 'The fixed x and y axes used as the reference frame for every function',
+          tags: ['axes', 'reference']
+        }
       )
+      scene.add(coordinateAxes)
       addSceneLighting(scene.scene)
 
       await addHDRI(scene, hdriData, 1)
@@ -122,15 +124,29 @@ export function animatedFunctionsScene(): AnimatedScene {
         backgroundOpacity: 0.5
       })
       scene.camera.position.set(0, 0, 10)
-      const informationTextNode = await createFastText('Some of the functions are scaled.', 0.6)
+      const informationTextNode = scene.expose(
+        'scaling-note',
+        await createFastText('Some of the functions are scaled.', 0.6),
+        {
+          description: 'Supporting note shown above the current function name',
+          tags: ['text', 'supporting-copy']
+        }
+      )
       informationTextNode.position.y = 13.5
       setOpacity(informationTextNode, 0.4)
       scene.add(informationTextNode)
-      const textNode = await createFastText('', 1.5)
+      const textNode = scene.expose('function-name', await createFastText('', 1.5), {
+        description: 'The name of the function currently represented by the plot',
+        tags: ['text', 'title', 'dynamic']
+      })
       textNode.position.y = 12
       scene.add(textNode)
 
       const plotLine = new PlotLine(scene.scene, 0xffffff)
+      scene.expose('function-plot', plotLine.object, {
+        description: 'The animated line that morphs between the functions',
+        tags: ['plot', 'primary-subject', 'dynamic']
+      })
 
       const vecFuncs = vectorizeFunctions(functions)
 
@@ -188,6 +204,10 @@ class PlotLine {
     })
     this.mesh = new THREE.Mesh(this.meshLine.geometry, material)
     scene.add(this.mesh)
+  }
+
+  get object(): THREE.Mesh {
+    return this.mesh
   }
 
   setPoints(points: [number, number][]) {

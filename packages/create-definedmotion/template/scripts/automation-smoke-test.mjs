@@ -118,6 +118,7 @@ try {
     !subject.fullyInFrame ||
     !hiddenLabel ||
     hiddenLabel.parentId !== 'label-group' ||
+    hiddenLabel.text !== 'Hidden label' ||
     JSON.stringify(hiddenLabel.worldTransform.position) !== JSON.stringify([9, -2, 0]) ||
     hiddenLabel.visible ||
     !detachedGuide ||
@@ -125,6 +126,18 @@ try {
     detachedGuide.inFrame
   ) {
     throw new Error('Semantic inspection metadata or geometry was incorrect')
+  }
+
+  const dynamicTextInspection = run(['inspect', 'alternatives', '--frame', '300', '--no-build'])
+  const courseName = dynamicTextInspection.objects.find((object) => object.id === 'course-name')
+  if (
+    courseName?.text !== 'Optik' ||
+    !courseName.worldBounds ||
+    courseName.worldBounds.size[0] <= 0 ||
+    !courseName.screenBounds ||
+    courseName.screenBounds.width <= 0
+  ) {
+    throw new Error('Dynamic text content and geometry were not synchronized before inspection')
   }
 
   const exposureLifecycleGrid = run([

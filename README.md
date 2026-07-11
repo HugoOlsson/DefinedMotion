@@ -212,8 +212,9 @@ npm run dm -- inspect tutorial-easy-1 --frame 30 --json
 
 `expose()` only registers the current object reference; descriptions, tags, and
 primitive metadata are optional. Geometry and screen bounds are calculated only
-when `inspect` runs. Registrations are cleared before every deterministic scene
-rebuild and when the scene is destroyed.
+when `inspect` runs, along with the current content of text-bearing objects.
+Registrations are cleared before every deterministic scene rebuild and when the
+scene is destroyed.
 
 For a sequence of agent or script queries, start a persistent runtime once:
 
@@ -242,6 +243,10 @@ current `src` tree, Vite fully reloads the renderer, and the runtime waits for
 that exact source revision to report ready before executing the request. A
 renderer generation is reused only while the source stays unchanged; each
 request still constructs and disposes its own scene.
+
+Invalid edits return `SOURCE_COMPILE_ERROR` with Vite's file, location, plugin,
+and source frame. Correct the source and retry; the existing session recovers
+without needing a restart.
 
 The animation timeline FPS, deterministic random seed, and default scene live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
 

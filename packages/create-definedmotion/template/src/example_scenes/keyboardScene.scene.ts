@@ -1,8 +1,5 @@
 import { defineScene } from '../project'
-import {
-  addBackgroundGradient,
-  addSceneLighting,
-} from '../renderer/src/lib/rendering/lighting3d'
+import { addBackgroundGradient, addSceneLighting } from '../renderer/src/lib/rendering/lighting3d'
 import { loadGLB } from '../renderer/src/lib/rendering/objects/import'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import type { SceneAsset } from '../renderer/src/lib/assets/assetReference'
@@ -14,7 +11,6 @@ import { easeLinear } from '../renderer/src/lib/animation/interpolations'
 import { createFastText, createLine, updateText } from '../renderer/src/lib/rendering/objects2d'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
 import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
-
 
 export default defineScene({
   id: 'keyboard',
@@ -243,19 +239,20 @@ const setText = async (textNode: any, addedCharacter: string) => {
   }
 
   // Update text storage and visible text
+  let nextText: string
   if (fullText.length > numberVisible) {
     // Split into new history and visible portions
     const newVisible = fullText.slice(-numberVisible)
     textNode.historyTextStore = fullText.slice(0, fullText.length - numberVisible)
-    textNode.text = '...' + newVisible
+    nextText = '...' + newVisible
   } else {
     // Show full text without ellipsis
-    textNode.text = fullText
+    nextText = fullText
     textNode.historyTextStore = ''
   }
 
   // Update the text node
-  await updateText(textNode, textNode.text)
+  await updateText(textNode, nextText)
 }
 const typeAnimation = (
   scene: AnimatedScene,
@@ -312,7 +309,14 @@ export function keyboardScene(): AnimatedScene {
       const tickSound = scene.asset('audio/tick_sound.mp3')
       const keyboard1 = scene.asset('audio/keyboard1.mp3')
       const sounds = { tick: tickSound, key: keyboard1 }
-      const keyboard = await loadGLB(scene.asset('objects/keyboardScene/ibm-keyboard.glb'))
+      const keyboard = scene.expose(
+        'keyboard',
+        await loadGLB(scene.asset('objects/keyboardScene/ibm-keyboard.glb')),
+        {
+          description: 'The imported IBM keyboard model at the center of the animation',
+          tags: ['model', 'keyboard', 'primary-subject']
+        }
+      )
       const hdriData = await loadHDRIData(scene.asset(HDRIs.photoStudio1), 2)
 
       scene.registerAudio(tickSound)
@@ -386,7 +390,10 @@ export function keyboardScene(): AnimatedScene {
 
       //setPosition(scene.scene, translateToKey(' '))
 
-      const text = await createFastText('', 0.4)
+      const text = scene.expose('typed-message', await createFastText('', 0.4), {
+        description: 'The message currently being typed on the keyboard surface',
+        tags: ['text', 'dynamic']
+      })
       text.rotateX(-Math.PI / 2)
       text.position.y = 0.02
 
@@ -399,7 +406,14 @@ export function keyboardScene(): AnimatedScene {
       scene.add(text)
 
       const point1 = new THREE.Vector3(-5, 0.05, -3.4)
-      const line = createLine({ point1, point2: point1.clone().add(new THREE.Vector3(6, 0, 0)) })
+      const line = scene.expose(
+        'text-baseline',
+        createLine({ point1, point2: point1.clone().add(new THREE.Vector3(6, 0, 0)) }),
+        {
+          description: 'The fixed baseline beneath the typed message',
+          tags: ['guide', 'line']
+        }
+      )
       scene.add(line)
 
       const typeSpeed = 70
@@ -409,7 +423,13 @@ export function keyboardScene(): AnimatedScene {
       scene.addAnims(typeAnimation(scene, line1, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line1].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
+        typeAnimation(
+          scene,
+          [...line1].map(() => backCharacter).join(''),
+          text,
+          deleteSpeed,
+          sounds
+        )
       )
 
       scene.addWait(300)
@@ -417,7 +437,13 @@ export function keyboardScene(): AnimatedScene {
       scene.addAnims(typeAnimation(scene, line2, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line2].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
+        typeAnimation(
+          scene,
+          [...line2].map(() => backCharacter).join(''),
+          text,
+          deleteSpeed,
+          sounds
+        )
       )
 
       scene.addWait(300)
@@ -425,7 +451,13 @@ export function keyboardScene(): AnimatedScene {
       scene.addAnims(typeAnimation(scene, line3, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line3].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
+        typeAnimation(
+          scene,
+          [...line3].map(() => backCharacter).join(''),
+          text,
+          deleteSpeed,
+          sounds
+        )
       )
 
       scene.addWait(300)
@@ -434,7 +466,13 @@ export function keyboardScene(): AnimatedScene {
       scene.addAnims(typeAnimation(scene, line4, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line4].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
+        typeAnimation(
+          scene,
+          [...line4].map(() => backCharacter).join(''),
+          text,
+          deleteSpeed,
+          sounds
+        )
       )
 
       scene.addWait(300)
@@ -442,7 +480,13 @@ export function keyboardScene(): AnimatedScene {
       scene.addAnims(typeAnimation(scene, line5, text, typeSpeed, sounds))
       scene.addWait(1000)
       scene.addAnims(
-        typeAnimation(scene, [...line5].map(() => backCharacter).join(''), text, deleteSpeed, sounds)
+        typeAnimation(
+          scene,
+          [...line5].map(() => backCharacter).join(''),
+          text,
+          deleteSpeed,
+          sounds
+        )
       )
 
       const initialZoom = scene.camera.zoom

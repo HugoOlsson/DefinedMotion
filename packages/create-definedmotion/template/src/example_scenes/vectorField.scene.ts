@@ -2,14 +2,10 @@ import { defineScene } from '../project'
 import { addHDRI, HDRIs, loadHDRIData } from '$renderer/lib/rendering/hdri'
 import { linspace } from '../renderer/src/lib/mathHelpers/vectors'
 import { COLORS } from '../renderer/src/lib/rendering/helpers'
-import {
-  addBackgroundGradient,
-  addSceneLighting,
-} from '../renderer/src/lib/rendering/lighting3d'
+import { addBackgroundGradient, addSceneLighting } from '../renderer/src/lib/rendering/lighting3d'
 import { createFastText } from '../renderer/src/lib/rendering/objects2d'
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
-
 
 export default defineScene({
   id: 'vector-field',
@@ -73,6 +69,11 @@ export function vectorFieldScene(): AnimatedScene {
       const arrows: (THREE.ArrowHelper | null)[][][] = Array.from({ length: xs.length }, () =>
         Array.from({ length: ys.length }, () => Array.from({ length: zs.length }, () => null))
       )
+      const fieldArrows = scene.expose('field-arrows', new THREE.Group(), {
+        description: 'The complete three-dimensional grid of directional arrows',
+        tags: ['vector-field', 'primary-subject', 'dynamic']
+      })
+      scene.add(fieldArrows)
 
       for (let i = 0; i < xs.length; i++) {
         for (let j = 0; j < ys.length; j++) {
@@ -119,12 +120,15 @@ export function vectorFieldScene(): AnimatedScene {
             arrows[i][j][k] = arrowHelper
 
             // 3. add to scene
-            scene.add(arrowHelper)
+            fieldArrows.add(arrowHelper)
           }
         }
       }
 
-      const textNode = await createFastText('Vector Field', 5)
+      const textNode = scene.expose('title', await createFastText('Vector Field', 5), {
+        description: 'Billboard title positioned above the vector field',
+        tags: ['text', 'title']
+      })
       textNode.position.y = max * 1.5
       scene.add(textNode)
 
@@ -148,6 +152,11 @@ export function vectorFieldScene(): AnimatedScene {
       }
 
       const groups: GroupData[] = []
+      const movingParticles = scene.expose('moving-particles', new THREE.Group(), {
+        description: 'The illuminated particles moving through the vector field',
+        tags: ['particles', 'dynamic']
+      })
+      scene.add(movingParticles)
 
       Array(30)
         .fill(0)
@@ -170,7 +179,7 @@ export function vectorFieldScene(): AnimatedScene {
             velocity
           })
 
-          scene.add(group)
+          movingParticles.add(group)
         })
 
       scene.onEachTick((tick, time) => {

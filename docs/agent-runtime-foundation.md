@@ -119,7 +119,8 @@ scene.expose('temperature-curve', curve, {
 `inspect <scene> --frame <number>` seeks through the same deterministic runtime
 as still rendering and returns scene duration, camera projection, local and
 world transforms, world bounds, screen bounds, attachment, inherited
-visibility, and in-frame state. Frame zero is the default.
+visibility, and in-frame state. Text-bearing objects also report their current
+text content. Frame zero is the default.
 
 The registry belongs to one `AnimatedScene`. It is cleared before every rebuild
 and on destruction, so newly-created objects replace previous-generation
@@ -140,8 +141,15 @@ Each session result identifies `runtimeId`, `generation`, and `sourceRevision`.
 The runtime ID remains stable for the process. A generation identifies a clean
 renderer load. The source revision proves which source tree produced the
 result. If source changes during a request, the request is rejected and retried
-against the new revision; compilation failure times out with an error instead
-of returning output from an older generation.
+against the new revision. Vite validates changed modules before reloading. A
+syntax or import failure returns `SOURCE_COMPILE_ERROR` immediately with its
+file, line, column, plugin, and source frame instead of returning output from an
+older generation. Fix the source and retry; the same session recovers without a
+manual restart.
+
+While that revision is invalid, `session status` reports `source-error` and the
+pending revision plus the same structured diagnostic. Diagnostics from older
+revisions are ignored when edits arrive quickly.
 
 Changes outside `src`, such as dependency or build-configuration changes,
 require restarting the session. Runtime discovery metadata is stored with mode

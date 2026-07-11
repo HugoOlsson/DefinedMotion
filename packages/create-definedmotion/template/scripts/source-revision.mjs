@@ -9,6 +9,19 @@ import { join, relative, resolve } from 'node:path'
  * uncommitted project version it has loaded. Generated output is outside src.
  */
 export function computeSourceRevision(projectRoot) {
+  let lastError
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return computeSourceRevisionOnce(projectRoot)
+    } catch (error) {
+      if (!isTransientSourceRace(error)) throw error
+      lastError = error
+    }
+  }
+  throw lastError
+}
+
+function computeSourceRevisionOnce(projectRoot) {
   const root = resolve(projectRoot)
   const sourceRoot = join(root, 'src')
   const files = collectFiles(sourceRoot).sort()
@@ -22,6 +35,10 @@ export function computeSourceRevision(projectRoot) {
   }
 
   return `sha256:${hash.digest('hex')}`
+}
+
+function isTransientSourceRace(error) {
+  return error instanceof Error && ['EISDIR', 'ENOENT', 'ENOTDIR'].includes(error.code)
 }
 
 function collectFiles(directory) {

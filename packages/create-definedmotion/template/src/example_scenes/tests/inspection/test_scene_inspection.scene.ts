@@ -35,7 +35,11 @@ export function testSceneInspection(): AnimatedScene {
 
       const labelGroup = scene.expose('label-group', new THREE.Group())
       labelGroup.position.set(8, -4, 0)
-      const hiddenLabel = scene.expose('hidden-label', createRectangle(2, 2, { color: '#f97316' }))
+      const hiddenLabel = scene.expose(
+        'hidden-label',
+        createRectangle(2, 2, { color: '#f97316' })
+      ) as THREE.Object3D & { text: string }
+      hiddenLabel.text = 'Hidden label'
       hiddenLabel.position.set(1, 2, 0)
       hiddenLabel.visible = false
       labelGroup.add(hiddenLabel)

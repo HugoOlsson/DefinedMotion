@@ -87,6 +87,7 @@ export interface InspectObjectResult {
   id: string
   type: string
   name?: string
+  text?: string
   parentId?: string
   metadata: InspectObjectMetadata
   attached: boolean
@@ -171,6 +172,11 @@ export interface AutomationFailureResult {
     code: string
     message: string
     stack?: string
+    file?: string
+    line?: number
+    column?: number
+    plugin?: string
+    frame?: string
   }
   runtimeId?: string
   generation?: number
@@ -212,7 +218,24 @@ export interface RuntimeClientStopRequest {
   token: string
 }
 
+export interface RuntimeSourceDiagnostic {
+  message: string
+  file?: string
+  line?: number
+  column?: number
+  plugin?: string
+  frame?: string
+}
+
+export interface RuntimeClientSourceErrorRequest {
+  action: 'source-error'
+  token: string
+  sourceRevision: string
+  diagnostic: RuntimeSourceDiagnostic
+}
+
 export type RuntimeClientRequest =
   | RuntimeClientStatusRequest
   | RuntimeClientExecuteRequest
   | RuntimeClientStopRequest
+  | RuntimeClientSourceErrorRequest

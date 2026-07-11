@@ -8,7 +8,8 @@ import type {
   AutomationRequest,
   AutomationResult,
   RuntimeClientRequest,
-  RuntimeDescriptor
+  RuntimeDescriptor,
+  RuntimeSourceDiagnostic
 } from '../automation/types'
 import { computeSourceRevision } from '../../scripts/source-revision.mjs'
 
@@ -34,10 +35,16 @@ interface RendererResultWaiter {
   timeout: ReturnType<typeof setTimeout>
 }
 
+interface SourceFailure {
+  revision: string
+  diagnostic: RuntimeSourceDiagnostic
+}
+
 class RuntimeHostError extends Error {
   constructor(
     public readonly code: string,
-    message: string
+    message: string,
+    public readonly diagnostic?: Omit<RuntimeSourceDiagnostic, 'message'>
   ) {
     super(message)
     this.name = 'RuntimeHostError'
@@ -70,6 +77,7 @@ export class PersistentRuntimeHost {
   private revisionWaiters = new Set<RevisionWaiter>()
   private rendererResults = new Map<string, RendererResultWaiter>()
   private requestQueue: Promise<void> = Promise.resolve()
+  private sourceFailure?: SourceFailure
   private stopped = false
 
   constructor(
@@ -103,6 +111,7 @@ export class PersistentRuntimeHost {
     this.rendererRevision = sourceRevision
     this.readySequence++
     if (revisionChanged) this.generation++
+    if (this.sourceFailure?.revision === sourceRevision) this.sourceFailure = undefined
 
     for (const waiter of [...this.revisionWaiters]) {
       if (waiter.revision === sourceRevision) {
@@ -172,6 +181,17 @@ export class PersistentRuntimeHost {
     }
 
     if (request.action === 'status') return this.status()
+    if (request.action === 'source-error') {
+      if (
+        typeof request.sourceRevision !== 'string' ||
+        !request.diagnostic ||
+        typeof request.diagnostic.message !== 'string'
+      ) {
+        return this.failure('INVALID_SOURCE_DIAGNOSTIC', 'Vite sent an invalid source diagnostic')
+      }
+      this.recordSourceFailure(request.sourceRevision, request.diagnostic)
+      return { success: true, action: 'source-error' }
+    }
     if (request.action === 'stop') {
       setTimeout(() => app.quit(), 25)
       return {
@@ -187,6 +207,8 @@ export class PersistentRuntimeHost {
 
     return this.enqueue(async () => {
       try {
+        const sourceFailure = this.failureForRevision(request.sourceRevision)
+        if (sourceFailure) throw this.sourceCompileError(sourceFailure.diagnostic)
         if (
           this.rendererRevision !== request.sourceRevision &&
           computeSourceRevision(this.projectRoot) !== request.sourceRevision
@@ -196,7 +218,7 @@ export class PersistentRuntimeHost {
             'Source changed before the runtime received the request; retry the command'
           )
         }
-        await this.waitForRevision(request.sourceRevision)
+        await this.ensureRendererRevision(request.sourceRevision)
         const result = await this.executeInRenderer(request.request)
         return {
           ...result,
@@ -211,7 +233,10 @@ export class PersistentRuntimeHost {
           command: request.request.command,
           error: {
             code: error instanceof RuntimeHostError ? error.code : 'SESSION_FAILED',
-            message: normalized.message
+            message: normalized.message,
+            ...(error instanceof RuntimeHostError && error.diagnostic
+              ? { ...error.diagnostic }
+              : {})
           },
           runtimeId: this.config.runtimeId,
           generation: this.generation,
@@ -232,6 +257,8 @@ export class PersistentRuntimeHost {
 
   private waitForRevision(revision: string): Promise<void> {
     if (this.rendererRevision === revision) return Promise.resolve()
+    const sourceFailure = this.failureForRevision(revision)
+    if (sourceFailure) return Promise.reject(this.sourceCompileError(sourceFailure.diagnostic))
 
     return new Promise((resolvePromise, rejectPromise) => {
       const waiter: RevisionWaiter = {
@@ -244,7 +271,7 @@ export class PersistentRuntimeHost {
             rejectPromise(
               new RuntimeHostError(
                 'SOURCE_UPDATE_TIMEOUT',
-                'The source changed, but Vite did not produce a matching ready renderer within 30 seconds'
+                'The source changed, but Vite did not produce a matching ready renderer within 30 seconds. The source may contain a Vite compile error; fix it and retry to recover the session'
               )
             )
           )
@@ -252,6 +279,73 @@ export class PersistentRuntimeHost {
       }
       this.revisionWaiters.add(waiter)
     })
+  }
+
+  private recordSourceFailure(revision: string, diagnostic: RuntimeSourceDiagnostic): void {
+    try {
+      if (computeSourceRevision(this.projectRoot) !== revision) return
+    } catch {
+      return
+    }
+    const failure = { revision, diagnostic: normalizeSourceDiagnostic(diagnostic) }
+    this.sourceFailure = failure
+    const error = this.sourceCompileError(failure.diagnostic)
+    for (const waiter of [...this.revisionWaiters]) {
+      if (waiter.revision === revision) {
+        this.finishRevisionWaiter(waiter, () => waiter.reject(error))
+      }
+    }
+  }
+
+  private failureForRevision(revision: string): SourceFailure | undefined {
+    return this.sourceFailure?.revision === revision ? this.sourceFailure : undefined
+  }
+
+  private currentSourceFailure(): SourceFailure | undefined {
+    if (!this.sourceFailure) return undefined
+    try {
+      return this.failureForRevision(computeSourceRevision(this.projectRoot))
+    } catch {
+      return undefined
+    }
+  }
+
+  private sourceCompileError(diagnostic: RuntimeSourceDiagnostic): RuntimeHostError {
+    const location = diagnostic.file
+      ? `${diagnostic.file}${diagnostic.line ? `:${diagnostic.line}${diagnostic.column ? `:${diagnostic.column}` : ''}` : ''}`
+      : undefined
+    const message = location
+      ? `Vite could not compile ${location}: ${diagnostic.message}`
+      : `Vite could not compile the current source: ${diagnostic.message}`
+    return new RuntimeHostError('SOURCE_COMPILE_ERROR', message, {
+      ...(diagnostic.file ? { file: diagnostic.file } : {}),
+      ...(diagnostic.line !== undefined ? { line: diagnostic.line } : {}),
+      ...(diagnostic.column !== undefined ? { column: diagnostic.column } : {}),
+      ...(diagnostic.plugin ? { plugin: diagnostic.plugin } : {}),
+      ...(diagnostic.frame ? { frame: diagnostic.frame } : {})
+    })
+  }
+
+  private async ensureRendererRevision(revision: string): Promise<void> {
+    if (this.rendererRevision === revision) return Promise.resolve()
+
+    const rendererRevisionAtStart = this.rendererRevision
+    const ready = this.waitForRevision(revision)
+    const reloadTimer = rendererRevisionAtStart
+      ? setTimeout(() => {
+          if (
+            this.rendererRevision === rendererRevisionAtStart &&
+            !this.failureForRevision(revision)
+          ) {
+            this.window.webContents.reloadIgnoringCache()
+          }
+        }, 500)
+      : undefined
+    try {
+      await ready
+    } finally {
+      if (reloadTimer) clearTimeout(reloadTimer)
+    }
   }
 
   private executeInRenderer(request: AutomationRequest): Promise<AutomationResult> {
@@ -316,11 +410,21 @@ export class PersistentRuntimeHost {
   }
 
   private status(): unknown {
+    const sourceFailure = this.currentSourceFailure()
     return {
       success: true,
       command: 'session',
       action: 'status',
-      status: this.rendererRevision ? 'ready' : 'loading',
+      status: sourceFailure ? 'source-error' : this.rendererRevision ? 'ready' : 'loading',
+      ...(sourceFailure
+        ? {
+            pendingSourceRevision: sourceFailure.revision,
+            error: {
+              code: 'SOURCE_COMPILE_ERROR',
+              ...sourceFailure.diagnostic
+            }
+          }
+        : {}),
       ...this.statusMetadata()
     }
   }
@@ -381,3 +485,19 @@ export class PersistentRuntimeHost {
     return { success: false, command: 'session', error: { code, message } }
   }
 }
+
+const normalizeSourceDiagnostic = (
+  diagnostic: RuntimeSourceDiagnostic
+): RuntimeSourceDiagnostic => ({
+  message: boundedString(diagnostic.message, 4_000) || 'Unknown Vite transform error',
+  ...(diagnostic.file ? { file: boundedString(diagnostic.file, 1_000) } : {}),
+  ...(Number.isInteger(diagnostic.line) && diagnostic.line! > 0 ? { line: diagnostic.line } : {}),
+  ...(Number.isInteger(diagnostic.column) && diagnostic.column! >= 0
+    ? { column: diagnostic.column }
+    : {}),
+  ...(diagnostic.plugin ? { plugin: boundedString(diagnostic.plugin, 200) } : {}),
+  ...(diagnostic.frame ? { frame: boundedString(diagnostic.frame, 4_000) } : {})
+})
+
+const boundedString = (value: unknown, maximumLength: number): string =>
+  typeof value === 'string' ? value.slice(0, maximumLength) : ''

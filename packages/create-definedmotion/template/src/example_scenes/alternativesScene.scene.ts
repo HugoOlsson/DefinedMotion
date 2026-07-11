@@ -9,7 +9,6 @@ import {
 import { AnimatedScene, HotReloadSetting, SpaceSetting } from '../renderer/src/lib/scene/sceneClass'
 import * as THREE from 'three'
 
-
 export default defineScene({
   id: 'alternatives',
   name: 'Alternatives',
@@ -72,22 +71,31 @@ export function alternativesScene(): AnimatedScene {
     HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       const tickSound = scene.asset('audio/tick_sound.mp3')
-      const background = createRectangle(200, 200)
-      const textElement = await createFastText('', 1.5)
+      const background = scene.expose('background', createRectangle(200, 200), {
+        description: 'Full-frame color field behind the current course name',
+        tags: ['background', 'dynamic-color']
+      })
+      const textElement = scene.expose('course-name', await createFastText('', 1.5), {
+        description: 'The course name currently shown in the center of the frame',
+        tags: ['text', 'primary-subject', 'dynamic']
+      })
       scene.add(background, textElement)
       scene.registerAudio(tickSound)
 
       let lastIndex
-      const switchAnimation = createAnim(easeLinear(0, 1, alternatives.length * 300), (value) => {
-        const index = Math.floor(value * alternatives.length)
+      const switchAnimation = createAnim(
+        easeLinear(0, 1, alternatives.length * 300),
+        async (value) => {
+          const index = Math.floor(value * alternatives.length)
 
-        if (index !== lastIndex) {
-          lastIndex = index
-          background.material.color = new THREE.Color(slideColors[index % slideColors.length])
-          updateText(textElement, alternatives[index % alternatives.length])
-          scene.playAudio(tickSound)
+          if (index !== lastIndex) {
+            lastIndex = index
+            background.material.color = new THREE.Color(slideColors[index % slideColors.length])
+            await updateText(textElement, alternatives[index % alternatives.length])
+            scene.playAudio(tickSound)
+          }
         }
-      })
+      )
 
       scene.addAnims(switchAnimation)
     }

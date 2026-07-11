@@ -62,6 +62,7 @@ const inspectObject = (
     id: exposed.id,
     type: object.type,
     ...(object.name ? { name: object.name } : {}),
+    ...textContent(object),
     ...(parentId ? { parentId } : {}),
     metadata: cloneMetadata(exposed.metadata),
     attached,
@@ -75,6 +76,11 @@ const inspectObject = (
     worldBounds,
     screenBounds: projected.bounds
   }
+}
+
+const textContent = (object: THREE.Object3D): { text?: string } => {
+  const text = (object as THREE.Object3D & { text?: unknown }).text
+  return typeof text === 'string' ? { text } : {}
 }
 
 const inspectCamera = (
