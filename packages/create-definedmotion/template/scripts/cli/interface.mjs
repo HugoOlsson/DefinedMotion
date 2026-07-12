@@ -30,6 +30,9 @@ Examples:
   npm run dm -- camera-grid vector-field --frame 600
   npm run dm -- inspect tutorial-easy-1 --frame 30 --json
   npm run dm -- session stop
+
+Agent interface guide:
+  docs/agent-workflow.md
 `
 
 export function parseArguments(values) {

@@ -74,7 +74,7 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 
 
 ## Look at example scenes
-DefinedMotion includes **12 example scenes** and **34 tests** to help you learn and verify functionality. Browse `/src/example_scenes` to see complete, working animations you can run immediately.
+DefinedMotion includes **17 example scenes** and **36 tests** to help you learn and verify functionality. Browse `/src/example_scenes` to see complete, working animations you can run immediately.
 
 
 ### Create Scene 
@@ -162,6 +162,8 @@ Place scene modules under `src/scenes` and name them `*.scene.ts`. DefinedMotion
 ## Automation CLI
 
 DefinedMotion projects include a headless automation path for tools, scripts, CI, and coding agents. It uses the same scene definitions and timeline runtime as the interactive Studio, but runs in a hidden Electron renderer.
+
+Generated projects include an automatically discoverable `AGENTS.md` and a concise [`agent interface guide`](packages/create-definedmotion/template/docs/agent-workflow.md). The guide maps every feedback tool to what it returns, when to use it, and the design idea behind it.
 
 List the registered scenes:
 
