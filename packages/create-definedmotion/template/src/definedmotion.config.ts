@@ -8,5 +8,5 @@ export const definedMotionConfig = {
   timelineFps: 60,
   renderEveryNthFrame: 1,
   seed: 1,
-  defaultScene: 'fourier-series'
+  defaultScene: 'fractal-tree-growth'
 } as const

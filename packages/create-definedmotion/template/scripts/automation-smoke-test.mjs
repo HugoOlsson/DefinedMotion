@@ -33,10 +33,10 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 48) {
-    throw new Error(`Expected 48 automatically discovered scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 53) {
+    throw new Error(`Expected 53 automatically discovered scenes, received ${scenes.scenes.length}`)
   }
-  if (!scenes.scenes.some((scene) => scene.id === 'fourier-series' && scene.isDefault)) {
+  if (!scenes.scenes.some((scene) => scene.id === 'fractal-tree-growth' && scene.isDefault)) {
     throw new Error('Configured default scene was not discoverable')
   }
   if (
@@ -47,10 +47,10 @@ try {
 
   const scenesWithoutTests = run(['scenes', '--exclude-tests', '--no-build'])
   if (
-    scenesWithoutTests.scenes.length !== 12 ||
+    scenesWithoutTests.scenes.length !== 17 ||
     scenesWithoutTests.scenes.some((scene) => scene.isTest)
   ) {
-    throw new Error('--exclude-tests did not return exactly the 12 non-test scenes')
+    throw new Error('--exclude-tests did not return exactly the 17 non-test scenes')
   }
 
   const emittedMedia = readdirSync(join(projectRoot, 'out', 'renderer', 'assets')).filter((file) =>
