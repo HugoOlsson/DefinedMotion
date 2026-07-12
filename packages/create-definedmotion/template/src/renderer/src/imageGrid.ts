@@ -71,7 +71,8 @@ export const renderImageGrid = async <Item>(
   const cells: GridCellBounds[] = []
   for (let index = 0; index < options.items.length; index++) {
     const item = options.items[index]
-    await options.renderItem(item, index)
+    const pendingRender = options.renderItem(item, index)
+    if (pendingRender) await pendingRender
 
     const column = index % columns
     const row = Math.floor(index / columns)
