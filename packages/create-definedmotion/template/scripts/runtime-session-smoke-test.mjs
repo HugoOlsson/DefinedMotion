@@ -133,6 +133,43 @@ try {
     '59',
     '--require-session'
   ])
+  const initialCameras = run([
+    'cameras',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--require-session'
+  ])
+  const repeatedCameras = run([
+    'cameras',
+    'test-scene-inspection',
+    '--frame',
+    '59',
+    '--require-session'
+  ])
+  const overviewInspection = run([
+    'inspect',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--camera',
+    'overview',
+    '--require-session'
+  ])
+  const firstVectorCameras = run(['cameras', 'vector-field', '--frame', '600', '--require-session'])
+  const repeatedVectorCameras = run([
+    'cameras',
+    'vector-field',
+    '--frame',
+    '600',
+    '--require-session'
+  ])
+  const firstFollowCamera = firstVectorCameras.cameras.find(
+    (camera) => camera.id === 'particle-follow'
+  )
+  const repeatedFollowCamera = repeatedVectorCameras.cameras.find(
+    (camera) => camera.id === 'particle-follow'
+  )
   const unexposedInspection = run([
     'inspect',
     'test-zoom-perspective-sequential',
@@ -145,6 +182,23 @@ try {
     repeatedInspection.runtimeId !== initialStatus.runtimeId ||
     unexposedInspection.runtimeId !== initialStatus.runtimeId ||
     initialInspection.generation !== repeatedInspection.generation ||
+    initialCameras.runtimeId !== initialStatus.runtimeId ||
+    repeatedCameras.runtimeId !== initialStatus.runtimeId ||
+    initialCameras.generation !== repeatedCameras.generation ||
+    initialCameras.cameraCount !== 3 ||
+    repeatedCameras.cameraCount !== 3 ||
+    initialCameras.cameras.find((camera) => camera.id === 'tracking')?.camera.position[0] !== 3 ||
+    repeatedCameras.cameras.find((camera) => camera.id === 'tracking')?.camera.position[0] !==
+      5.9 ||
+    overviewInspection.cameraId !== 'overview' ||
+    overviewInspection.camera.type !== 'perspective' ||
+    firstVectorCameras.runtimeId !== initialStatus.runtimeId ||
+    repeatedVectorCameras.runtimeId !== initialStatus.runtimeId ||
+    firstVectorCameras.generation !== repeatedVectorCameras.generation ||
+    !firstFollowCamera ||
+    !repeatedFollowCamera ||
+    JSON.stringify(firstFollowCamera.camera.position) !==
+      JSON.stringify(repeatedFollowCamera.camera.position) ||
     initialInspection.objects.length !== 4 ||
     repeatedInspection.objects.length !== 4 ||
     unexposedInspection.objects.length !== 0 ||
@@ -158,7 +212,7 @@ try {
     typedMessage.screenBounds.width <= 0
   ) {
     throw new Error(
-      'Persistent inspection retained stale references or failed to synchronize asset-heavy text'
+      'Persistent inspection retained stale state, produced nondeterministic cameras, or failed to synchronize asset-heavy text'
     )
   }
 
@@ -418,6 +472,51 @@ try {
     JSON.stringify(sessionGridResult.cells) !== JSON.stringify(standaloneGridResult.cells)
   ) {
     throw new Error('Persistent and standalone timeline grids were not deterministic equivalents')
+  }
+
+  const sessionCameraGridOutput = join(temporaryDirectory, 'session-camera-grid.png')
+  const standaloneCameraGridOutput = join(temporaryDirectory, 'standalone-camera-grid.png')
+  const sessionCameraGridResult = run([
+    'camera-grid',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--cameras',
+    'main,overview,tracking',
+    '--columns',
+    '2',
+    '--cell-width',
+    '180',
+    '--output',
+    sessionCameraGridOutput,
+    '--require-session'
+  ])
+  const standaloneCameraGridResult = run([
+    'camera-grid',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--cameras',
+    'main,overview,tracking',
+    '--columns',
+    '2',
+    '--cell-width',
+    '180',
+    '--output',
+    standaloneCameraGridOutput,
+    '--standalone',
+    '--no-build'
+  ])
+  if (
+    sha256(sessionCameraGridOutput) !== sha256(standaloneCameraGridOutput) ||
+    sessionCameraGridResult.runtimeId !== initialStatus.runtimeId ||
+    standaloneCameraGridResult.runtimeId !== undefined ||
+    JSON.stringify(sessionCameraGridResult.cameraCells) !==
+      JSON.stringify(standaloneCameraGridResult.cameraCells) ||
+    JSON.stringify(sessionCameraGridResult.cameras) !==
+      JSON.stringify(standaloneCameraGridResult.cameras)
+  ) {
+    throw new Error('Persistent and standalone camera grids were not deterministic equivalents')
   }
 
   rmSync(fixturePath, { force: true })

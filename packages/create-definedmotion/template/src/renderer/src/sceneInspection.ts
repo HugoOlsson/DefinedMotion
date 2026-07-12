@@ -11,7 +11,8 @@ import type {
 import type {
   AnimatedScene,
   ExposedObjectMetadata,
-  ExposedSceneObject
+  ExposedSceneObject,
+  InspectionCamera
 } from './lib/scene/sceneClass'
 
 const MAX_INSPECT_OBJECTS = 500
@@ -23,10 +24,13 @@ export interface SceneInspection {
   objectsTruncated: boolean
 }
 
-export const inspectScene = (scene: AnimatedScene): SceneInspection => {
+export const inspectScene = (
+  scene: AnimatedScene,
+  camera: InspectionCamera = scene.camera
+): SceneInspection => {
   scene.scene.updateMatrixWorld(true)
-  scene.camera.updateProjectionMatrix()
-  scene.camera.updateMatrixWorld(true)
+  camera.updateProjectionMatrix()
+  camera.updateWorldMatrix(true, false)
 
   const exposedObjects = scene
     .getExposedObjects()
@@ -34,10 +38,10 @@ export const inspectScene = (scene: AnimatedScene): SceneInspection => {
   const exposedIds = new Map(exposedObjects.map(({ id, object }) => [object, id]))
   const objects = exposedObjects
     .slice(0, MAX_INSPECT_OBJECTS)
-    .map((exposed) => inspectObject(scene, exposed, exposedIds))
+    .map((exposed) => inspectObject(scene, exposed, exposedIds, camera))
 
   return {
-    camera: inspectCamera(scene.camera),
+    camera: inspectCamera(camera),
     objects,
     totalExposedObjects: exposedObjects.length,
     objectsTruncated: exposedObjects.length > objects.length
@@ -47,7 +51,8 @@ export const inspectScene = (scene: AnimatedScene): SceneInspection => {
 const inspectObject = (
   scene: AnimatedScene,
   exposed: ExposedSceneObject,
-  exposedIds: Map<THREE.Object3D, string>
+  exposedIds: Map<THREE.Object3D, string>,
+  camera: InspectionCamera
 ): InspectObjectResult => {
   const { object } = exposed
   object.updateWorldMatrix(true, true)
@@ -55,7 +60,7 @@ const inspectObject = (
   const attached = isAttachedToScene(object, scene.scene)
   const visible = attached && isEffectivelyVisible(object, scene.scene)
   const worldBounds = getWorldBounds(object)
-  const projected = projectBounds(worldBounds, scene.camera, scene.width, scene.height)
+  const projected = projectBounds(worldBounds, camera, scene.width, scene.height)
   const parentId = findExposedParentId(object, exposedIds)
 
   return {
@@ -83,7 +88,7 @@ const textContent = (object: THREE.Object3D): { text?: string } => {
   return typeof text === 'string' ? { text } : {}
 }
 
-const inspectCamera = (
+export const inspectCamera = (
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
 ): InspectCameraResult => {
   const position = new THREE.Vector3()

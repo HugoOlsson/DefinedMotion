@@ -21,6 +21,12 @@ import {
   type ExposedSceneObject
 } from './sceneExposure'
 import {
+  SceneCameraRegistry,
+  type ExposedCameraMetadata,
+  type ExposedSceneCamera,
+  type InspectionCamera
+} from './sceneCamera'
+import {
   assetUrl,
   createAssetReference,
   type AssetSource,
@@ -68,6 +74,8 @@ export type {
   ExposedObjectMetadata,
   ExposedSceneObject
 } from './sceneExposure'
+export { MAIN_CAMERA_ID } from './sceneCamera'
+export type { ExposedCameraMetadata, ExposedSceneCamera, InspectionCamera } from './sceneCamera'
 
 export const hotreloadNameLookup = (mode: HotReloadSetting) => {
   switch (mode) {
@@ -112,6 +120,7 @@ export class AnimatedScene {
   private sceneInstructions: Map<number, SceneInstruction[]> = new Map()
   private planedSounds: Map<number, AudioInScene[]> = new Map()
   private exposureRegistry = new SceneExposureRegistry()
+  private cameraRegistry = new SceneCameraRegistry()
 
   private pixelsWidth
   private pixelsHeight
@@ -160,6 +169,8 @@ export class AnimatedScene {
   private resizeObserver?: ResizeObserver
   private interactive: boolean
   private randomGenerator = Alea(definedMotionConfig.seed)
+  // Cold library initialization must not advance the explicit scene.random() stream.
+  private patchedMathRandomGenerator = Alea(definedMotionConfig.seed)
   private unregisterDestroy?: () => void
   private destroyed = false
   
@@ -228,6 +239,7 @@ export class AnimatedScene {
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
     this.resizeObserver?.disconnect()
     this.clearExposedObjects()
+    this.clearExposedCameras()
   }
 
   add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
@@ -293,6 +305,37 @@ export class AnimatedScene {
 
   get exposedObjectCount(): number {
     return this.exposureRegistry.size
+  }
+
+  /**
+   * Gives a perspective or orthographic camera a stable ID for agent-only rendering.
+   * The camera is not added to the Three.js scene and never changes the authored output.
+   */
+  exposeCamera<T extends InspectionCamera>(
+    id: string,
+    camera: T,
+    metadata: ExposedCameraMetadata = {}
+  ): T {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'EXPOSE_CAMERA_OUTSIDE_BUILD',
+        'scene.exposeCamera() must be called while the scene build function is running'
+      )
+    }
+    return this.cameraRegistry.expose(id, camera, metadata)
+  }
+
+  /** Current-build inspection camera registrations. The returned array is a snapshot. */
+  getExposedCameras(): ExposedSceneCamera[] {
+    return this.cameraRegistry.snapshot()
+  }
+
+  getExposedCamera(id: string): ExposedSceneCamera | undefined {
+    return this.cameraRegistry.get(id)
+  }
+
+  get exposedCameraCount(): number {
+    return this.cameraRegistry.size
   }
 
   addAnims(...animations: UserAnimation[]) {
@@ -471,8 +514,8 @@ export class AnimatedScene {
     this.camera.updateProjectionMatrix()
   }
 
-  async capturePng(): Promise<Blob> {
-    this.renderCurrentFrame()
+  async capturePng(camera: InspectionCamera = this.camera): Promise<Blob> {
+    this.renderCurrentFrame(camera)
     const canvas = this.renderer.domElement
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) throw new Error('Could not encode the WebGL canvas as PNG')
@@ -760,10 +803,11 @@ export class AnimatedScene {
     this.animationFrameId = requestAnimationFrame(animate)
   }
 
-  renderCurrentFrame() {
-    //ANALYZE THIS LINE
-    this.camera.updateProjectionMatrix()
-    this.renderer.render(this.scene, this.camera)
+  renderCurrentFrame(camera: InspectionCamera = this.camera): void {
+    this.scene.updateMatrixWorld(true)
+    camera.updateProjectionMatrix()
+    camera.updateWorldMatrix(true, false)
+    this.renderer.render(this.scene, camera)
   }
 
   private async traceToFrameIndex(index: number, withAudio: boolean) {
@@ -846,6 +890,7 @@ export class AnimatedScene {
 
   private resetSceneVars() {
     this.clearExposedObjects()
+    this.clearExposedCameras()
     this.sceneRenderTick = 0
     this.sceneCalculationTick = 0
     this.totalSceneTicks = 0
@@ -854,15 +899,20 @@ export class AnimatedScene {
     this.sceneInstructions = new Map()
     this.planedSounds = new Map()
     this.randomGenerator = Alea(definedMotionConfig.seed)
+    this.patchedMathRandomGenerator = Alea(definedMotionConfig.seed)
   }
 
   private clearExposedObjects(): void {
     this.exposureRegistry.clear()
   }
 
+  private clearExposedCameras(): void {
+    this.cameraRegistry.clear()
+  }
+
   private async withSeededRandom<T>(operation: () => Promise<T> | T): Promise<T> {
     const originalRandom = Math.random
-    Math.random = this.random
+    Math.random = () => this.patchedMathRandomGenerator()
     try {
       return await operation()
     } finally {

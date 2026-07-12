@@ -20,7 +20,7 @@ export class SceneExposureRegistry {
   private idsByObject = new WeakMap<THREE.Object3D, string>()
 
   expose<T extends THREE.Object3D>(id: string, object: T, metadata: ExposedObjectMetadata): T {
-    const normalizedId = validateId(id)
+    const normalizedId = validateExposedId(id)
     if (!(object instanceof THREE.Object3D)) {
       throw new SceneRuntimeError(
         'INVALID_EXPOSED_OBJECT',
@@ -44,7 +44,7 @@ export class SceneExposureRegistry {
     this.objects.set(normalizedId, {
       id: normalizedId,
       object,
-      metadata: normalizeMetadata(metadata, normalizedId)
+      metadata: normalizeExposedMetadata(metadata, normalizedId)
     })
     this.idsByObject.set(object, normalizedId)
     return object
@@ -64,7 +64,7 @@ export class SceneExposureRegistry {
   }
 }
 
-const validateId = (id: string): string => {
+export const validateExposedId = (id: string): string => {
   if (typeof id !== 'string' || id.trim() === '') {
     throw new SceneRuntimeError(
       'INVALID_EXPOSED_ID',
@@ -86,7 +86,10 @@ const validateId = (id: string): string => {
   return id
 }
 
-const normalizeMetadata = (metadata: ExposedObjectMetadata, id: string): ExposedObjectMetadata => {
+export const normalizeExposedMetadata = (
+  metadata: ExposedObjectMetadata,
+  id: string
+): ExposedObjectMetadata => {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     throw new SceneRuntimeError(
       'INVALID_EXPOSED_METADATA',

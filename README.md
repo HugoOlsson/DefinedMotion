@@ -216,6 +216,33 @@ when `inspect` runs, along with the current content of text-bearing objects.
 Registrations are cleared before every deterministic scene rebuild and when the
 scene is destroyed.
 
+Scenes can also expose purpose-built inspection cameras. They are ordinary
+Three.js cameras, so they can be placed, parented, or updated by scene code:
+
+```ts
+const overview = scene.exposeCamera(
+  'overview',
+  new THREE.PerspectiveCamera(50, scene.width / scene.height, 0.1, 1000),
+  { description: 'Wide view of the full mechanism', tags: ['overview'] }
+)
+overview.position.set(20, 15, 30)
+overview.lookAt(0, 0, 0)
+```
+
+Discover the cameras available at an exact frame, inspect geometry through one,
+render one, or compare all views in a single labeled image:
+
+```bash
+npm run dm -- cameras my-scene --frame 30 --json
+npm run dm -- inspect my-scene --frame 30 --camera overview --json
+npm run dm -- still my-scene --frame 30 --camera overview --json
+npm run dm -- camera-grid my-scene --frame 30 --json
+```
+
+`main` always refers to the authored animation camera and is reserved. A camera
+grid seeks once and renders each selected view from the same scene state. Use
+`--cameras main,overview,detail` for an explicit ordered subset.
+
 For a sequence of agent or script queries, start a persistent runtime once:
 
 ```bash
@@ -227,14 +254,16 @@ npm run dm -- scenes --json
 npm run dm -- still tutorial-easy-1 --frame 30 --json
 npm run dm -- timeline-grid tutorial-easy-1 --json
 npm run dm -- inspect tutorial-easy-1 --frame 30 --json
+npm run dm -- cameras my-scene --frame 30 --json
+npm run dm -- camera-grid my-scene --frame 30 --json
 
 npm run dm -- session stop
 ```
 
-Normal `scenes`, `still`, `timeline-grid`, and `inspect` commands automatically
-use the project session when one is running and otherwise retain the one-shot
-behavior. Pass `--standalone` to force an isolated process, or
-`--require-session` when falling back would be undesirable.
+Normal automation commands automatically use the project session when one is
+running and otherwise retain the one-shot behavior. Pass `--standalone` to
+force an isolated process, or `--require-session` when falling back would be
+undesirable.
 `session start --foreground` is useful in CI and agent terminals that own the
 runtime process lifecycle.
 

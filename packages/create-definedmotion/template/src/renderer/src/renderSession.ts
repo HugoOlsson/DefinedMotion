@@ -3,7 +3,10 @@ import { listProjectScenes } from '../../project'
 import type {
   AutomationRequest,
   AutomationResult,
+  CameraGridAutomationRequest,
+  CamerasAutomationRequest,
   InspectAutomationRequest,
+  InspectSceneInfo,
   TimelineGridAutomationRequest
 } from '../../automation/types'
 import { AutomationCommandError } from './automationError'
@@ -17,6 +20,8 @@ import {
 } from './lib/scene/sceneClass'
 import { inspectScene } from './sceneInspection'
 import { renderTimelineGrid, validateTimelineGridRequest } from './timelineGrid'
+import { renderCameraGrid, validateCameraGridRequest } from './cameraGrid'
+import { cameraSummary, listCameraSummaries, resolveInspectionCamera } from './inspectionCamera'
 
 /**
  * Owns the currently loaded automation scene for one renderer generation.
@@ -41,7 +46,9 @@ export class RenderSession {
     if (
       request.command !== 'still' &&
       request.command !== 'timeline-grid' &&
-      request.command !== 'inspect'
+      request.command !== 'inspect' &&
+      request.command !== 'cameras' &&
+      request.command !== 'camera-grid'
     ) {
       throw new AutomationCommandError(
         'UNKNOWN_COMMAND',
@@ -59,10 +66,20 @@ export class RenderSession {
     if (request.command === 'timeline-grid') {
       validateTimelineGridRequest(request)
     }
+    if (request.command === 'camera-grid') {
+      validateCameraGridRequest(request)
+    }
     if (request.command === 'inspect') {
       this.validateInspectRequest(request)
     }
-    if (request.command !== 'inspect') {
+    if (request.command === 'cameras') {
+      this.validateCamerasRequest(request)
+    }
+    if (
+      request.command === 'still' ||
+      request.command === 'timeline-grid' ||
+      request.command === 'camera-grid'
+    ) {
       this.validateOutputRequest(request)
     }
 
@@ -95,12 +112,19 @@ export class RenderSession {
     if (request.command === 'timeline-grid') {
       return await this.renderTimelineGrid(request, scene, startedAt)
     }
+    if (request.command === 'camera-grid') {
+      return await this.renderCameraGrid(request, scene, startedAt)
+    }
+    if (request.command === 'cameras') {
+      return await this.listCameras(request, scene, definition.name, definition.isTest, startedAt)
+    }
     if (request.command === 'inspect') {
       return await this.inspect(request, scene, definition.name, definition.isTest, startedAt)
     }
 
     await scene.seekExact(request.frame)
-    const png = await scene.capturePng()
+    const selectedCamera = resolveInspectionCamera(scene, request.camera)
+    const png = await scene.capturePng(selectedCamera.camera)
     const bytes = new Uint8Array(await png.arrayBuffer())
     const output = await window.api.writeAutomationFile(request.output, bytes)
 
@@ -109,6 +133,8 @@ export class RenderSession {
       command: 'still',
       scene: request.scene,
       frame: request.frame,
+      cameraId: selectedCamera.id,
+      camera: cameraSummary(selectedCamera).camera,
       timeMs: scene.getCurrentTimeMs(),
       durationInFrames: scene.totalSceneTicks,
       fps: timelineFPS,
@@ -130,7 +156,7 @@ export class RenderSession {
   }
 
   private validateOutputRequest(
-    request: Extract<AutomationRequest, { command: 'still' | 'timeline-grid' }>
+    request: Extract<AutomationRequest, { command: 'still' | 'timeline-grid' | 'camera-grid' }>
   ): void {
     if (typeof request.output !== 'string' || request.output === '') {
       throw new AutomationCommandError(
@@ -149,6 +175,15 @@ export class RenderSession {
     }
   }
 
+  private validateCamerasRequest(request: CamerasAutomationRequest): void {
+    if (!Number.isInteger(request.frame) || request.frame < 0) {
+      throw new AutomationCommandError(
+        'INVALID_FRAME',
+        'The cameras command requires a non-negative integer frame'
+      )
+    }
+  }
+
   private async inspect(
     request: InspectAutomationRequest,
     scene: AnimatedScene,
@@ -157,30 +192,42 @@ export class RenderSession {
     startedAt: number
   ): Promise<AutomationResult> {
     await scene.seekExact(request.frame)
-    const inspection = inspectScene(scene)
+    const selectedCamera = resolveInspectionCamera(scene, request.camera)
+    const inspection = inspectScene(scene, selectedCamera.camera)
     return {
       success: true,
       command: 'inspect',
       scene: request.scene,
       frame: request.frame,
       timeMs: scene.getCurrentTimeMs(),
-      sceneInfo: {
-        id: request.scene,
-        name: name ?? request.scene,
-        isDefault: request.scene === project.defaultScene,
-        isTest: isTest ?? false,
-        width: scene.width,
-        height: scene.height,
-        fps: timelineFPS,
-        durationInFrames: scene.totalSceneTicks,
-        lastFrame: scene.totalSceneTicks - 1,
-        durationMs: ticksToMillis(scene.totalSceneTicks),
-        seed: project.seed
-      },
+      sceneInfo: this.sceneInfo(request.scene, scene, name, isTest),
+      cameraId: selectedCamera.id,
       camera: inspection.camera,
       objects: inspection.objects,
       totalExposedObjects: inspection.totalExposedObjects,
       objectsTruncated: inspection.objectsTruncated,
+      renderTimeMs: Math.round(performance.now() - startedAt)
+    }
+  }
+
+  private async listCameras(
+    request: CamerasAutomationRequest,
+    scene: AnimatedScene,
+    name: string | undefined,
+    isTest: boolean | undefined,
+    startedAt: number
+  ): Promise<AutomationResult> {
+    await scene.seekExact(request.frame)
+    const cameras = listCameraSummaries(scene)
+    return {
+      success: true,
+      command: 'cameras',
+      scene: request.scene,
+      frame: request.frame,
+      timeMs: scene.getCurrentTimeMs(),
+      sceneInfo: this.sceneInfo(request.scene, scene, name, isTest),
+      cameras,
+      cameraCount: cameras.length,
       renderTimeMs: Math.round(performance.now() - startedAt)
     }
   }
@@ -215,6 +262,62 @@ export class RenderSession {
       cellHeight: grid.cellHeight,
       output,
       renderTimeMs: Math.round(performance.now() - startedAt)
+    }
+  }
+
+  private async renderCameraGrid(
+    request: CameraGridAutomationRequest,
+    scene: AnimatedScene,
+    startedAt: number
+  ): Promise<AutomationResult> {
+    const grid = await renderCameraGrid(request, scene)
+    const output = await window.api.writeAutomationFile(
+      request.output,
+      new Uint8Array(await grid.png.arrayBuffer())
+    )
+    return {
+      success: true,
+      command: 'camera-grid',
+      scene: request.scene,
+      frame: request.frame,
+      timeMs: scene.getCurrentTimeMs(),
+      durationInFrames: scene.totalSceneTicks,
+      fps: timelineFPS,
+      seed: project.seed,
+      width: grid.width,
+      height: grid.height,
+      sceneWidth: scene.width,
+      sceneHeight: scene.height,
+      columns: grid.columns,
+      rows: grid.rows,
+      cellWidth: request.cellWidth,
+      cellHeight: grid.cellHeight,
+      cameras: grid.cameras,
+      cameraCount: grid.cameras.length,
+      cameraCells: grid.cells,
+      output,
+      renderTimeMs: Math.round(performance.now() - startedAt)
+    }
+  }
+
+  private sceneInfo(
+    id: string,
+    scene: AnimatedScene,
+    name: string | undefined,
+    isTest: boolean | undefined
+  ): InspectSceneInfo {
+    return {
+      id,
+      name: name ?? id,
+      isDefault: id === project.defaultScene,
+      isTest: isTest ?? false,
+      width: scene.width,
+      height: scene.height,
+      fps: timelineFPS,
+      durationInFrames: scene.totalSceneTicks,
+      lastFrame: scene.totalSceneTicks - 1,
+      durationMs: ticksToMillis(scene.totalSceneTicks),
+      seed: project.seed
     }
   }
 

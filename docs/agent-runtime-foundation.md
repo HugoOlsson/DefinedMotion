@@ -25,6 +25,9 @@ renderer. Automation must not reimplement scene execution.
 - `AnimatedScene.expose()` gives selected Three.js objects stable semantic IDs.
   The scene-owned registry is rebuilt with the scene and performs no geometry
   work until an inspection request.
+- `AnimatedScene.exposeCamera()` gives authored debug viewpoints stable IDs.
+  Inspection cameras follow the same scene lifecycle and incur no extra render
+  work until explicitly requested.
 - `scripts/definedmotion.mjs` uses a compatible project runtime automatically,
   or builds and invokes an isolated hidden renderer as a fallback. JSON mode
   reserves stdout for the final machine-readable result.
@@ -49,6 +52,13 @@ npm run dm -- timeline-grid tutorial-easy-1 \
   --json
 
 npm run dm -- inspect tutorial-easy-1 --frame 30 --json
+
+npm run dm -- cameras vector-field --frame 600 --json
+
+npm run dm -- camera-grid vector-field \
+  --frame 600 \
+  --output .definedmotion/vector-field-cameras.png \
+  --json
 ```
 
 The default still path is
@@ -77,10 +87,10 @@ npm run dm -- inspect tutorial-easy-1 --frame 30 --json
 npm run dm -- session stop
 ```
 
-`scenes`, `still`, `timeline-grid`, and `inspect` prefer the session when it
-exists. `--standalone` forces a one-shot renderer, while `--require-session`
-fails instead of falling back. Use `session start --foreground` when the caller
-should own and observe the runtime process directly, such as in CI or an
+All render and inspection commands prefer the session when it exists.
+`--standalone` forces a one-shot renderer, while `--require-session` fails
+instead of falling back. Use `session start --foreground` when the caller should
+own and observe the runtime process directly, such as in CI or an
 agent-controlled terminal.
 
 The persistent boundary is deliberately the renderer environment, not a scene
@@ -128,6 +138,56 @@ references instead of accumulating. Duplicate IDs or duplicate object
 registrations fail during the build. Metadata is copied and limited to strings,
 finite numbers, booleans, null, tags, and an optional description. Inspection
 serializes at most 500 objects and reports when a response is truncated.
+
+### Inspection cameras
+
+Register an inspection viewpoint inside the scene build callback:
+
+```ts
+const overview = scene.exposeCamera(
+  'overview',
+  new THREE.PerspectiveCamera(50, scene.width / scene.height, 0.1, 1000),
+  {
+    description: 'Shows the complete simulation and its boundaries',
+    tags: ['overview']
+  }
+)
+overview.position.set(20, 15, 30)
+overview.lookAt(0, 0, 0)
+```
+
+The camera is a normal Three.js `PerspectiveCamera` or `OrthographicCamera`.
+Scene updaters can move it each frame, and parenting works normally. Registering
+it does not render another view or calculate geometry. A camera's state is read
+only after the requested frame has been sought.
+
+```bash
+# Discover IDs, projection data, transforms, and metadata at frame 600.
+npm run dm -- cameras vector-field --frame 600 --json
+
+# Project exposed-object geometry through a chosen viewpoint.
+npm run dm -- inspect vector-field --frame 600 --camera field-overview --json
+
+# Render exactly that view.
+npm run dm -- still vector-field --frame 600 --camera particle-follow --json
+
+# Compare main and every exposed camera from one exact scene state.
+npm run dm -- camera-grid vector-field --frame 600 --json
+
+# Select and order a subset explicitly.
+npm run dm -- camera-grid vector-field --frame 600 \
+  --cameras main,field-overview,particle-follow --columns 3 --json
+```
+
+`main` is reserved for the authored animation camera and is always discoverable.
+Unknown IDs return `UNKNOWN_CAMERA` together with the IDs available at that
+frame. Camera grids seek once, then render up to 25 views without advancing or
+rebuilding the scene between cells. Each JSON result includes camera metadata,
+projection state, and image cell bounds. A scene may expose at most 50 cameras.
+
+Like exposed objects, camera registrations belong to one `AnimatedScene` and
+are cleared before rebuild and destruction. This prevents old camera references
+from accumulating across requests or persistent-runtime generations.
 
 ### Freshness contract
 

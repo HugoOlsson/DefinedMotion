@@ -33,6 +33,41 @@ export function testSceneInspection(): AnimatedScene {
       subject.position.set(-5, 3, 0)
       scene.add(subject)
 
+      const overviewCamera = scene.exposeCamera(
+        'overview',
+        new THREE.PerspectiveCamera(50, scene.width / scene.height, 0.1, 100),
+        {
+          description: 'Perspective overview of the inspection subject',
+          tags: ['overview'],
+          data: { purpose: 'camera-regression' }
+        }
+      )
+      overviewCamera.position.set(-5, 3, 20)
+      overviewCamera.lookAt(subject.position)
+      assertSceneError(
+        () => scene.exposeCamera('overview', new THREE.PerspectiveCamera()),
+        'DUPLICATE_EXPOSED_CAMERA_ID'
+      )
+      assertSceneError(
+        () => scene.exposeCamera('overview-alias', overviewCamera),
+        'DUPLICATE_EXPOSED_CAMERA'
+      )
+      assertSceneError(
+        () => scene.exposeCamera('main', new THREE.PerspectiveCamera()),
+        'RESERVED_CAMERA_ID'
+      )
+
+      const trackingCamera = scene.exposeCamera(
+        'tracking',
+        new THREE.OrthographicCamera(-10, 10, 5, -5, 0.1, 100),
+        {
+          description: 'Orthographic camera that moves horizontally as the frame advances',
+          tags: ['dynamic', 'tracking']
+        }
+      )
+      trackingCamera.position.set(0, 0, 30)
+      trackingCamera.lookAt(subject.position)
+
       const labelGroup = scene.expose('label-group', new THREE.Group())
       labelGroup.position.set(8, -4, 0)
       const hiddenLabel = scene.expose(
@@ -47,6 +82,11 @@ export function testSceneInspection(): AnimatedScene {
 
       const detached = scene.expose('detached-guide', createRectangle(1, 1))
       detached.position.set(100, 100, 0)
+
+      scene.onEachTick((frame) => {
+        trackingCamera.position.x = frame / 10
+        trackingCamera.lookAt(subject.position)
+      })
 
       scene.addWait(1000)
     }

@@ -138,6 +138,17 @@ export function vectorFieldScene(): AnimatedScene {
       scene.camera.position.set(-116.443, 35.10142, 68.73468)
       scene.camera.quaternion.set(-0.109989, -0.491824, -0.06279674, 0.8614338)
 
+      const fieldOverviewCamera = scene.exposeCamera(
+        'field-overview',
+        new THREE.PerspectiveCamera(48, scene.width / scene.height, 0.1, 1000),
+        {
+          description: 'Elevated three-quarter overview of the complete vector field',
+          tags: ['overview', 'field']
+        }
+      )
+      fieldOverviewCamera.position.set(72, 58, 72)
+      fieldOverviewCamera.lookAt(0, 0, 0)
+
       const geometry = new THREE.SphereGeometry(0.3, 32, 32)
       const material = new THREE.MeshStandardMaterial({
         color: 0x000000,
@@ -158,6 +169,15 @@ export function vectorFieldScene(): AnimatedScene {
       })
       scene.add(movingParticles)
 
+      const particleFollowCamera = scene.exposeCamera(
+        'particle-follow',
+        new THREE.PerspectiveCamera(55, scene.width / scene.height, 0.05, 500),
+        {
+          description: 'Dynamic close-up that follows the first illuminated particle',
+          tags: ['dynamic', 'particle', 'close-up']
+        }
+      )
+
       Array(30)
         .fill(0)
         .forEach(() => {
@@ -167,8 +187,8 @@ export function vectorFieldScene(): AnimatedScene {
           const group = new THREE.Group()
           group.add(sphere, pointLight)
 
-          group.position.y = 8 * (Math.random() - 0.5)
-          group.position.z = 8 * (Math.random() - 0.5)
+          group.position.y = scene.randomBetween(-4, 4)
+          group.position.z = scene.randomBetween(-4, 4)
 
           let velocity = new THREE.Vector3(0, 0, 0) // Initial velocity
           let acceleration = new THREE.Vector3(0, 0, 0) // Initialize acceleration
@@ -214,6 +234,10 @@ export function vectorFieldScene(): AnimatedScene {
             }
           }
         }
+
+        const followedParticle = groups[0].group.position
+        particleFollowCamera.position.copy(followedParticle).add(new THREE.Vector3(12, 8, 12))
+        particleFollowCamera.lookAt(followedParticle)
       })
 
       scene.addWait(20000)

@@ -1,4 +1,10 @@
-export type AutomationCommand = 'scenes' | 'still' | 'timeline-grid' | 'inspect'
+export type AutomationCommand =
+  | 'scenes'
+  | 'still'
+  | 'timeline-grid'
+  | 'inspect'
+  | 'cameras'
+  | 'camera-grid'
 
 export interface ScenesAutomationRequest {
   command: 'scenes'
@@ -10,6 +16,7 @@ export interface StillAutomationRequest {
   scene: string
   frame: number
   output: string
+  camera?: string
 }
 
 export interface TimelineGridAutomationRequest {
@@ -26,6 +33,23 @@ export interface InspectAutomationRequest {
   command: 'inspect'
   scene: string
   frame: number
+  camera?: string
+}
+
+export interface CamerasAutomationRequest {
+  command: 'cameras'
+  scene: string
+  frame: number
+}
+
+export interface CameraGridAutomationRequest {
+  command: 'camera-grid'
+  scene: string
+  frame: number
+  cameras?: string[]
+  columns?: number
+  cellWidth: number
+  output: string
 }
 
 export type AutomationRequest =
@@ -33,6 +57,8 @@ export type AutomationRequest =
   | StillAutomationRequest
   | TimelineGridAutomationRequest
   | InspectAutomationRequest
+  | CamerasAutomationRequest
+  | CameraGridAutomationRequest
 
 export interface AutomationSceneSummary {
   id: string
@@ -41,15 +67,24 @@ export interface AutomationSceneSummary {
   isTest: boolean
 }
 
-export interface TimelineGridCell {
-  frame: number
-  timeMs: number
+export interface GridCellBounds {
   row: number
   column: number
   x: number
   y: number
   width: number
   height: number
+}
+
+export interface TimelineGridCell extends GridCellBounds {
+  frame: number
+  timeMs: number
+  label: string
+}
+
+export interface CameraGridCell extends GridCellBounds {
+  cameraId: string
+  isMain: boolean
   label: string
 }
 
@@ -119,6 +154,13 @@ export interface InspectCameraResult {
   bottom?: number
 }
 
+export interface AutomationCameraSummary {
+  id: string
+  isMain: boolean
+  metadata: InspectObjectMetadata
+  camera: InspectCameraResult
+}
+
 export interface InspectSceneInfo {
   id: string
   name: string
@@ -141,8 +183,12 @@ export interface AutomationSuccessResult {
   frame?: number
   frames?: number[]
   cells?: TimelineGridCell[]
+  cameraCells?: CameraGridCell[]
+  cameras?: AutomationCameraSummary[]
+  cameraCount?: number
   sceneInfo?: InspectSceneInfo
   camera?: InspectCameraResult
+  cameraId?: string
   objects?: InspectObjectResult[]
   totalExposedObjects?: number
   objectsTruncated?: boolean

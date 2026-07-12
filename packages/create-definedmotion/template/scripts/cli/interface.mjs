@@ -11,9 +11,11 @@ Usage:
   definedmotion session status [--json]
   definedmotion session stop [--json]
   definedmotion scenes [--exclude-tests] [--json] [--no-build] [--standalone]
-  definedmotion still <scene> --frame <number> [--output <file>] [--json] [--no-build] [--standalone]
+  definedmotion still <scene> --frame <number> [--camera <id>] [--output <file>] [--json] [--no-build] [--standalone]
   definedmotion timeline-grid <scene> [--frames <list> | --count <number>] [--columns <number>] [--cell-width <pixels>] [--output <file>] [--json] [--no-build] [--standalone]
-  definedmotion inspect <scene> [--frame <number>] [--json] [--no-build] [--standalone]
+  definedmotion cameras <scene> [--frame <number>] [--json] [--no-build] [--standalone]
+  definedmotion camera-grid <scene> [--frame <number>] [--cameras <list|all>] [--columns <number>] [--cell-width <pixels>] [--output <file>] [--json] [--no-build] [--standalone]
+  definedmotion inspect <scene> [--frame <number>] [--camera <id>] [--json] [--no-build] [--standalone]
 
 Session-aware commands use a running persistent runtime automatically.
 Pass --standalone to force a fresh build and Electron process, or
@@ -24,6 +26,8 @@ Examples:
   npm run dm -- scenes
   npm run dm -- still tutorial-easy-1 --frame 30 --output .definedmotion/frame.png
   npm run dm -- timeline-grid tutorial-easy-1
+  npm run dm -- cameras vector-field --frame 600 --json
+  npm run dm -- camera-grid vector-field --frame 600
   npm run dm -- inspect tutorial-easy-1 --frame 30 --json
   npm run dm -- session stop
 `
@@ -69,16 +73,77 @@ export function buildAutomationRequest(command, positionals, flags) {
     if (!scene || flags.frame === undefined || !Number.isInteger(frame) || frame < 0) {
       throw new CliError(
         'INVALID_ARGUMENTS',
-        'Usage: definedmotion still <scene> --frame <non-negative integer> [--output <file>]'
+        'Usage: definedmotion still <scene> --frame <non-negative integer> [--camera <id>] [--output <file>]'
       )
     }
 
-    const defaultOutput = join('.definedmotion', 'stills', `${scene}-frame-${frame}.png`)
+    const camera = parseOptionalId(flags.camera, '--camera')
+    const cameraSuffix = camera ? `-${safeFileSegment(camera)}` : ''
+    const defaultOutput = join(
+      '.definedmotion',
+      'stills',
+      `${scene}${cameraSuffix}-frame-${frame}.png`
+    )
     const outputValue = typeof flags.output === 'string' ? flags.output : defaultOutput
     return {
       command: 'still',
       scene,
       frame,
+      camera,
+      output: isAbsolute(outputValue) ? outputValue : resolve(projectRoot, outputValue)
+    }
+  }
+
+  if (command === 'cameras') {
+    const scene = positionals[1]
+    if (!scene) throw new CliError('INVALID_ARGUMENTS', 'The cameras command requires a scene id')
+    const frame = parseOptionalInteger(flags.frame, 0)
+    if (frame < 0) {
+      throw new CliError('INVALID_ARGUMENTS', '--frame must be a non-negative integer')
+    }
+    return { command: 'cameras', scene, frame }
+  }
+
+  if (command === 'camera-grid') {
+    const scene = positionals[1]
+    if (!scene) {
+      throw new CliError('INVALID_ARGUMENTS', 'The camera-grid command requires a scene id')
+    }
+    const frame = parseOptionalInteger(flags.frame, 0)
+    if (frame < 0) {
+      throw new CliError('INVALID_ARGUMENTS', '--frame must be a non-negative integer')
+    }
+    const cameras =
+      flags.cameras === undefined || flags.cameras === 'all'
+        ? undefined
+        : parseIds(flags.cameras, '--cameras', 25)
+    const columns =
+      flags.columns === undefined ? undefined : parseOptionalInteger(flags.columns, undefined)
+    const selectedCount = cameras?.length
+    if (
+      columns !== undefined &&
+      (columns < 1 || columns > 25 || (selectedCount !== undefined && columns > selectedCount))
+    ) {
+      throw new CliError(
+        'INVALID_ARGUMENTS',
+        selectedCount === undefined
+          ? '--columns must be between 1 and 25'
+          : `--columns must be between 1 and the selected number of cameras (${selectedCount})`
+      )
+    }
+    const cellWidth = parseOptionalInteger(flags['cell-width'], 360)
+    if (cellWidth < 120 || cellWidth > 1920) {
+      throw new CliError('INVALID_ARGUMENTS', '--cell-width must be between 120 and 1920 pixels')
+    }
+    const defaultOutput = join('.definedmotion', 'camera-grids', `${scene}-frame-${frame}.png`)
+    const outputValue = typeof flags.output === 'string' ? flags.output : defaultOutput
+    return {
+      command: 'camera-grid',
+      scene,
+      frame,
+      cameras,
+      columns,
+      cellWidth,
       output: isAbsolute(outputValue) ? outputValue : resolve(projectRoot, outputValue)
     }
   }
@@ -135,10 +200,40 @@ export function buildAutomationRequest(command, positionals, flags) {
     if (frame < 0) {
       throw new CliError('INVALID_ARGUMENTS', '--frame must be a non-negative integer')
     }
-    return { command: 'inspect', scene, frame }
+    const camera = parseOptionalId(flags.camera, '--camera')
+    return { command: 'inspect', scene, frame, camera }
   }
 
   throw new CliError('UNKNOWN_COMMAND', `Unknown command "${command}"`)
+}
+
+function parseOptionalId(value, option) {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new CliError('INVALID_ARGUMENTS', `${option} requires a non-empty ID`)
+  }
+  return value.trim()
+}
+
+function parseIds(value, option, maximumCount) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new CliError('INVALID_ARGUMENTS', `${option} requires a comma-separated list of IDs`)
+  }
+  const ids = value.split(',').map((part) => part.trim())
+  if (ids.some((id) => id === '') || ids.length > maximumCount) {
+    throw new CliError(
+      'INVALID_ARGUMENTS',
+      `${option} must contain 1-${maximumCount} non-empty IDs`
+    )
+  }
+  if (new Set(ids).size !== ids.length) {
+    throw new CliError('INVALID_ARGUMENTS', `${option} must not contain duplicates`)
+  }
+  return ids
+}
+
+function safeFileSegment(value) {
+  return value.replaceAll(/[^a-zA-Z0-9_-]/g, '-')
 }
 
 function parseFrames(value) {
@@ -217,14 +312,33 @@ export function emit(result, json) {
     return
   }
 
+  if (result.command === 'cameras') {
+    process.stdout.write(
+      `Cameras for ${result.scene} at frame ${result.frame} (${result.cameraCount ?? 0}):\n`
+    )
+    for (const camera of result.cameras ?? []) {
+      process.stdout.write(
+        `${camera.id}${camera.isMain ? ' (main)' : ''}\t${camera.camera.type}\t${camera.metadata.description ?? ''}\n`
+      )
+    }
+    return
+  }
+
+  if (result.command === 'camera-grid') {
+    process.stdout.write(
+      `Rendered ${result.cameraCount ?? 0} cameras from ${result.scene} frame ${result.frame} to ${result.output} (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
+    )
+    return
+  }
+
   if (result.command === 'inspect') {
     process.stdout.write(
-      `Inspected ${result.scene} frame ${result.frame}: ${result.objects?.length ?? 0} exposed objects (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
+      `Inspected ${result.scene} frame ${result.frame} through ${result.cameraId ?? 'main'}: ${result.objects?.length ?? 0} exposed objects (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
     )
     return
   }
 
   process.stdout.write(
-    `Rendered ${result.scene} frame ${result.frame} to ${result.output} (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
+    `Rendered ${result.scene} frame ${result.frame} through ${result.cameraId ?? 'main'} to ${result.output} (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
   )
 }

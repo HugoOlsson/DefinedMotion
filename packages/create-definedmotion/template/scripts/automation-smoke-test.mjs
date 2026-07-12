@@ -13,7 +13,7 @@ const projectRoot = dirname(scriptDirectory)
 const cli = join(scriptDirectory, 'definedmotion.mjs')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'definedmotion-smoke-'))
 
-function run(arguments_) {
+function run(arguments_, expectSuccess = true) {
   const result = spawnSync(process.execPath, [cli, ...arguments_, '--json'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit']
@@ -21,7 +21,7 @@ function run(arguments_) {
 
   if (!result.stdout) throw new Error(`CLI returned no JSON for: ${arguments_.join(' ')}`)
   const parsed = JSON.parse(result.stdout)
-  if (result.status !== 0 || !parsed.success) {
+  if (expectSuccess && (result.status !== 0 || !parsed.success)) {
     throw new Error(parsed.error?.message ?? `CLI failed with code ${result.status}`)
   }
   return parsed
@@ -126,6 +126,131 @@ try {
     detachedGuide.inFrame
   ) {
     throw new Error('Semantic inspection metadata or geometry was incorrect')
+  }
+
+  const cameras = run(['cameras', 'test-scene-inspection', '--frame', '30', '--no-build'])
+  const mainCamera = cameras.cameras.find((camera) => camera.id === 'main')
+  const overviewCamera = cameras.cameras.find((camera) => camera.id === 'overview')
+  const trackingCamera = cameras.cameras.find((camera) => camera.id === 'tracking')
+  if (
+    cameras.command !== 'cameras' ||
+    cameras.cameraCount !== 3 ||
+    cameras.sceneInfo.lastFrame !== 59 ||
+    !mainCamera?.isMain ||
+    mainCamera.camera.type !== 'orthographic' ||
+    overviewCamera?.isMain ||
+    overviewCamera?.camera.type !== 'perspective' ||
+    overviewCamera.metadata.data?.purpose !== 'camera-regression' ||
+    trackingCamera?.camera.type !== 'orthographic' ||
+    trackingCamera.camera.position[0] !== 3
+  ) {
+    throw new Error('Inspection camera discovery or frame-aware state was incorrect')
+  }
+
+  const overviewInspection = run([
+    'inspect',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--camera',
+    'overview',
+    '--no-build'
+  ])
+  const overviewSubject = overviewInspection.objects.find((object) => object.id === 'subject')
+  if (
+    overviewInspection.cameraId !== 'overview' ||
+    overviewInspection.camera.type !== 'perspective' ||
+    !overviewSubject?.screenBounds ||
+    overviewSubject.screenBounds.width <= 0 ||
+    JSON.stringify(overviewSubject.screenBounds) === JSON.stringify(subject.screenBounds)
+  ) {
+    throw new Error('Semantic inspection did not project objects through the selected camera')
+  }
+
+  const unknownCamera = run(
+    [
+      'inspect',
+      'test-scene-inspection',
+      '--frame',
+      '30',
+      '--camera',
+      'missing-camera',
+      '--no-build'
+    ],
+    false
+  )
+  if (
+    unknownCamera.success ||
+    unknownCamera.error?.code !== 'UNKNOWN_CAMERA' ||
+    !unknownCamera.error?.message?.includes('main, overview, tracking')
+  ) {
+    throw new Error('Unknown camera IDs did not return actionable available-camera feedback')
+  }
+
+  const mainCameraOutput = join(temporaryDirectory, 'camera-main.png')
+  const overviewCameraOutput = join(temporaryDirectory, 'camera-overview.png')
+  const overviewStill = run([
+    'still',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--camera',
+    'overview',
+    '--output',
+    overviewCameraOutput,
+    '--no-build'
+  ])
+  run([
+    'still',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--camera',
+    'main',
+    '--output',
+    mainCameraOutput,
+    '--no-build'
+  ])
+  if (
+    overviewStill.cameraId !== 'overview' ||
+    sha256(mainCameraOutput) === sha256(overviewCameraOutput)
+  ) {
+    throw new Error('Still rendering did not use the selected inspection camera')
+  }
+
+  const cameraGridOutput = join(temporaryDirectory, 'camera-grid.png')
+  const cameraGrid = run([
+    'camera-grid',
+    'test-scene-inspection',
+    '--frame',
+    '30',
+    '--cameras',
+    'main,overview,tracking',
+    '--columns',
+    '2',
+    '--cell-width',
+    '120',
+    '--output',
+    cameraGridOutput,
+    '--no-build'
+  ])
+  const cameraGridImage = await sharp(cameraGridOutput).metadata()
+  if (
+    cameraGrid.command !== 'camera-grid' ||
+    cameraGrid.cameraCount !== 3 ||
+    cameraGrid.cameraCells.length !== 3 ||
+    JSON.stringify(cameraGrid.cameras.map((camera) => camera.id)) !==
+      JSON.stringify(['main', 'overview', 'tracking']) ||
+    cameraGrid.columns !== 2 ||
+    cameraGrid.rows !== 2 ||
+    cameraGrid.width !== 264 ||
+    cameraGrid.height !== 248 ||
+    cameraGridImage.width !== cameraGrid.width ||
+    cameraGridImage.height !== cameraGrid.height ||
+    cameraGrid.cameraCells[1].label !== 'overview · perspective' ||
+    cameraGrid.cameraCells[2].cameraId !== 'tracking'
+  ) {
+    throw new Error('Camera grid image or structured camera metadata was incorrect')
   }
 
   const dynamicTextInspection = run(['inspect', 'alternatives', '--frame', '300', '--no-build'])
