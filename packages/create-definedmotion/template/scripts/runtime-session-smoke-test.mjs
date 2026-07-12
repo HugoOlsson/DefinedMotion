@@ -91,14 +91,17 @@ const fixtureSyntaxErrorSource = () =>
 const fixtureMissingImportSource = () =>
   `import './runtime-missing-dependency'\n${fixtureSource('#0000ff')}`
 
+const fixtureEvaluationErrorSource = () =>
+  `${fixtureSource('#0000ff')}\nconst __runtimeEvaluationProbe = __runtimeEvaluationFactory()\nconst __runtimeEvaluationFactory = () => true\n`
+
 async function waitForReady() {
-  const deadline = Date.now() + 30_000
+  const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {
     const status = run(['session', 'status'])
     if (status.status === 'ready') return status
     await delay(100)
   }
-  throw new Error('Persistent runtime did not become ready within 30 seconds')
+  throw new Error('Persistent runtime did not become ready within 15 seconds')
 }
 
 async function centerPixel(path) {
@@ -116,14 +119,34 @@ function sha256(path) {
 const delay = (milliseconds) =>
   new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds))
 
-let runtimeProcess
 try {
   run(['session', 'stop'])
-  runtimeProcess = spawn(process.execPath, [cli, 'session', 'start', '--foreground'], {
-    cwd: projectRoot,
-    stdio: ['ignore', 'ignore', 'inherit']
-  })
+  writeFileSync(fixturePath, fixtureEvaluationErrorSource())
+  const initialFailureStartedAt = Date.now()
+  const initialFailure = run(['session', 'start'], false)
+  const initialFailureDuration = Date.now() - initialFailureStartedAt
+  const initialFailureStatus = run(['session', 'status'])
+  if (
+    initialFailure.success ||
+    initialFailure.error?.code !== 'SOURCE_EVALUATION_FAILED' ||
+    initialFailure.error?.file !== 'src/scenes/runtime-freshness.scene.ts' ||
+    !initialFailure.error?.stack?.includes('__runtimeEvaluationFactory') ||
+    initialFailureDuration > 15_000 ||
+    initialFailureStatus.status !== 'source-error' ||
+    initialFailureStatus.error?.code !== 'SOURCE_EVALUATION_FAILED'
+  ) {
+    throw new Error(
+      `Initial module evaluation failure did not fail session start with structured diagnostics: ${JSON.stringify(
+        {
+          initialFailure,
+          initialFailureDuration,
+          initialFailureStatus
+        }
+      )}`
+    )
+  }
 
+  writeFileSync(fixturePath, fixtureSource('#ff0000'))
   const initialStatus = await waitForReady()
   const initialInspection = run(['inspect', 'test-scene-inspection', '--require-session'])
   const repeatedInspection = run([
@@ -313,6 +336,59 @@ try {
         recoveredPixel
       })}`
     )
+  }
+
+  writeFileSync(fixturePath, fixtureEvaluationErrorSource())
+  const evaluationFailureStartedAt = Date.now()
+  const evaluationFailure = run(['inspect', 'runtime-freshness', '--require-session'], false)
+  const evaluationFailureDuration = Date.now() - evaluationFailureStartedAt
+  const evaluationFailureStatus = run(['session', 'status'])
+  const failedStartStartedAt = Date.now()
+  const failedStart = run(['session', 'start'], false)
+  const failedStartDuration = Date.now() - failedStartStartedAt
+  if (
+    evaluationFailure.success ||
+    evaluationFailure.error?.code !== 'SOURCE_EVALUATION_FAILED' ||
+    evaluationFailure.error?.file !== 'src/scenes/runtime-freshness.scene.ts' ||
+    !Number.isInteger(evaluationFailure.error?.line) ||
+    !evaluationFailure.error?.message?.includes('__runtimeEvaluationFactory') ||
+    !evaluationFailure.error?.stack?.includes('__runtimeEvaluationFactory') ||
+    evaluationFailureDuration > 5_000 ||
+    evaluationFailureStatus.status !== 'source-error' ||
+    evaluationFailureStatus.error?.code !== 'SOURCE_EVALUATION_FAILED' ||
+    failedStart.success ||
+    failedStart.error?.code !== 'SOURCE_EVALUATION_FAILED' ||
+    failedStartDuration > 5_000
+  ) {
+    throw new Error(
+      `Module evaluation failures were not reported immediately with structured diagnostics: ${JSON.stringify(
+        {
+          evaluationFailure,
+          evaluationFailureDuration,
+          evaluationFailureStatus,
+          failedStart,
+          failedStartDuration
+        }
+      )}`
+    )
+  }
+
+  writeFileSync(fixturePath, fixtureSource('#0000ff'))
+  const evaluationRecoveryOutput = join(temporaryDirectory, 'evaluation-recovered.png')
+  const evaluationRecovery = run([
+    'still',
+    'runtime-freshness',
+    '--frame',
+    '0',
+    '--output',
+    evaluationRecoveryOutput,
+    '--require-session'
+  ])
+  if (
+    evaluationRecovery.runtimeId !== initialStatus.runtimeId ||
+    JSON.stringify(await centerPixel(evaluationRecoveryOutput)) !== JSON.stringify([0, 0, 255, 255])
+  ) {
+    throw new Error('Runtime did not recover after correcting a module evaluation failure')
   }
 
   const concurrentResults = await Promise.all([
@@ -535,8 +611,6 @@ try {
   rmSync(revisionNoisePath, { force: true })
   try {
     run(['session', 'stop'])
-  } catch {
-    runtimeProcess?.kill('SIGTERM')
-  }
+  } catch {}
   rmSync(temporaryDirectory, { recursive: true, force: true })
 }

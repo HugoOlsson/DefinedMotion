@@ -266,6 +266,7 @@ export interface RuntimeClientStopRequest {
 
 export interface RuntimeSourceDiagnostic {
   message: string
+  stack?: string
   file?: string
   line?: number
   column?: number

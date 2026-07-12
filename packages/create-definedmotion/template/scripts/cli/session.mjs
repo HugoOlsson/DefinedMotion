@@ -33,7 +33,7 @@ export function readRuntimeDescriptor() {
   }
 }
 
-function sendRuntimeRequest(descriptor, request, timeoutMs = 35_000) {
+function sendRuntimeRequest(descriptor, request, timeoutMs = 17_000) {
   return new Promise((resolvePromise, rejectPromise) => {
     const socket = createConnection(descriptor.socketPath)
     socket.setEncoding('utf8')
@@ -106,6 +106,7 @@ export async function startRuntime(foreground = false) {
   if (existingStatus.status === 'ready' || existingStatus.status === 'loading') {
     return { ...existingStatus, action: 'start' }
   }
+  if (existingStatus.status === 'source-error') return failedRuntimeStart(existingStatus)
 
   cleanupStaleRuntime(readRuntimeDescriptor())
   mkdirSync(runtimeDirectory, { recursive: true })
@@ -148,7 +149,7 @@ export async function startRuntime(foreground = false) {
   child.unref()
   closeSync(logFile)
 
-  const deadline = Date.now() + 30_000
+  const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {
     await delay(100)
     const descriptor = readRuntimeDescriptor()
@@ -156,6 +157,7 @@ export async function startRuntime(foreground = false) {
     try {
       const status = await sendRuntimeRequest(descriptor, { action: 'status' }, 1_000)
       if (status.status === 'ready') return { ...status, action: 'start' }
+      if (status.status === 'source-error') return failedRuntimeStart(status)
     } catch {
       // electron-vite may still be compiling or launching Electron.
     }
@@ -163,9 +165,15 @@ export async function startRuntime(foreground = false) {
 
   throw new CliError(
     'SESSION_START_TIMEOUT',
-    `Runtime did not become ready within 30 seconds. See ${runtimeLogPath}`
+    `Runtime did not become ready within 15 seconds. See ${runtimeLogPath}`
   )
 }
+
+const failedRuntimeStart = (status) => ({
+  ...status,
+  success: false,
+  action: 'start'
+})
 
 export async function stopRuntime() {
   const descriptor = readRuntimeDescriptor()

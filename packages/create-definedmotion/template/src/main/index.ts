@@ -7,7 +7,11 @@ import icon from '../../resources/icon.png?asset'
 import { renderVideo } from './rendering'
 import { deleteRenderedContent } from './storage'
 import ElectronStore from 'electron-store'
-import type { AutomationRequest, AutomationResult } from '../automation/types'
+import type {
+  AutomationRequest,
+  AutomationResult,
+  RuntimeSourceDiagnostic
+} from '../automation/types'
 import { registerAssetProtocol } from './assets'
 import { getPersistentRuntimeConfig, PersistentRuntimeHost } from './runtimeHost'
 
@@ -38,6 +42,9 @@ nativeTheme.themeSource = 'light'
 
 let mainWindow: BrowserWindow
 let persistentRuntimeHost: PersistentRuntimeHost | undefined
+let pendingRendererFailure:
+  | { sourceRevision: string; diagnostic: RuntimeSourceDiagnostic }
+  | undefined
 
 interface WindowBounds {
   width: number
@@ -194,6 +201,25 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.on(
+    'definedmotion:runtime-failed',
+    (event, sourceRevision: string, diagnostic: RuntimeSourceDiagnostic) => {
+      if (
+        event.sender !== mainWindow?.webContents ||
+        typeof sourceRevision !== 'string' ||
+        !diagnostic ||
+        typeof diagnostic.message !== 'string'
+      ) {
+        return
+      }
+      if (persistentRuntimeHost) {
+        persistentRuntimeHost.rendererFailed(sourceRevision, diagnostic)
+      } else {
+        pendingRendererFailure = { sourceRevision, diagnostic }
+      }
+    }
+  )
+
   ipcMain.on('definedmotion:runtime-result', (event, id: string, result: AutomationResult) => {
     if (event.sender === mainWindow?.webContents) {
       persistentRuntimeHost?.rendererResult(id, result)
@@ -211,6 +237,13 @@ app.whenReady().then(() => {
 
   if (persistentRuntimeConfig) {
     persistentRuntimeHost = new PersistentRuntimeHost(mainWindow, persistentRuntimeConfig)
+    if (pendingRendererFailure) {
+      persistentRuntimeHost.rendererFailed(
+        pendingRendererFailure.sourceRevision,
+        pendingRendererFailure.diagnostic
+      )
+      pendingRendererFailure = undefined
+    }
     void persistentRuntimeHost.start().catch((error) => {
       console.error('Could not start DefinedMotion persistent runtime:', error)
       app.exit(1)

@@ -4,7 +4,8 @@ import { RenderOptions } from '../main/rendering'
 import type {
   AutomationRequest,
   AutomationResult,
-  RuntimeRendererRequest
+  RuntimeRendererRequest,
+  RuntimeSourceDiagnostic
 } from '../automation/types'
 
 // ---- NEW helpers for event subscription
@@ -23,6 +24,40 @@ function onRuntimeRequest(cb: (request: RuntimeRendererRequest) => void): () => 
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
+let runtimeReadySent = false
+let runtimeFailureSent = false
+
+const runtimeSourceRevision = (): string =>
+  (window as Window & { __DEFINEDMOTION_SOURCE_REVISION__?: string })
+    .__DEFINEDMOTION_SOURCE_REVISION__ ?? 'unknown'
+
+const reportEarlyRuntimeFailure = (diagnostic: RuntimeSourceDiagnostic): void => {
+  if (runtimeReadySent || runtimeFailureSent || !process.env['DEFINEDMOTION_SESSION_TOKEN']) {
+    return
+  }
+  runtimeFailureSent = true
+  ipcRenderer.send('definedmotion:runtime-failed', runtimeSourceRevision(), diagnostic)
+}
+
+window.addEventListener('error', (event) => {
+  const error = event.error instanceof Error ? event.error : undefined
+  reportEarlyRuntimeFailure({
+    message: event.message || error?.message || 'Renderer module evaluation failed',
+    ...(error?.stack ? { stack: error.stack } : {}),
+    ...(event.filename ? { file: event.filename } : {}),
+    ...(event.lineno > 0 ? { line: event.lineno } : {}),
+    ...(event.colno > 0 ? { column: event.colno } : {})
+  })
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  const error = event.reason instanceof Error ? event.reason : undefined
+  reportEarlyRuntimeFailure({
+    message: error?.message || String(event.reason || 'Unhandled renderer rejection'),
+    ...(error?.stack ? { stack: error.stack } : {})
+  })
+})
+
 const customAPI = {
   startVideoRender: (options: RenderOptions) => ipcRenderer.invoke('start-video-render', options),
 
@@ -37,8 +72,10 @@ const customAPI = {
   completeAutomation: (result: AutomationResult) =>
     ipcRenderer.send('definedmotion:automation-complete', result),
 
-  runtimeReady: (sourceRevision: string): void =>
-    ipcRenderer.send('definedmotion:runtime-ready', sourceRevision),
+  runtimeReady: (sourceRevision: string): void => {
+    runtimeReadySent = true
+    ipcRenderer.send('definedmotion:runtime-ready', sourceRevision)
+  },
 
   onRuntimeRequest,
 
