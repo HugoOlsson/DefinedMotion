@@ -8,5 +8,5 @@ export const definedMotionConfig = {
   timelineFps: 60,
   renderEveryNthFrame: 1,
   seed: 1,
-  defaultScene: 'fractal-tree-growth'
+  defaultScene: 'test-many-video-planes'
 } as const

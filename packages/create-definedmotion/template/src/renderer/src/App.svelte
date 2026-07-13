@@ -44,19 +44,31 @@
 
   let isPlayingStateVar = $state(false)
 
-  let lastSetFrame = 0
+  let pendingSliderValue: number | undefined
+  let sliderDrain: Promise<void> | undefined
 
   const maxSliderValue = 10_000
   let urlUpdaterInterval: ReturnType<typeof setInterval>
 
-  async function handleSliderChange(sliderValue: number) {
-    if (scene) {
+  function handleSliderChange(sliderValue: number): Promise<void> {
+    pendingSliderValue = sliderValue
+    if (!sliderDrain) {
+      sliderDrain = drainSliderChanges().finally(() => {
+        sliderDrain = undefined
+      })
+    }
+    return sliderDrain
+  }
+
+  async function drainSliderChanges(): Promise<void> {
+    while (pendingSliderValue !== undefined) {
+      const sliderValue = pendingSliderValue
+      pendingSliderValue = undefined
+      if (!scene) continue
       const frame = Math.round((sliderValue / maxSliderValue) * (scene.totalSceneTicks - 1))
-      if (frame !== lastSetFrame) {
-        await scene.jumpToFrameAtIndex(frame)
-        updateUIImmediate();
-        lastSetFrame = frame
-      }
+      if (frame === scene.sceneRenderTick) continue
+      await scene.jumpToFrameAtIndex(frame)
+      updateUIImmediate()
     }
   }
 
@@ -119,8 +131,6 @@ function updateUIImmediate() {
     }
    
     setStateInScene(scene)
-    lastSetFrame = scene.sceneRenderTick
-
     urlUpdaterInterval = setInterval(() => {
       updateStateInUrl(scene.sceneRenderTick)
     }, 500)
@@ -222,14 +232,21 @@ export async function copyToClipboard(text: string): Promise<void> {
       oninput={(e: any) => {
         // while scrubbing: jump visuals quietly; when not scrubbing, behaves like before
         const v = Number(e.target.value)
-        handleSliderChange(v)
+        void handleSliderChange(v).catch((error) =>
+          console.error('Could not scrub the scene:', error)
+        )
       }}
-      onpointerup={(e: any) => {
+      onpointerup={async (e: any) => {
         if (!scene) return
         isScrubbing = false
         const v = Number((e.target as HTMLInputElement).value)
         // ensure we’re at the dropped frame
-        handleSliderChange(v)
+        try {
+          await handleSliderChange(v)
+        } catch (error) {
+          console.error('Could not finish scrubbing the scene:', error)
+          return
+        }
         if (wasPlayingBeforeScrub) {
           // resume cleanly from here
           scene.playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)

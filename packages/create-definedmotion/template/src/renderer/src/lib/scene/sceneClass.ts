@@ -42,6 +42,11 @@ import {
   resumeAll as audioResumeAll,
   stopAll as audioStopAll
 } from '../audio/manager'
+import {
+  FrameResourceHost,
+  type FrameResource,
+  type FrameResourceDependency
+} from './frameResource'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -121,6 +126,7 @@ export class AnimatedScene {
   private planedSounds: Map<number, AudioInScene[]> = new Map()
   private exposureRegistry = new SceneExposureRegistry()
   private cameraRegistry = new SceneCameraRegistry()
+  private readonly frameResources = new FrameResourceHost()
 
   private pixelsWidth
   private pixelsHeight
@@ -233,6 +239,7 @@ export class AnimatedScene {
   onDestroy() {
     if (this.destroyed) return
     this.destroyed = true
+    this.isPlaying = false
     this.unregisterDestroy?.()
     this.unregisterDestroy = undefined
     this.stopControls()
@@ -240,6 +247,7 @@ export class AnimatedScene {
     this.resizeObserver?.disconnect()
     this.clearExposedObjects()
     this.clearExposedCameras()
+    this.frameResources.dispose()
   }
 
   add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
@@ -386,6 +394,32 @@ export class AnimatedScene {
     this.sceneDependencies.push(updater)
   }
 
+  /** @internal Returns a persistent resource owned by this scene. */
+  getOrCreateFrameResource<T extends FrameResource>(
+    id: string,
+    signature: string,
+    create: () => T
+  ): T {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'FRAME_RESOURCE_OUTSIDE_BUILD',
+        'Frame resources must be created while the scene is building'
+      )
+    }
+    return this.frameResources.getOrCreate(id, signature, create)
+  }
+
+  /** @internal Adds a persistent resource to the current build's frame plan. */
+  useFrameResource(dependency: FrameResourceDependency): void {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'FRAME_RESOURCE_OUTSIDE_BUILD',
+        'Frame resources must be used while the scene is building'
+      )
+    }
+    this.frameResources.use(dependency)
+  }
+
   end() {
     const lastAnimationTick = this.sceneAnimations.reduce(
       (latest, animation) => Math.max(latest, animation.endTick + 1),
@@ -442,8 +476,20 @@ export class AnimatedScene {
     this.addAnims(createAnim(easeConstant(0, duration), () => {}))
   }
 
-  async jumpToFrameAtIndex(index: number, notSize: boolean = false) {
-    await this.prepareSceneForSeek(notSize, true)
+  jumpToFrameAtIndex(index: number, notSize: boolean = false): Promise<void> {
+    return this.presentFrameAtIndex(index, notSize, 'exact')
+  }
+
+  private async presentFrameAtIndex(
+    index: number,
+    notSize: boolean,
+    presentation: 'exact' | 'realtime'
+  ): Promise<void> {
+    await this.prepareSceneForSeek(
+      notSize,
+      true,
+      presentation === 'exact' ? 'suspend' : 'preserve'
+    )
 
     if (index > this.totalSceneTicks - 1 || index < 0) {
       index = 0
@@ -460,6 +506,8 @@ export class AnimatedScene {
     }
 
     this.sceneRenderTick = index
+    if (presentation === 'exact') await this.prepareExactFrame()
+    else this.updateRealtimeFrame({ discontinuity: true })
     this.renderCurrentFrame()
     await this.playEffectFunction()
 
@@ -500,6 +548,7 @@ export class AnimatedScene {
     await this.traceToFrameIndex(index, false)
     this.sceneRenderTick = index
     this.prepareOutputViewport()
+    await this.prepareExactFrame()
     this.renderCurrentFrame()
     await this.playEffectFunction()
     this.doNotPlayAudio = false
@@ -524,15 +573,20 @@ export class AnimatedScene {
 
   private async prepareSceneForSeek(
     notSize: boolean,
-    loadAudioAssets: boolean
+    loadAudioAssets: boolean,
+    frameResourceMode: 'suspend' | 'preserve' = 'suspend'
   ): Promise<void> {
     this.doNotPlayAudio = true
+    this.frameResources.beginBuild(frameResourceMode)
     this.resetComponents(notSize)
     this.isBuilding = true
+    let buildCompleted = false
     try {
       await this.withSeededRandom(() => this.buildFunction(this))
+      buildCompleted = true
     } finally {
       this.isBuilding = false
+      this.frameResources.finishBuild(buildCompleted)
     }
 
     if (loadAudioAssets) {
@@ -656,6 +710,7 @@ export class AnimatedScene {
   pause() {
     this.isPlaying = false
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
+    this.frameResources.suspend()
 
 
     audioPauseAll()
@@ -703,6 +758,7 @@ export class AnimatedScene {
       await this.traceCurrentFrame(this.sceneRenderTick, true, i === startFrame)
 
       if (this.sceneRenderTick % renderSkip === 0) {
+        await this.prepareExactFrame()
         this.renderCurrentFrame()
         await captureCanvasFrame(
           Math.round(this.sceneRenderTick / renderSkip),
@@ -755,10 +811,11 @@ export class AnimatedScene {
     audioResumeAll()
 
     // Capture a distance that OrbitControls will keep during play
-  this.playbackTargetDistance =
+    this.playbackTargetDistance =
     this.controls.target.distanceTo(this.camera.position)
 
     let currentFrame = fromFrame
+    let cycleStartFrame = fromFrame
     let firstFrameInCycle = true
     let cycleStartedAt = performance.now()
     const frameDurationMs = 1000 / timelineFPS
@@ -767,14 +824,20 @@ export class AnimatedScene {
       if (!this.isPlaying) return
       if (currentFrame <= toFrame) {
         const elapsedFrames = Math.floor((now - cycleStartedAt) / frameDurationMs)
-        const targetFrame = Math.min(toFrame, fromFrame + elapsedFrames)
+        const targetFrame = Math.min(toFrame, cycleStartFrame + elapsedFrames)
+        let frameWasTraced = false
 
         while (currentFrame <= targetFrame && this.isPlaying) {
           this.sceneRenderTick = currentFrame
           // jumpToFrameAtIndex() already traced the first visual frame.
           await this.traceCurrentFrame(this.sceneRenderTick, true, firstFrameInCycle)
           firstFrameInCycle = false
+          currentFrame++
+          frameWasTraced = true
+        }
 
+        if (!this.isPlaying) return
+        if (frameWasTraced) {
           // --- Keep controls.target aligned with the animated camera ---
           if (this.playbackTargetDistance != null) {
             const camDir = new THREE.Vector3()
@@ -785,15 +848,16 @@ export class AnimatedScene {
             this.controls.update() // ok to call while disabled; just updates internals
           }
 
+          this.updateRealtimeFrame({ continuesAfterFrame: this.sceneRenderTick === toFrame })
           this.renderCurrentFrame()
-          currentFrame++
           await this.playEffectFunction()
         }
 
         this.animationFrameId = requestAnimationFrame(animate)
       } else {
-        await this.jumpToFrameAtIndex(0)
+        await this.presentFrameAtIndex(0, false, 'realtime')
         currentFrame = 0
+        cycleStartFrame = 0
         firstFrameInCycle = true
         cycleStartedAt = performance.now()
         this.animationFrameId = requestAnimationFrame(animate)
@@ -808,6 +872,24 @@ export class AnimatedScene {
     camera.updateProjectionMatrix()
     camera.updateWorldMatrix(true, false)
     this.renderer.render(this.scene, camera)
+  }
+
+  private prepareExactFrame(): Promise<void> {
+    return this.frameResources.prepareExact(
+      this.sceneRenderTick,
+      ticksToMillis(this.sceneRenderTick)
+    )
+  }
+
+  private updateRealtimeFrame(
+    options: { discontinuity?: boolean; continuesAfterFrame?: boolean } = {}
+  ): void {
+    this.frameResources.updateRealtime({
+      frame: this.sceneRenderTick,
+      timeMs: ticksToMillis(this.sceneRenderTick),
+      discontinuity: options.discontinuity ?? false,
+      continuesAfterFrame: options.continuesAfterFrame ?? false
+    })
   }
 
   private async traceToFrameIndex(index: number, withAudio: boolean) {

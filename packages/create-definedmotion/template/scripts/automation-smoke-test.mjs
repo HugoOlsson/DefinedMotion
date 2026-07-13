@@ -33,11 +33,11 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 53) {
-    throw new Error(`Expected 53 automatically discovered scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 55) {
+    throw new Error(`Expected 55 automatically discovered scenes, received ${scenes.scenes.length}`)
   }
-  if (!scenes.scenes.some((scene) => scene.id === 'fractal-tree-growth' && scene.isDefault)) {
-    throw new Error('Configured default scene was not discoverable')
+  if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
+    throw new Error('Scene discovery did not identify exactly one configured default')
   }
   if (
     !scenes.scenes.some((scene) => scene.id === 'test-camera-waypoints-sequential' && scene.isTest)
@@ -72,6 +72,43 @@ try {
   ])
   if (assetResult.durationInFrames !== 1) {
     throw new Error('Asset reference test did not render its expected one-frame scene')
+  }
+
+  const videoFrameA = join(temporaryDirectory, 'video-frame-a.png')
+  const videoFrameARepeat = join(temporaryDirectory, 'video-frame-a-repeat.png')
+  const videoFrameB = join(temporaryDirectory, 'video-frame-b.png')
+  run([
+    'still',
+    'test-video-plane',
+    '--frame',
+    '60',
+    '--output',
+    videoFrameA,
+    '--no-build'
+  ])
+  run([
+    'still',
+    'test-video-plane',
+    '--frame',
+    '60',
+    '--output',
+    videoFrameARepeat,
+    '--no-build'
+  ])
+  run([
+    'still',
+    'test-video-plane',
+    '--frame',
+    '180',
+    '--output',
+    videoFrameB,
+    '--no-build'
+  ])
+  if (sha256(videoFrameA) !== sha256(videoFrameARepeat)) {
+    throw new Error('Repeated exact video frames were not byte-identical')
+  }
+  if (sha256(videoFrameA) === sha256(videoFrameB)) {
+    throw new Error('Different video timestamps rendered identical frames')
   }
 
   const firstOutput = join(temporaryDirectory, 'first.png')
