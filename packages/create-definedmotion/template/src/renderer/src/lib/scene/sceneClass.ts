@@ -167,6 +167,7 @@ export class AnimatedScene {
 
   private isBuilding = false
   private isRendering = false
+  private presentationOperation?: string
   private doNotPlayAudio = false
   private renderingAudioGather: AudioInScene[] = []
 
@@ -477,7 +478,9 @@ export class AnimatedScene {
   }
 
   jumpToFrameAtIndex(index: number, notSize: boolean = false): Promise<void> {
-    return this.presentFrameAtIndex(index, notSize, 'exact')
+    return this.runPresentationOperation('seek', () =>
+      this.presentFrameAtIndex(index, notSize, 'exact')
+    )
   }
 
   private async presentFrameAtIndex(
@@ -524,7 +527,11 @@ export class AnimatedScene {
    * requested frame. Unlike editor scrubbing, this never uses a hot-reload
    * shortcut and rejects invalid frame numbers instead of wrapping to zero.
    */
-  async seekExact(index: number): Promise<void> {
+  seekExact(index: number): Promise<void> {
+    return this.runPresentationOperation('exact seek', () => this.seekExactFrame(index))
+  }
+
+  private async seekExactFrame(index: number): Promise<void> {
     if (!Number.isInteger(index) || index < 0) {
       throw new SceneRuntimeError(
         'INVALID_FRAME',
@@ -563,7 +570,12 @@ export class AnimatedScene {
     this.camera.updateProjectionMatrix()
   }
 
-  async capturePng(camera: InspectionCamera = this.camera): Promise<Blob> {
+  capturePng(camera: InspectionCamera = this.camera): Promise<Blob> {
+    return this.runPresentationOperation('capture', () => this.captureExactPng(camera))
+  }
+
+  private async captureExactPng(camera: InspectionCamera): Promise<Blob> {
+    await this.prepareExactFrame()
     this.renderCurrentFrame(camera)
     const canvas = this.renderer.domElement
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
@@ -721,91 +733,104 @@ export class AnimatedScene {
     if (this.interactive) this.startControls()
   }
 
-  async render() {
-    this.renderingEventFunction(true)
-    this.isRendering = true
-    this.isPlaying = true
-    this.stopControls()
-    
+  render(): Promise<void> {
+    return this.runPresentationOperation('render', () => this.renderAnimation())
+  }
+
+  private async renderAnimation(): Promise<void> {
     const ro = this.resizeObserver
-    ro?.disconnect()
-
     const renderName = generateID(10)
-
-
     const cpu_free_time = 5
     const div = this.container
     const originalPosition = div.style.position
     const originalTop = div.style.top
     const originalLeft = div.style.left
     const originalZIndex = div.style.zIndex
-    // Set to position absolute
-    div.style.position = 'absolute'
-    div.style.top = '0' // Or whatever values you need
-    div.style.left = '0'
-    div.style.zIndex = '999' // Optional, to ensure it's on top
-    div.style.opacity = '0'
+    const originalOpacity = div.style.opacity
 
-    this.prepareOutputViewport()
+    this.renderingEventFunction(true)
+    this.isRendering = true
+    this.isPlaying = true
 
-    window.scrollTo(0, 0)
-    const startFrame = 0
-    await this.jumpToFrameAtIndex(startFrame, true)
-    for (let i = startFrame; i < this.totalSceneTicks; i++) {
-      this.sceneRenderTick = i
-      //To not trace start frame twice
+    try {
+      this.stopControls()
+      ro?.disconnect()
 
-      await this.traceCurrentFrame(this.sceneRenderTick, true, i === startFrame)
+      div.style.position = 'absolute'
+      div.style.top = '0'
+      div.style.left = '0'
+      div.style.zIndex = '999'
+      div.style.opacity = '0'
 
-      if (this.sceneRenderTick % renderSkip === 0) {
-        await this.prepareExactFrame()
-        this.renderCurrentFrame()
-        await captureCanvasFrame(
-          Math.round(this.sceneRenderTick / renderSkip),
-          renderName,
-          this.renderer
-        )
+      this.prepareOutputViewport()
+      window.scrollTo(0, 0)
+      const startFrame = 0
+      await this.presentFrameAtIndex(startFrame, true, 'exact')
+      for (let i = startFrame; i < this.totalSceneTicks; i++) {
+        this.sceneRenderTick = i
+        //To not trace start frame twice
+
+        await this.traceCurrentFrame(this.sceneRenderTick, true, i === startFrame)
+
+        if (this.sceneRenderTick % renderSkip === 0) {
+          await this.prepareExactFrame()
+          this.renderCurrentFrame()
+          await captureCanvasFrame(
+            Math.round(this.sceneRenderTick / renderSkip),
+            renderName,
+            this.renderer
+          )
+        }
+        await this.playEffectFunction()
+        if (i % 10 === 0) {
+          await sleep(cpu_free_time)
+        }
       }
-      await this.playEffectFunction()
-      if (i % 10 === 0) {
-        await sleep(cpu_free_time)
-      }
+
+      triggerEncoder(this.pixelsWidth, this.pixelsHeight, this.renderingAudioGather)
+
+      this.renderingAudioGather = []
+      this.isRendering = false
+      this.isPlaying = false
+      await this.presentFrameAtIndex(0, false, 'exact')
+      this.renderCurrentFrame()
+    } finally {
+      this.isPlaying = false
+      this.isRendering = false
+      this.renderingAudioGather = []
+      div.style.position = originalPosition
+      div.style.top = originalTop
+      div.style.left = originalLeft
+      div.style.zIndex = originalZIndex
+      div.style.opacity = originalOpacity
+      this.renderer.setPixelRatio(window.devicePixelRatio)
+      this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
+      ro?.observe(this.container)
+      if (this.interactive) this.startControls()
+      this.renderingEventFunction(false)
     }
-
-    triggerEncoder(this.pixelsWidth, this.pixelsHeight, this.renderingAudioGather)
-
-    this.renderingAudioGather = []
-    this.isRendering = false
-
-    div.style.opacity = '1'
-
-    // Restore original positioning
-    div.style.position = originalPosition
-    div.style.top = originalTop
-    div.style.left = originalLeft
-    div.style.zIndex = originalZIndex
-
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
-    ro?.observe(this.container)
-
-    this.isPlaying = false
-    await this.jumpToFrameAtIndex(0)
-    this.renderCurrentFrame()
-
-    
-    if (this.interactive) this.startControls()
-    this.renderingEventFunction(false)
   }
 
   play() {
     this.playSequenceOfAnimation(0, this.totalSceneTicks - 1)
   }
 
-  async playSequenceOfAnimation(fromFrame: number, toFrame: number) {
+  playSequenceOfAnimation(fromFrame: number, toFrame: number): Promise<void> {
+    return this.runPresentationOperation('playback start', () =>
+      this.startPlayback(fromFrame, toFrame)
+    )
+  }
+
+  private async startPlayback(fromFrame: number, toFrame: number): Promise<void> {
     this.isPlaying = true
     this.stopControls()
-    await this.jumpToFrameAtIndex(fromFrame)
+    try {
+      await this.presentFrameAtIndex(fromFrame, false, 'exact')
+    } catch (error) {
+      this.pause()
+      throw error
+    }
+    if (!this.isPlaying) return
 
     // If we were previously paused and had partial offsets captured, this also ensures clean resume:
     audioResumeAll()
@@ -829,7 +854,7 @@ export class AnimatedScene {
 
         while (currentFrame <= targetFrame && this.isPlaying) {
           this.sceneRenderTick = currentFrame
-          // jumpToFrameAtIndex() already traced the first visual frame.
+          // presentFrameAtIndex() already traced the first visual frame.
           await this.traceCurrentFrame(this.sceneRenderTick, true, firstFrameInCycle)
           firstFrameInCycle = false
           currentFrame++
@@ -853,18 +878,36 @@ export class AnimatedScene {
           await this.playEffectFunction()
         }
 
-        this.animationFrameId = requestAnimationFrame(animate)
+        scheduleNextFrame()
       } else {
         await this.presentFrameAtIndex(0, false, 'realtime')
         currentFrame = 0
         cycleStartFrame = 0
         firstFrameInCycle = true
         cycleStartedAt = performance.now()
-        this.animationFrameId = requestAnimationFrame(animate)
+        scheduleNextFrame()
       }
     }
 
-    this.animationFrameId = requestAnimationFrame(animate)
+    const scheduleNextFrame = (): void => {
+      this.animationFrameId = requestAnimationFrame((now) => {
+        if (!this.isPlaying) return
+        this.presentationOperation = 'playback frame'
+        void animate(now)
+          .catch((error) => {
+            this.pause()
+            this.playEffectFunction()
+            console.error('Playback stopped after an error:', error)
+          })
+          .finally(() => {
+            if (this.presentationOperation === 'playback frame') {
+              this.presentationOperation = undefined
+            }
+          })
+      })
+    }
+
+    scheduleNextFrame()
   }
 
   renderCurrentFrame(camera: InspectionCamera = this.camera): void {
@@ -872,6 +915,30 @@ export class AnimatedScene {
     camera.updateProjectionMatrix()
     camera.updateWorldMatrix(true, false)
     this.renderer.render(this.scene, camera)
+  }
+
+  private async runPresentationOperation<T>(
+    name: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    if (this.destroyed) {
+      throw new SceneRuntimeError('SCENE_DESTROYED', 'The scene has been destroyed')
+    }
+    const activeOperation = this.presentationOperation ?? (this.isPlaying ? 'playback' : undefined)
+    if (activeOperation) {
+      throw new SceneRuntimeError(
+        'SCENE_BUSY',
+        `Cannot start ${name} while ${activeOperation} is active`
+      )
+    }
+
+    this.presentationOperation = name
+    try {
+      return await operation()
+    } finally {
+      this.presentationOperation = undefined
+      this.doNotPlayAudio = false
+    }
   }
 
   private prepareExactFrame(): Promise<void> {

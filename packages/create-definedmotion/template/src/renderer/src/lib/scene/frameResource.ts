@@ -75,14 +75,17 @@ export class FrameResourceHost {
 
   finishBuild(successful: boolean): void {
     this.assertUsable()
-    const boundResources = successful
-      ? new Set(this.dependencies.map(({ resource }) => resource))
-      : new Set<FrameResource>()
-    this.suspendResources(
-      [...this.resources.values()]
-        .map(({ value }) => value)
-        .filter((resource) => !boundResources.has(resource))
-    )
+    if (!successful) {
+      this.suspendResources([...this.resources.values()].map(({ value }) => value))
+      return
+    }
+
+    const boundResources = new Set(this.dependencies.map(({ resource }) => resource))
+    for (const [id, { value }] of this.resources) {
+      if (boundResources.has(value)) continue
+      this.resources.delete(id)
+      this.disposeResource(value)
+    }
   }
 
   updateRealtime(context: RealtimeFrameContext): void {
@@ -111,12 +114,15 @@ export class FrameResourceHost {
       signal: preparation.signal
     }
     const dependencies = [...this.dependencies]
+    const preparations = dependencies.map(async (dependency) => dependency.prepareExact(context))
 
     try {
-      await Promise.all(dependencies.map((dependency) => dependency.prepareExact(context)))
+      await Promise.all(preparations)
       if (this.disposed || this.preparation !== preparation) throw abortedPreparation()
       this.preparation = undefined
     } catch (error) {
+      preparation.abort()
+      await Promise.allSettled(preparations)
       if (this.preparation === preparation) {
         this.preparation = undefined
         this.suspendResources(dependencies.map(({ resource }) => resource))
@@ -137,13 +143,7 @@ export class FrameResourceHost {
     const resources = [...this.resources.values()]
     this.resources.clear()
     this.dependencies = []
-    for (const { value } of resources) {
-      try {
-        value.dispose()
-      } catch (error) {
-        console.warn('Frame resource failed while disposing:', error)
-      }
-    }
+    for (const { value } of resources) this.disposeResource(value)
   }
 
   private suspendResources(resources: Iterable<FrameResource>): void {
@@ -153,6 +153,14 @@ export class FrameResourceHost {
       } catch (error) {
         console.warn('Frame resource failed while suspending:', error)
       }
+    }
+  }
+
+  private disposeResource(resource: FrameResource): void {
+    try {
+      resource.dispose()
+    } catch (error) {
+      console.warn('Frame resource failed while disposing:', error)
     }
   }
 

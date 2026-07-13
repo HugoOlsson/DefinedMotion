@@ -99,7 +99,7 @@ try {
     'still',
     'test-video-plane',
     '--frame',
-    '180',
+    '30',
     '--output',
     videoFrameB,
     '--no-build'

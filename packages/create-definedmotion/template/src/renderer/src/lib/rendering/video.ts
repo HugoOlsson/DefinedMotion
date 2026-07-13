@@ -7,7 +7,7 @@ import type {
   FrameResource,
   RealtimeFrameContext
 } from '../scene/frameResource'
-import type { AnimatedScene } from '../scene/sceneClass'
+import { timelineFPS, type AnimatedScene } from '../scene/sceneClass'
 
 export interface VideoPlaneOptions {
   /** Stable identity for the decoder and texture across scene rebuilds. */
@@ -33,7 +33,6 @@ interface VideoFrameState {
   advancing: boolean
   playbackRate: number
   loop: boolean
-  previousElapsed?: number
 }
 
 const MEDIA_TIMEOUT_MS = 10_000
@@ -71,8 +70,7 @@ export function createVideoPlane(
     timeSeconds: initialTime,
     advancing: false,
     playbackRate: 1,
-    loop: false,
-    previousElapsed: undefined
+    loop: false
   }
   const geometry = new THREE.PlaneGeometry(width, height)
   const material = new THREE.MeshBasicMaterial({
@@ -397,18 +395,24 @@ const videoAnimation = (
   const playbackRate = positive(options.playbackRate ?? 1, 'playbackRate')
   const loop = options.loop ?? false
   const sourceDuration = (durationMs / 1000) * playbackRate
+  let previousElapsed: number | undefined
+  let previousTick: number | undefined
 
-  return createAnim(easeLinear(0, sourceDuration, durationMs), (elapsed, _tick, isLast) => {
+  return createAnim(easeLinear(0, sourceDuration, durationMs), (elapsed, tick, isLast) => {
+    const tickDelta = previousTick === undefined ? 0 : tick - previousTick
+    const evaluatedRate =
+      previousElapsed === undefined || tickDelta <= 0
+        ? playbackRate
+        : ((elapsed - previousElapsed) * timelineFPS) / tickDelta
     const time = source.normalizeTime(sourceStart + elapsed, loop)
     state.timeSeconds = time
-    state.playbackRate = playbackRate
+    state.playbackRate = evaluatedRate > 0 ? evaluatedRate : playbackRate
     state.loop = loop
     const movingForward =
-      state.previousElapsed === undefined
-        ? elapsed <= TIME_TOLERANCE_SECONDS
-        : elapsed >= state.previousElapsed - TIME_TOLERANCE_SECONDS
+      previousElapsed === undefined ? elapsed <= TIME_TOLERANCE_SECONDS : evaluatedRate > 0
     state.advancing = !isLast && movingForward
-    state.previousElapsed = elapsed
+    previousElapsed = elapsed
+    previousTick = tick
   })
 }
 

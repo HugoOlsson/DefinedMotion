@@ -32,7 +32,7 @@ export function createVideoPlaneTest(): AnimatedScene {
         tags: ['video', 'primary-subject']
       })
       scene.add(video)
-      scene.addAnims(video.play(11_000))
+      scene.addAnims(video.play(11_000).scaleLength(0.1))
     }
   )
 }

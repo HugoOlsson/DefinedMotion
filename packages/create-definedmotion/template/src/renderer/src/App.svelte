@@ -2,7 +2,7 @@
   import './app.css'
   import { generateID, setStateInScene, updateStateInUrl } from './lib/general/helpers'
   import { onDestroy, onMount } from 'svelte'
-  import { hotreloadNameLookup, renderOutputFps, screenFPS, setGlobalContainerRef, timelineFPS, type AnimatedScene } from './lib/scene/sceneClass'
+  import { hotreloadNameLookup, renderOutputFps, SceneRuntimeError, screenFPS, setGlobalContainerRef, timelineFPS, type AnimatedScene } from './lib/scene/sceneClass'
   import { loadFonts } from './lib/rendering/objects2d'
   import { entryScene, renderSkip } from '../../entry'
   import { callAllDestroyFunctions } from './lib/general/onDestory'
@@ -60,6 +60,17 @@
     return sliderDrain
   }
 
+  function startPlaybackFromCurrent(): void {
+    if (!scene || scene.isPlaying) return
+    isPlayingStateVar = true
+    void scene
+      .playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
+      .catch((error) => {
+        isPlayingStateVar = false
+        console.error('Could not start playback:', error)
+      })
+  }
+
   async function drainSliderChanges(): Promise<void> {
     while (pendingSliderValue !== undefined) {
       const sliderValue = pendingSliderValue
@@ -67,7 +78,16 @@
       if (!scene) continue
       const frame = Math.round((sliderValue / maxSliderValue) * (scene.totalSceneTicks - 1))
       if (frame === scene.sceneRenderTick) continue
-      await scene.jumpToFrameAtIndex(frame)
+      try {
+        await scene.jumpToFrameAtIndex(frame)
+      } catch (error) {
+        if (!(error instanceof SceneRuntimeError) || error.code !== 'SCENE_BUSY' || scene.isPlaying) {
+          throw error
+        }
+        pendingSliderValue ??= sliderValue
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+        continue
+      }
       updateUIImmediate()
     }
   }
@@ -117,20 +137,22 @@ function updateUIImmediate() {
     setGlobalContainerRef(animationWindow)
 
     scene = entryScene()
-    hasInitScene = true
 
     scene.playEffectFunction = () => {
-     maybeUpdateUI();
+      isPlayingStateVar = scene.isPlaying
+      maybeUpdateUI();
     }
     scene.renderingEventFunction = (isStart) => {
       isRendering = isStart
        if (!isStart) {
+         isPlayingStateVar = false
         // render just finished; force UI to reflect the reset frame
         updateUIImmediate()
       }
     }
    
-    setStateInScene(scene)
+    await setStateInScene(scene)
+    hasInitScene = true
     urlUpdaterInterval = setInterval(() => {
       updateStateInUrl(scene.sceneRenderTick)
     }, 500)
@@ -187,6 +209,7 @@ export async function copyToClipboard(text: string): Promise<void> {
  
 
     <button
+    disabled={!hasInitScene || isRendering}
     class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full p-1 hover:bg-black/10 transition"
           onclick={() => {
             if (scene.isPlaying) {
@@ -194,8 +217,7 @@ export async function copyToClipboard(text: string): Promise<void> {
               updateUIImmediate();
               isPlayingStateVar = false
             } else {
-              scene.playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
-              isPlayingStateVar = true
+              startPlaybackFromCurrent()
             }
           }}>{isPlayingStateVar ? 'Pause' : 'Play'}</button
         >
@@ -206,9 +228,12 @@ export async function copyToClipboard(text: string): Promise<void> {
       <p bind:this={timeValueElement} class="font-normal text-[0.7rem] leading-none w-[93px] ">Time:</p>
       </div>
     <button
+    disabled={!hasInitScene || isRendering || isPlayingStateVar}
     class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full  p-1 hover:bg-black/10 transition"
       onclick={() => {
-        scene.render()
+        void scene
+          .render()
+          .catch((error) => console.error('Could not render the scene:', error))
       }}>Render</button
     >
   </div>
@@ -216,6 +241,7 @@ export async function copyToClipboard(text: string): Promise<void> {
     <input
       bind:this={sliderElement}
       type="range"
+      disabled={!hasInitScene || isRendering}
       min="0"
       max={maxSliderValue}
 
@@ -249,8 +275,7 @@ export async function copyToClipboard(text: string): Promise<void> {
         }
         if (wasPlayingBeforeScrub) {
           // resume cleanly from here
-          scene.playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
-          isPlayingStateVar = true
+          startPlaybackFromCurrent()
         }
       }}
     />
