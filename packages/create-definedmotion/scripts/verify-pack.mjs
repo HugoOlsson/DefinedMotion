@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { readFileSync } from 'node:fs'
 
 const packageRoot = new URL('..', import.meta.url)
 const packed = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
@@ -12,6 +13,12 @@ if (packed.status !== 0) throw new Error(packed.stderr || 'npm pack failed')
 
 const result = JSON.parse(packed.stdout)[0]
 const paths = result.files.map((file) => file.path)
+const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+if (manifest.bin?.['create-definedmotion'] !== 'bin/create-definedmotion.js') {
+  throw new Error(
+    'create-definedmotion package must publish the bin/create-definedmotion.js binary'
+  )
+}
 const forbidden = [/(^|\/)node_modules\//, /(^|\/)dist\//, /(^|\/)out\//, /(^|\/)\.definedmotion\//]
 for (const file of paths) {
   if (forbidden.some((pattern) => pattern.test(file))) {

@@ -6,11 +6,11 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/HugoOlsson/DefinedMotion"
+    "url": "git+https://github.com/HugoOlsson/DefinedMotion.git"
   },
   "type": "module",
   "bin": {
-    "create-definedmotion": "./bin/create-definedmotion.js"
+    "create-definedmotion": "bin/create-definedmotion.js"
   },
   "files": [
     "bin",
