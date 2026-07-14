@@ -22,6 +22,7 @@ const isAutomation = Boolean(automationRequestRaw && automationResultPath)
 const persistentRuntimeConfig = getPersistentRuntimeConfig()
 const isPersistentRuntime = Boolean(persistentRuntimeConfig)
 const isRuntimeMode = isAutomation || isPersistentRuntime
+const isDevelopmentSmoke = process.env['DEFINEDMOTION_DEV_SMOKE'] === '1'
 
 let automationRequest: AutomationRequest | undefined
 if (automationRequestRaw) {
@@ -110,6 +111,28 @@ function createWindow(): void {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  if (isDevelopmentSmoke) {
+    mainWindow.webContents.on('console-message', (_event, level, message) => {
+      console.log(`[DefinedMotion renderer ${level}] ${message}`)
+    })
+    mainWindow.webContents.on('did-finish-load', () => {
+      const deadline = Date.now() + 10_000
+      const reportWhenMounted = (): void => {
+        void mainWindow.webContents
+          .executeJavaScript("Boolean(document.querySelector('#app')?.childElementCount)")
+          .then((mounted: boolean) => {
+            if (mounted) console.log('DEFINEDMOTION_RENDERER_READY')
+            else if (Date.now() >= deadline) console.log('DEFINEDMOTION_RENDERER_EMPTY')
+            else setTimeout(reportWhenMounted, 250)
+          })
+          .catch((error: unknown) => {
+            console.error('DEFINEDMOTION_RENDERER_CHECK_FAILED', error)
+          })
+      }
+      reportWhenMounted()
+    })
+  }
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.

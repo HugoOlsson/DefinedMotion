@@ -267,6 +267,16 @@ const definedMotionPublicImports = [
   'definedmotion/reference'
 ]
 
+const nestedCommonJsImports = [
+  'three.meshline',
+  'mathjax-full/js/mathjax',
+  'mathjax-full/js/input/tex',
+  'mathjax-full/js/input/tex/AllPackages.js',
+  'mathjax-full/js/output/svg',
+  'mathjax-full/js/adaptors/liteAdaptor',
+  'mathjax-full/js/handlers/html'
+].map((dependency) => `definedmotion > ${dependency}`)
+
 export default defineConfig({
   main: {
     build: {
@@ -328,6 +338,9 @@ export default defineConfig({
     // These ESM entry points resolve to framework source that requires this config's virtual
     // modules and GLSL plugin. An installed npm package lives under node_modules, so Vite would
     // otherwise try to prebundle it before those transforms are available.
-    optimizeDeps: { exclude: ['electron', ...definedMotionPublicImports] }
+    optimizeDeps: {
+      exclude: ['electron', ...definedMotionPublicImports],
+      include: nestedCommonJsImports
+    }
   }
 })

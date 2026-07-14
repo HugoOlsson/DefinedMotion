@@ -58,19 +58,17 @@ const processTree = (pid) => {
 const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPromise) => {
   const child = spawn('npm', ['run', 'dev'], {
     cwd,
-    env: npmEnvironment,
+    env: { ...npmEnvironment, DEFINEDMOTION_DEV_SMOKE: '1' },
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let output = ''
   let settled = false
-  let readinessTimer
   let timeout
 
   const finish = (error) => {
     if (settled) return
     settled = true
     if (timeout) clearTimeout(timeout)
-    if (readinessTimer) clearTimeout(readinessTimer)
     if (child.pid === undefined) {
       if (error) rejectPromise(error)
       else resolvePromise()
@@ -100,14 +98,15 @@ const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPro
       output.includes('error while updating dependencies') ||
       output.includes('No loader is configured for ".glsl"') ||
       output.includes('Could not resolve "virtual:definedmotion-config"') ||
-      output.includes('Top-level await is not available')
+      output.includes('Top-level await is not available') ||
+      output.includes('does not provide an export named') ||
+      output.includes('DEFINEDMOTION_RENDERER_EMPTY') ||
+      output.includes('DEFINEDMOTION_RENDERER_CHECK_FAILED')
     ) {
       finish(new Error(`Packed consumer development startup failed\n${output}`))
       return
     }
-    if (!readinessTimer && output.includes('All render cache have been deleted.')) {
-      readinessTimer = setTimeout(() => finish(), 8_000)
-    }
+    if (output.includes('DEFINEDMOTION_RENDERER_READY')) finish()
   }
   child.stdout.on('data', inspect)
   child.stderr.on('data', inspect)
