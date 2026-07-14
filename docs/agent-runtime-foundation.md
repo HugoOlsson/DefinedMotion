@@ -19,8 +19,8 @@ renderer. Automation must not reimplement scene execution.
   files are written by the main process.
 - `AnimatedScene.asset()` creates validated lazy references below `src/assets`.
   A standard Electron protocol streams selected assets in Studio and automation,
-  including MIME types and byte ranges, while packaged projects copy the same
-  asset tree to their resources directory.
+  including MIME types and byte ranges. Separate project, package, and reference
+  namespaces resolve consumer media, framework-owned built-ins, and reference-corpus media.
 - `AnimatedScene.expose()` gives selected Three.js objects stable semantic IDs.
   The scene-owned registry is rebuilt with the scene and performs no geometry
   work until an inspection request.
@@ -274,9 +274,9 @@ and exact source revision.
 
 ## Next layers
 
-The foundation intentionally precedes AI-specific protocols. Planned clients
-and capabilities can build on the same runtime:
+The runtime, CLI, reference corpus, and generated consumer projects now have separate package
+boundaries. Additional clients and capabilities can build on that foundation without duplicating
+scene execution:
 
 1. Validation, debug overlays, and object-ID renders.
-2. Extracted versioned runtime/CLI packages for upgrading generated projects.
-3. An agent skill and, if useful, a thin MCP wrapper.
+2. An agent skill and, if useful, a thin MCP wrapper.

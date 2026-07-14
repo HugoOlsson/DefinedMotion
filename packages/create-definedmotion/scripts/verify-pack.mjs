@@ -19,7 +19,10 @@ for (const file of paths) {
   }
 }
 for (const required of [
+  'README.md',
   'bin/create-definedmotion.js',
+  'template/AGENTS.md',
+  'template/README.md',
   'template/package.json',
   'template/definedmotion.config.ts',
   'template/src/scenes/my-first-scene.scene.ts'

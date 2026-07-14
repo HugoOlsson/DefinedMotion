@@ -74,7 +74,11 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 
 
 ## Look at example scenes
-DefinedMotion includes **17 example scenes** and **39 executable visual tests** to help people and agents learn the exact installed API. They are versioned with the runtime under `node_modules/definedmotion/reference`; start with `reference/INDEX.md` and `reference/agent-workflow.md`.
+DefinedMotion ships a curated set of example scenes and executable visual tests so people and
+agents can learn the exact installed API even when the library is new to them. The corpus is
+versioned with the runtime under `node_modules/definedmotion/reference`. In this repository, browse
+the [reference index](packages/definedmotion/reference/INDEX.md) and
+[agent workflow](packages/definedmotion/reference/agent-workflow.md).
 
 
 ### Create Scene 
@@ -153,11 +157,13 @@ Place scene modules under `src/scenes` and name them `*.scene.ts`. DefinedMotion
 ## Project Setup
  
 1. Run `npx create-definedmotion project_name`
-2. Run the animation viewer with `npm run dev`
-3. Add a default-exported `*.scene.ts` module in `src/scenes`
-4. Select its ID as `defaultScene` in `definedmotion.config.ts`
-5. Update the framework later with `npm install definedmotion@latest`; your scenes and assets remain in the project.
-6. When you want to render your animation, click "Render". Final videos are written to `renders/`;
+2. Enter the project with `cd project_name`
+3. Install dependencies with `npm install`
+4. Run the Studio with `npm run dev`
+5. Add a default-exported `*.scene.ts` module in `src/scenes`
+6. Select its ID as `defaultScene` in `definedmotion.config.ts`
+7. Update the framework later with `npm install definedmotion@latest`; your scenes and assets remain in the project.
+8. When you want to render your animation, click "Render". Final videos are written to `renders/`;
    temporary frames and audio stay under `.definedmotion/cache/`. You will need ffmpeg available
    in your system PATH.
 
@@ -283,9 +289,12 @@ without needing a restart.
 
 The animation timeline FPS, deterministic random seed, and default scene live in `definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
 
-Project media is referenced lazily through `scene.asset('path/inside/src/assets')`. Listing scenes therefore loads scene code and metadata, but does not read or bundle every scene's videos, models, HDRIs, audio, or data files.
+Project media is referenced lazily through paths relative to `src/assets`, for example
+`scene.asset('videos/demo.mp4')`. Listing scenes therefore loads scene code and metadata, but does
+not read or bundle every scene's videos, models, HDRIs, audio, or data files.
 
-See [`docs/agent-runtime-foundation.md`](docs/agent-runtime-foundation.md) for the runtime boundaries, result contract, and planned inspection layers.
+See [`docs/agent-runtime-foundation.md`](docs/agent-runtime-foundation.md) for the runtime boundaries
+and result contract.
 
 
 ## The DefinedMotion Scheduler
@@ -898,6 +907,12 @@ The same URLs work in Studio and hidden CLI rendering. The Electron asset protoc
 
 Do not statically import project media or load it at module scope. Scene modules are discovered eagerly, so module-scope work would run during `dm scenes`; `scene.asset()` keeps discovery cheap while only the selected scene consumes its resources.
 
+Reference scenes use `referenceAsset()` from `definedmotion/assets` for media shipped under
+`node_modules/definedmotion/reference/assets`. When adapting an example, either keep that
+versioned sample reference or copy the media into your project's `src/assets` and replace it with
+`scene.asset()`. `packageAsset()` addresses framework-owned built-ins such as fonts and HDRIs;
+normal project scenes should prefer `scene.asset()` for their own files.
+
 ## Public imports
 
 Scene code uses stable package entry points. Internal Studio paths are not part of the public API.
@@ -1118,3 +1133,6 @@ The framework lives in `packages/definedmotion`, the small generator lives in
 `packages/create-definedmotion`, and `playground` is a private consumer project. See
 [`docs/package-architecture.md`](docs/package-architecture.md) for the publication boundary and
 reference-corpus rules.
+
+From the repository root, use `npm run typecheck`, `npm run build`, `npm run pack:check`, and
+`npm run test:package` to verify framework and package-boundary changes.

@@ -96,7 +96,7 @@ The render and inspection commands support these execution flags:
 | `--json`            | Emit the complete JSON result.                                                                                                                                                                                   |
 | `--standalone`      | Ignore any running session; build and launch an isolated hidden Electron process.                                                                                                                                |
 | `--require-session` | Fail with `SESSION_NOT_RUNNING` instead of falling back when no compatible session exists. Cannot be combined with `--standalone`.                                                                               |
-| `--no-build`        | When using the standalone path, skip the Electron/Vite build and use existing `out` files. Unsafe after source changes. A running session already uses Vite source freshness, so this flag is unnecessary there. |
+| `--no-build`        | When using the standalone path, skip the Electron/Vite build and use existing `.definedmotion/build` files. Unsafe after source changes. A running session already uses Vite source freshness, so this flag is unnecessary there. |
 
 Without `--standalone` or `--require-session`, a command uses a compatible running session when available and otherwise falls back to a standalone build and process.
 
@@ -462,6 +462,12 @@ Paths are relative to `src/assets`, use forward slashes, and cannot be absolute 
 
 Create references inside the selected scene’s build path. Avoid importing videos, models, HDRIs, audio, or datasets at module scope; catalogue discovery imports scene code but should not load every scene’s media.
 
+Published examples and visual tests may import `referenceAsset()` from `definedmotion/assets` for
+files below the installed package's `reference/assets`. A project scene can keep that reference
+when intentionally reusing a bundled sample. For project-owned media, copy the file into
+`src/assets` and use `scene.asset()` instead. `packageAsset()` is reserved for framework-owned
+built-ins below the package's top-level `assets` directory.
+
 ## Source freshness and session behavior
 
 The CLI hashes the complete `src` tree for every session request. Vite watches additions, edits, and removals. The runtime executes only when its renderer reports the requested revision ready.
@@ -530,9 +536,12 @@ Before handing off a change:
 
 - Review the full timeline and important transitions.
 - Confirm exposed state and camera containment where relevant.
-- Run `npm run typecheck`.
-- Run `npm run test:automation` for agent-interface, scene-discovery, asset, inspection, or camera changes.
-- Run `npm run test:runtime-session` for persistent-runtime and freshness changes.
+- In a generated or consumer project, run `npm run build`.
+- When changing the DefinedMotion framework, run `npm run typecheck` from the repository root.
+- For framework agent-interface, scene-discovery, asset, inspection, or camera changes, run
+  `npm run test:automation --workspace definedmotion` from the repository root.
+- For framework persistent-runtime and freshness changes, run
+  `npm run test:runtime-session --workspace definedmotion` from the repository root.
 - Keep generated images under `.definedmotion/`; do not commit them.
 - Stop sessions started for the task.
 

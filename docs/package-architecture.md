@@ -36,6 +36,10 @@ rejects imports of private renderer or project paths.
 The generated project's `AGENTS.md` directs coding agents to the installed, version-matched
 `node_modules/definedmotion/reference/INDEX.md` and `agent-workflow.md`.
 
+Reference examples and tests are registered as scenes by default, directly from the installed
+package. They are not copied into a consumer's `src/scenes`, so updating `definedmotion` updates the
+runtime and its teaching corpus without touching user files.
+
 ## Public API boundary
 
 Consumer and reference scenes import only from:
@@ -47,6 +51,9 @@ Consumer and reference scenes import only from:
 - `definedmotion/math`
 - `definedmotion/media`
 - `definedmotion/rendering`
+
+`definedmotion/reference` exposes reference-corpus metadata. It does not expose implementation
+internals or replace the published files under `reference/`.
 
 Studio internals remain available inside the package implementation but are not exported as a
 consumer contract.
@@ -66,9 +73,9 @@ Reference tests and assets use one category level. Generic wrappers such as `for
 
 ## Consumer-generated files
 
-Temporary frame and audio data live below `.definedmotion/cache/` in the consuming project. Final
-video files are written to its top-level `renders/` directory. Neither location is part of the
-installed package, and both are ignored by Git.
+Build output, runtime state, and temporary frame and audio data live below `.definedmotion/` in the
+consuming project. Final video files are written to its top-level `renders/` directory. Neither
+location is part of the installed package, and both are ignored by Git.
 
 ## Packaging checks
 
@@ -76,3 +83,6 @@ Both packages use positive `files` allowlists. `npm run pack:check` inspects the
 forbidden generated directories and size regressions. `npm run test:package` installs the packed
 framework into a temporary generated project, builds it, discovers packaged and project scenes,
 reinstalls the dependency, and verifies that the user's scene was unchanged.
+
+Run both commands from the repository root. Framework type checks and production builds are
+available there as `npm run typecheck` and `npm run build`.

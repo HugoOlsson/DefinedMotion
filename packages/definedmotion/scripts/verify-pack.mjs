@@ -26,10 +26,13 @@ for (const file of paths) {
 }
 
 for (const required of [
+  'AGENTS.md',
+  'README.md',
   'cli/index.mjs',
   'src/public/index.ts',
   'assets/fonts/Montserrat-Medium.woff',
   'reference/INDEX.md',
+  'reference/agent-workflow.md',
   'reference/catalog.json',
   'reference/examples/tutorials/easy1.scene.ts',
   'reference/tests/video/test_video_plane.scene.ts'

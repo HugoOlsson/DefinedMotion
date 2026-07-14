@@ -1,7 +1,5 @@
 node_modules
 .definedmotion
-dist
-out
 renders
 .DS_Store
 *.log*

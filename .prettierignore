@@ -1,5 +1,6 @@
-out
-dist
+node_modules
+**/.definedmotion
+**/renders
 pnpm-lock.yaml
 LICENSE.md
 tsconfig.json

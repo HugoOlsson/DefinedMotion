@@ -8,3 +8,6 @@ and runtime state under `.definedmotion/`.
 
 The installed version-specific examples, tests, and agent workflow live under
 `node_modules/definedmotion/reference`.
+
+Update the framework and its matching reference corpus with `npm install definedmotion@latest`.
+This does not replace `definedmotion.config.ts`, `src/scenes`, or `src/assets`.
