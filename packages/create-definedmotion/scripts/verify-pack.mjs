@@ -23,6 +23,7 @@ const forbidden = [
   /(^|\/)node_modules\//,
   /(^|\/)dist\//,
   /(^|\/)out\//,
+  /(^|\/)\.DS_Store$/,
   /(^|\/)\.definedmotion\//,
   /(^|\/)(renders|rendered_videos|image_renders|audio_renders)\//
 ]

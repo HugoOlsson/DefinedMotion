@@ -152,12 +152,6 @@
       "source": "tests/environment/test_hdri_performance.scene.ts"
     },
     {
-      "id": "test-iphone-screen-recording",
-      "name": "iPhone Screen Recording",
-      "kind": "test",
-      "source": "tests/video/iphone-screen-recording.scene.ts"
-    },
-    {
       "id": "test-latex-blue-particle-transition",
       "name": "LaTeX Blue Particle Transition",
       "kind": "test",
@@ -218,12 +212,6 @@
       "source": "tests/audio/test_many_short_sounds.scene.ts"
     },
     {
-      "id": "test-many-video-planes",
-      "name": "Many Timeline Video Planes",
-      "kind": "test",
-      "source": "tests/video/test_many_video_planes.scene.ts"
-    },
-    {
       "id": "test-material-on-latex",
       "name": "Material On LaTeX",
       "kind": "test",
@@ -264,12 +252,6 @@
       "name": "Updater1",
       "kind": "test",
       "source": "tests/animation/test_updater.scene.ts"
-    },
-    {
-      "id": "test-video-plane",
-      "name": "Timeline Video Plane",
-      "kind": "test",
-      "source": "tests/video/test_video_plane.scene.ts"
     },
     {
       "id": "test-with-environment-latex-particle-transition",

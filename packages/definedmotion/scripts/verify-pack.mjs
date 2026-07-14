@@ -21,6 +21,7 @@ const forbidden = [
   /(^|\/)dist\//,
   /(^|\/)out\//,
   /^scripts\//,
+  /(^|\/)\.DS_Store$/,
   /(^|\/)\.definedmotion\//,
   /(^|\/)(renders|rendered_videos|image_renders|audio_renders)\//
 ]
@@ -40,7 +41,7 @@ for (const required of [
   'reference/agent-workflow.md',
   'reference/catalog.json',
   'reference/examples/tutorials/easy1.scene.ts',
-  'reference/tests/video/test_video_plane.scene.ts'
+  'reference/tests/assets/test_asset_references.scene.ts'
 ]) {
   if (!paths.includes(required)) throw new Error(`Required package file is missing: ${required}`)
 }

@@ -70,7 +70,7 @@ try {
     'node_modules/definedmotion/reference/INDEX.md',
     'node_modules/definedmotion/reference/catalog.json',
     'node_modules/definedmotion/reference/examples/tutorials/easy1.scene.ts',
-    'node_modules/definedmotion/reference/tests/video/test_video_plane.scene.ts'
+    'node_modules/definedmotion/reference/tests/assets/test_asset_references.scene.ts'
   ]) {
     if (!existsSync(join(consumerRoot, required))) {
       throw new Error(`Packed consumer is missing ${required}`)
@@ -98,7 +98,7 @@ try {
   const jsonStart = scenesOutput.indexOf('{')
   const result = JSON.parse(scenesOutput.slice(jsonStart))
   const ids = new Set(result.scenes.map((scene) => scene.id))
-  for (const id of ['my-first-scene', 'tutorial-easy-1', 'test-video-plane']) {
+  for (const id of ['my-first-scene', 'tutorial-easy-1', 'test-asset-references']) {
     if (!ids.has(id)) throw new Error(`Packed consumer did not discover ${id}`)
   }
 

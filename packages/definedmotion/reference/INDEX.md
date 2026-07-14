@@ -31,7 +31,6 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-deferred-anims-2 | test | Deferred Anims2 | `tests/deferred/testing_deferredAnims2.scene.ts` |
 | test-fly-minimal-two-poses | test | Fly Minimal Two Poses | `tests/camera/test_fly_camera_waypoints_verifiable.scene.ts` |
 | test-hdri-performance | test | HDRI Performance | `tests/environment/test_hdri_performance.scene.ts` |
-| test-iphone-screen-recording | test | iPhone Screen Recording | `tests/video/iphone-screen-recording.scene.ts` |
 | test-latex-blue-particle-transition | test | LaTeX Blue Particle Transition | `tests/latex/test_latex_blue_particle_transition.scene.ts` |
 | test-latex-highlight-animation | test | LaTeX Highlight Animation | `tests/latex/test_latex_highlight_animation.scene.ts` |
 | test-latex-mark-animation | test | LaTeX Mark Animation | `tests/latex/test_latex_mark_animation.scene.ts` |
@@ -42,7 +41,6 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-latex-to-svg | test | LaTeX To SVG | `tests/svg/test_latex_to_svg.scene.ts` |
 | test-long-audio | test | Long Audio | `tests/audio/test_long_audio.scene.ts` |
 | test-many-short-sounds | test | Many Short Sounds | `tests/audio/test_many_short_sounds.scene.ts` |
-| test-many-video-planes | test | Many Timeline Video Planes | `tests/video/test_many_video_planes.scene.ts` |
 | test-material-on-latex | test | Material On LaTeX | `tests/svg/test_material_on_latex.scene.ts` |
 | test-regular-text-latex | test | Regular Text LaTeX | `tests/svg/test_regular_text_latex.scene.ts` |
 | test-scene-inspection | test | Scene Inspection | `tests/inspection/test_scene_inspection.scene.ts` |
@@ -50,7 +48,6 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-transition-svgs | test | Transition Svgs | `tests/svg/test_transition_svgs.scene.ts` |
 | test-update-svg-object | test | Update SVG Object | `tests/svg/test_update_svg_object.scene.ts` |
 | test-updater-1 | test | Updater1 | `tests/animation/test_updater.scene.ts` |
-| test-video-plane | test | Timeline Video Plane | `tests/video/test_video_plane.scene.ts` |
 | test-with-environment-latex-particle-transition | test | With Environment LaTeX Particle Transition | `tests/latex/test_with_environment_latex_particle_transition.scene.ts` |
 | test-write-latex-animation | test | Write LaTeX Animation | `tests/latex/test_write_latex_animation.scene.ts` |
 | test-write-latex-animation-2 | test | Write LaTeX Animation 2 | `tests/latex/test_write_latex_animation_2.scene.ts` |

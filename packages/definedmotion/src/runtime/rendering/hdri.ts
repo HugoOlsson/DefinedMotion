@@ -20,11 +20,7 @@ import frag_blur_hdri from '../shaders/hdri_blur/frag.glsl?raw';
 
 export const HDRIs = Object.freeze({
   photoStudio1: packageAsset('hdri/photo-studio1.hdr'),
-  photoStudio2: packageAsset('hdri/photo-studio2.hdr'),
-  photoStudio3: packageAsset('hdri/photo-studio3.hdr'),
-  outdoor1: packageAsset('hdri/outdoor1.hdr'),
-  indoor1: packageAsset('hdri/indoor1.hdr'),
-  metro1: packageAsset('hdri/metro1.hdr')
+  outdoor1: packageAsset('hdri/outdoor1.hdr')
 })
 
 /**
