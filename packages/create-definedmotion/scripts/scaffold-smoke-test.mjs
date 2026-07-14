@@ -21,6 +21,15 @@ try {
   }
   const packageJson = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8'))
   if (packageJson.name !== 'smoke-project') throw new Error('Scaffold package name was not updated')
+  if (packageJson.scripts?.typecheck !== 'tsc --noEmit') {
+    throw new Error('Scaffold is missing its TypeScript validation command')
+  }
+  if (packageJson.devDependencies?.['@types/three'] !== '^0.175.0') {
+    throw new Error('Scaffold is missing declarations matching its Three.js dependency')
+  }
+  if (!packageJson.devDependencies?.typescript) {
+    throw new Error('Scaffold is missing a project-local TypeScript compiler')
+  }
   if (existsSync(join(project, 'src', 'renderer'))) throw new Error('Scaffold contains framework source')
   process.stdout.write('Thin project scaffold verified\n')
 } finally {

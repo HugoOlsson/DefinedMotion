@@ -10,7 +10,7 @@ import {
 } from '../assets'
 
 // Helper function to load an MTL file using a Promise
-function loadMTL(mtlPath, mtlFile) {
+function loadMTL(mtlPath: string, mtlFile: string): Promise<MTLLoader.MaterialCreator> {
   return new Promise((resolve, reject) => {
     const mtlLoader = new MTLLoader()
     mtlLoader.setPath(mtlPath)
@@ -29,7 +29,11 @@ function loadMTL(mtlPath, mtlFile) {
 }
 
 // Helper function to load an OBJ file using a Promise
-function loadOBJ(objPath, objFile, materials) {
+function loadOBJ(
+  objPath: string,
+  objFile: string,
+  materials: MTLLoader.MaterialCreator
+): Promise<THREE.Group> {
   return new Promise((resolve, reject) => {
     const objLoader = new OBJLoader()
     if (materials) {
@@ -134,7 +138,7 @@ export async function loadGLB(
     })
 
     gltf.scene.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
+      if (child instanceof THREE.Mesh) {
         child.castShadow = true
         child.receiveShadow = true
 

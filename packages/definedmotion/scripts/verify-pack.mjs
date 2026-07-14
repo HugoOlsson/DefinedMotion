@@ -36,6 +36,8 @@ for (const required of [
   'README.md',
   'cli/index.mjs',
   'src/public/index.ts',
+  'types/public/index.d.ts',
+  'types/public/rendering.d.ts',
   'assets/fonts/Montserrat-Medium.woff',
   'reference/INDEX.md',
   'reference/agent-workflow.md',

@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.web.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "types",
+    "rootDir": "src",
+    "sourceMap": false
+  },
+  "include": [
+    "src/public/**/*.ts",
+    "src/virtual-modules.d.ts",
+    "src/preload/index.d.ts",
+    "src/renderer/env.d.ts"
+  ]
+}

@@ -59,10 +59,10 @@ export const defineConfig = (config: DefinedMotionConfig): DefinedMotionConfig =
   return config
 }
 
-const validateSceneDefinition = (
+const validateSceneDefinition: (
   definition: unknown,
   source: string
-): asserts definition is DefinedMotionSceneDefinition => {
+) => asserts definition is DefinedMotionSceneDefinition = (definition, source) => {
   if (!definition || typeof definition !== 'object') {
     throw new Error(`Invalid scene module ${source}: default export must use defineScene()`)
   }

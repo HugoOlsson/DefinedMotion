@@ -1,6 +1,6 @@
 {
   "name": "definedmotion",
-  "version": "0.4.0-alpha.4",
+  "version": "0.4.0-alpha.5",
   "description": "Programmatic 2D and 3D animation runtime, Studio, and agent reference",
   "author": "Hugo Olsson",
   "license": "Apache-2.0",
@@ -12,16 +12,40 @@
   "bin": {
     "definedmotion": "cli/index.mjs"
   },
-  "types": "./src/public/index.ts",
+  "types": "./types/public/index.d.ts",
   "exports": {
-    ".": "./src/public/index.ts",
-    "./animation": "./src/public/animation.ts",
-    "./assets": "./src/public/assets.ts",
-    "./latex": "./src/public/latex.ts",
-    "./math": "./src/public/math.ts",
-    "./media": "./src/public/media.ts",
-    "./rendering": "./src/public/rendering.ts",
-    "./reference": "./src/public/reference.ts",
+    ".": {
+      "types": "./types/public/index.d.ts",
+      "default": "./src/public/index.ts"
+    },
+    "./animation": {
+      "types": "./types/public/animation.d.ts",
+      "default": "./src/public/animation.ts"
+    },
+    "./assets": {
+      "types": "./types/public/assets.d.ts",
+      "default": "./src/public/assets.ts"
+    },
+    "./latex": {
+      "types": "./types/public/latex.d.ts",
+      "default": "./src/public/latex.ts"
+    },
+    "./math": {
+      "types": "./types/public/math.d.ts",
+      "default": "./src/public/math.ts"
+    },
+    "./media": {
+      "types": "./types/public/media.d.ts",
+      "default": "./src/public/media.ts"
+    },
+    "./rendering": {
+      "types": "./types/public/rendering.d.ts",
+      "default": "./src/public/rendering.ts"
+    },
+    "./reference": {
+      "types": "./types/public/reference.d.ts",
+      "default": "./src/public/reference.ts"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -29,6 +53,7 @@
     "cli",
     "resources",
     "src",
+    "types",
     "reference",
     "!reference/**/.DS_Store",
     "AGENTS.md",
@@ -45,10 +70,11 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",
-    "pack:check": "node ./scripts/verify-pack.mjs",
+    "types:generate": "node ./scripts/generate-types.mjs",
+    "pack:check": "npm run types:generate && node ./scripts/verify-pack.mjs",
     "reference:generate": "node ./scripts/generate-reference.mjs",
     "reference:verify": "node ./scripts/verify-reference.mjs",
-    "prepack": "npm run reference:generate && npm run reference:verify",
+    "prepack": "npm run reference:generate && npm run reference:verify && npm run types:generate",
     "test:automation": "node ./scripts/automation-smoke-test.mjs",
     "test:runtime-session": "node ./scripts/runtime-session-smoke-test.mjs"
   },

@@ -143,12 +143,14 @@ try {
   writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`)
 
   run('npm', ['install', '--prefer-offline'], { cwd: consumerRoot })
+  run('npm', ['run', 'typecheck'], { cwd: consumerRoot })
 
   for (const required of [
     'node_modules/definedmotion/cli/index.mjs',
     'node_modules/definedmotion/assets/fonts/Montserrat-Medium.woff',
     'node_modules/definedmotion/reference/INDEX.md',
     'node_modules/definedmotion/reference/catalog.json',
+    'node_modules/definedmotion/types/public/index.d.ts',
     'node_modules/definedmotion/reference/examples/tutorials/easy1.scene.ts',
     'node_modules/definedmotion/reference/tests/assets/test_asset_references.scene.ts'
   ]) {
