@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { COLORS } from './helpers'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
-import { FontLoader, LineGeometry, LineMaterial, ThreeMFLoader } from 'three/examples/jsm/Addons.js'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import fontJSON from '../fonts/montserrat.json'
 import { createAssetReference } from '../assets'
 

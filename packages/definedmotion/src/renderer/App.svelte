@@ -40,7 +40,7 @@
 
   const animationWindowID = generateID()
 
-  let scene: AnimatedScene
+  let scene = $state<AnimatedScene>()
   let hasInitScene = $state(false)
 
   let isPlayingStateVar = $state(false)

@@ -19,7 +19,13 @@ if (manifest.bin?.['create-definedmotion'] !== 'bin/create-definedmotion.js') {
     'create-definedmotion package must publish the bin/create-definedmotion.js binary'
   )
 }
-const forbidden = [/(^|\/)node_modules\//, /(^|\/)dist\//, /(^|\/)out\//, /(^|\/)\.definedmotion\//]
+const forbidden = [
+  /(^|\/)node_modules\//,
+  /(^|\/)dist\//,
+  /(^|\/)out\//,
+  /(^|\/)\.definedmotion\//,
+  /(^|\/)(renders|rendered_videos|image_renders|audio_renders)\//
+]
 for (const file of paths) {
   if (forbidden.some((pattern) => pattern.test(file))) {
     throw new Error(`Forbidden path in create-definedmotion package: ${file}`)
