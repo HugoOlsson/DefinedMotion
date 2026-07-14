@@ -256,6 +256,17 @@ const persistentRuntimePlugins = process.env['DEFINEDMOTION_SESSION_TOKEN']
   ? [persistentRuntimeReloadPlugin()]
   : []
 
+const definedMotionPublicImports = [
+  'definedmotion',
+  'definedmotion/animation',
+  'definedmotion/assets',
+  'definedmotion/latex',
+  'definedmotion/math',
+  'definedmotion/media',
+  'definedmotion/rendering',
+  'definedmotion/reference'
+]
+
 export default defineConfig({
   main: {
     build: {
@@ -314,6 +325,9 @@ export default defineConfig({
       fs: { allow: [packageRoot, projectRoot] },
       watch: { ignored: [] }
     },
-    optimizeDeps: { exclude: ['electron'] }
+    // These ESM entry points resolve to framework source that requires this config's virtual
+    // modules and GLSL plugin. An installed npm package lives under node_modules, so Vite would
+    // otherwise try to prebundle it before those transforms are available.
+    optimizeDeps: { exclude: ['electron', ...definedMotionPublicImports] }
   }
 })

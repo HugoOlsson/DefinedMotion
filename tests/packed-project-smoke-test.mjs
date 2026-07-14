@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
   existsSync,
@@ -43,6 +43,87 @@ const run = (command, args, options = {}) => {
 }
 
 const hashFile = (file) => createHash('sha256').update(readFileSync(file)).digest('hex')
+
+const processTree = (pid) => {
+  if (process.platform === 'win32') return [pid]
+  const result = spawnSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' })
+  const children = (result.stdout ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(Number)
+    .filter(Number.isInteger)
+  return [pid, ...children.flatMap(processTree)]
+}
+
+const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPromise) => {
+  const child = spawn('npm', ['run', 'dev'], {
+    cwd,
+    env: npmEnvironment,
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
+  let output = ''
+  let settled = false
+  let readinessTimer
+  let timeout
+
+  const finish = (error) => {
+    if (settled) return
+    settled = true
+    if (timeout) clearTimeout(timeout)
+    if (readinessTimer) clearTimeout(readinessTimer)
+    if (child.pid === undefined) {
+      if (error) rejectPromise(error)
+      else resolvePromise()
+      return
+    }
+    if (process.platform === 'win32') {
+      spawnSync('taskkill', ['/pid', String(child.pid), '/t', '/f'])
+      if (error) rejectPromise(error)
+      else resolvePromise()
+      return
+    }
+    const pids = processTree(child.pid).reverse()
+    for (const pid of pids) {
+      try { process.kill(pid, 'SIGTERM') } catch { /* Process already stopped. */ }
+    }
+    setTimeout(() => {
+      for (const pid of pids) {
+        try { process.kill(pid, 'SIGKILL') } catch { /* Process already stopped. */ }
+      }
+      if (error) rejectPromise(error)
+      else resolvePromise()
+    }, 500)
+  }
+  const inspect = (chunk) => {
+    output += chunk.toString()
+    if (
+      output.includes('error while updating dependencies') ||
+      output.includes('No loader is configured for ".glsl"') ||
+      output.includes('Could not resolve "virtual:definedmotion-config"') ||
+      output.includes('Top-level await is not available')
+    ) {
+      finish(new Error(`Packed consumer development startup failed\n${output}`))
+      return
+    }
+    if (!readinessTimer && output.includes('All render cache have been deleted.')) {
+      readinessTimer = setTimeout(() => finish(), 8_000)
+    }
+  }
+  child.stdout.on('data', inspect)
+  child.stderr.on('data', inspect)
+  child.once('error', (error) => finish(error))
+  child.once('exit', (code, signal) => {
+    if (!settled) {
+      finish(new Error(
+        `Packed consumer development process exited before verification ` +
+        `(code ${code ?? 'none'}, signal ${signal ?? 'none'})\n${output}`
+      ))
+    }
+  })
+  timeout = setTimeout(() => {
+    finish(new Error(`Packed consumer development startup timed out\n${output}`))
+  }, 45_000)
+})
 
 try {
   const packedOutput = run(
@@ -90,6 +171,7 @@ try {
   const userScene = join(consumerRoot, 'src', 'scenes', 'my-first-scene.scene.ts')
   const userSceneBeforeUpgrade = hashFile(userScene)
   run('npm', ['run', 'build'], { cwd: consumerRoot })
+  await verifyDevelopmentStartup(consumerRoot)
   const scenesOutput = run(
     'npm',
     ['run', 'dm', '--', 'scenes', '--no-build', '--json'],
@@ -110,7 +192,8 @@ try {
   }
 
   process.stdout.write(
-    `Packed consumer verified with ${result.scenes.length} packaged and project scenes; ` +
+    `Packed consumer verified production and development startup with ` +
+      `${result.scenes.length} packaged and project scenes; ` +
       `dependency reinstall preserved the user scene\n`
   )
 } finally {
