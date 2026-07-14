@@ -1,0 +1,33 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "include": [
+    "src/public/**/*",
+    "src/project.ts",
+    "src/virtual-modules.d.ts",
+    "src/automation/**/*",
+    "src/preload/*.d.ts",
+    "src/renderer/**/*",
+    "src/runtime/**/*",
+    "src/automation/**/*",
+    "reference/examples/**/*",
+    "reference/tests/**/*"
+  ],
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "noUnusedLocals": false,
+    "types": ["vite-plugin-glsl/ext"],
+    "baseUrl": ".",
+    "paths": {
+      "definedmotion": ["src/public/index.ts"],
+      "definedmotion/*": ["src/public/*"]
+    }
+  }
+}

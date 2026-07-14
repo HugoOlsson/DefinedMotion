@@ -1,0 +1,16 @@
+{
+  "name": "definedmotion-playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": ".definedmotion/build/main/index.js",
+  "scripts": {
+    "dev": "definedmotion dev",
+    "build": "definedmotion build",
+    "dm": "definedmotion"
+  },
+  "dependencies": {
+    "definedmotion": "0.4.0-alpha.0",
+    "three": "^0.175.0"
+  }
+}

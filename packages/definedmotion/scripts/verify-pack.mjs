@@ -1,0 +1,56 @@
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+const packed = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+  cwd: new URL('..', import.meta.url),
+  encoding: 'utf8',
+  env: { ...process.env, npm_config_cache: join(tmpdir(), 'definedmotion-npm-cache') }
+})
+if (packed.status !== 0) throw new Error(packed.stderr || 'npm pack failed')
+
+const result = JSON.parse(packed.stdout)[0]
+const paths = result.files.map((file) => file.path)
+const forbidden = [
+  /(^|\/)node_modules\//,
+  /(^|\/)dist\//,
+  /(^|\/)out\//,
+  /^scripts\//,
+  /(^|\/)\.definedmotion\//,
+  /(^|\/)(renders|rendered_videos|image_renders|audio_renders)\//
+]
+for (const file of paths) {
+  if (forbidden.some((pattern) => pattern.test(file))) {
+    throw new Error(`Forbidden path in definedmotion package: ${file}`)
+  }
+}
+
+for (const required of [
+  'AGENTS.md',
+  'README.md',
+  'cli/index.mjs',
+  'src/public/index.ts',
+  'assets/fonts/Montserrat-Medium.woff',
+  'reference/INDEX.md',
+  'reference/agent-workflow.md',
+  'reference/catalog.json',
+  'reference/examples/tutorials/easy1.scene.ts',
+  'reference/tests/video/test_video_plane.scene.ts'
+]) {
+  if (!paths.includes(required)) throw new Error(`Required package file is missing: ${required}`)
+}
+
+if (paths.includes('src/scenes/.gitkeep')) {
+  throw new Error('Legacy framework scene placeholder must not be published')
+}
+
+const maximumUnpackedBytes = 150 * 1024 * 1024
+if (result.unpackedSize > maximumUnpackedBytes) {
+  throw new Error(`definedmotion unpacked size exceeds 150 MiB: ${result.unpackedSize} bytes`)
+}
+
+process.stdout.write(
+  `definedmotion pack verified: ${result.entryCount} files, ` +
+    `${(result.size / 1024 / 1024).toFixed(1)} MiB packed, ` +
+    `${(result.unpackedSize / 1024 / 1024).toFixed(1)} MiB unpacked\n`
+)
