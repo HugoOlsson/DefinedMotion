@@ -1,5 +1,0 @@
-# ignore everything in this dir…
-*
-# …but keep the placeholder and the ignore file tracked
-!.gitkeep
-!.gitignore

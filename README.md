@@ -74,12 +74,12 @@ This is a programmatic animation library, similar to 3Blue1Brown's Manim or Moti
 
 
 ## Look at example scenes
-DefinedMotion includes **17 example scenes** and **38 tests** to help you learn and verify functionality. Browse `/src/example_scenes` to see complete, working animations you can run immediately.
+DefinedMotion includes **17 example scenes** and **39 executable visual tests** to help people and agents learn the exact installed API. They are versioned with the runtime under `node_modules/definedmotion/reference`; start with `reference/INDEX.md` and `reference/agent-workflow.md`.
 
 
 ### Create Scene 
 ```ts
-import { defineScene } from '../project'
+import { AnimatedScene, defineScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
 
 export const yourSceneName = (): AnimatedScene => {
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
@@ -96,7 +96,7 @@ export default defineScene({
 
 ```
 
-Place scene modules under `src/scenes` and name them `*.scene.ts`. DefinedMotion discovers them automatically, so adding a scene does not require editing a central registry. The `id` is the stable identifier used by Studio and CLI commands. Select the initial Studio scene with `defaultScene` in `src/definedmotion.config.ts`.
+Place scene modules under `src/scenes` and name them `*.scene.ts`. DefinedMotion discovers them automatically, so adding a scene does not require editing a central registry. The `id` is the stable identifier used by Studio and CLI commands. Select the initial Studio scene with `defaultScene` in the root `definedmotion.config.ts`.
 
 ### Scene tasks (cheatsheet)
 ```ts
@@ -153,17 +153,19 @@ Place scene modules under `src/scenes` and name them `*.scene.ts`. DefinedMotion
 ## Project Setup
  
 1. Run `npx create-definedmotion project_name`
-2. Install all dependencies with `npm install`
-3. Run the animation viewer with `npm run dev`
-4. Add a default-exported `*.scene.ts` module in `src/scenes`
-5. Select its ID as `defaultScene` in `src/definedmotion.config.ts`
-6. When you want to render your animation, click "Render". You will need to have ffmpeg on your system and available in your system PATH.
+2. Run the animation viewer with `npm run dev`
+3. Add a default-exported `*.scene.ts` module in `src/scenes`
+4. Select its ID as `defaultScene` in `definedmotion.config.ts`
+5. Update the framework later with `npm install definedmotion@latest`; your scenes and assets remain in the project.
+6. When you want to render your animation, click "Render". Final videos are written to `renders/`;
+   temporary frames and audio stay under `.definedmotion/cache/`. You will need ffmpeg available
+   in your system PATH.
 
 ## Automation CLI
 
 DefinedMotion projects include a headless automation path for tools, scripts, CI, and coding agents. It uses the same scene definitions and timeline runtime as the interactive Studio, but runs in a hidden Electron renderer.
 
-Generated projects include an automatically discoverable `AGENTS.md` and a concise [`agent interface guide`](packages/create-definedmotion/template/docs/agent-workflow.md). The guide maps every feedback tool to what it returns, when to use it, and the design idea behind it.
+Generated projects include an automatically discoverable `AGENTS.md`. It points agents to the version-matched [`reference index`](packages/definedmotion/reference/INDEX.md) and [`agent interface guide`](packages/definedmotion/reference/agent-workflow.md) shipped by `definedmotion` itself.
 
 List the registered scenes:
 
@@ -279,7 +281,7 @@ Invalid edits return `SOURCE_COMPILE_ERROR` with Vite's file, location, plugin,
 and source frame. Correct the source and retry; the existing session recovers
 without needing a restart.
 
-The animation timeline FPS, deterministic random seed, and default scene live in `src/definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
+The animation timeline FPS, deterministic random seed, and default scene live in `definedmotion.config.ts`. Timeline FPS is independent from monitor refresh rate, so a frame number represents the same animation time on every machine. Default-exported `src/scenes/**/*.scene.ts` modules are discovered automatically for Studio and the CLI.
 
 Project media is referenced lazily through `scene.asset('path/inside/src/assets')`. Listing scenes therefore loads scene code and metadata, but does not read or bundle every scene's videos, models, HDRIs, audio, or data files.
 
@@ -721,7 +723,7 @@ dm.addDeferredAnims(
 
 **Quick setup with pre-configured lighting:**
 ```typescript
-import { addSceneLighting } from '$renderer/lib/rendering/lighting3d'
+import { addSceneLighting } from 'definedmotion/rendering'
 
 addSceneLighting(scene.scene, {
   colorScheme: 'cool',  // 'cool' | 'warm' | 'contrast' | 'studio' | 'dramatic'
@@ -731,7 +733,7 @@ addSceneLighting(scene.scene, {
 
 **Simple gradient backgrounds:**
 ```typescript
-import { addBackgroundGradient } from '$renderer/lib/rendering/lighting3d'
+import { addBackgroundGradient } from 'definedmotion/rendering'
 
 addBackgroundGradient({
   scene,
@@ -747,13 +749,13 @@ HDRIs provide realistic environment lighting and reflections. Use a two-step app
 
 **Load and apply inside the scene build function**
 ```typescript
-import { loadHDRIData, addHDRI, HDRIs } from '$renderer/lib/rendering/hdri'
+import { loadHDRIData, addHDRI, HDRIs } from 'definedmotion/rendering'
 
 export function myScene(): AnimatedScene {
   return new AnimatedScene(1920, 1080, SpaceSetting.ThreeDim,
     HotReloadSetting.TraceFromStart, async (scene) => {
     const hdriData = await loadHDRIData(
-      scene.asset(HDRIs.outdoor1), // photoStudio1/2/3, outdoor1, indoor1, metro1
+      HDRIs.outdoor1, // photoStudio1/2/3, outdoor1, indoor1, metro1
       2                            // blur amount (0=sharp, 5+=very blurred)
     )
 
@@ -882,7 +884,7 @@ DefinedMotion's loaders accept references directly where possible:
 
 ```typescript
 import * as THREE from 'three'
-import { loadGLB } from '$renderer/lib/rendering/objects/import'
+import { loadGLB } from 'definedmotion/rendering'
 
 const car = await loadGLB(model)
 const metal = await new THREE.TextureLoader().loadAsync(texture.url)
@@ -896,22 +898,19 @@ The same URLs work in Studio and hidden CLI rendering. The Electron asset protoc
 
 Do not statically import project media or load it at module scope. Scene modules are discovered eagerly, so module-scope work would run during `dm scenes`; `scene.asset()` keeps discovery cheap while only the selected scene consumes its resources.
 
-## Import Path Shortcuts
+## Public imports
 
-DefinedMotion provides a renderer path alias to avoid deeply nested relative imports.
+Scene code uses stable package entry points. Internal Studio paths are not part of the public API.
 
-### Available Shortcut
-
-**`$renderer/*`** - Access any file in `src/renderer/src/`
 ```typescript
-// Instead of: import { AnimatedScene } from '../../../../renderer/src/lib/scene/sceneClass'
-import { AnimatedScene } from '$renderer/lib/scene/sceneClass'
-import { fadeIn } from '$renderer/lib/animation/animations'
-import { createCircle } from '$renderer/lib/rendering/objects2d'
-import { addHDRI, HDRIs } from '$renderer/lib/rendering/hdri'
+import { AnimatedScene, defineScene } from 'definedmotion'
+import { fadeIn } from 'definedmotion/animation'
+import { createCircle, addHDRI, HDRIs } from 'definedmotion/rendering'
 ```
 
-Use `scene.asset()` for files in `src/assets`; there is intentionally no static media-import alias.
+Additional focused entry points are `definedmotion/assets`, `definedmotion/latex`,
+`definedmotion/math`, and `definedmotion/media`. Use `scene.asset()` for files in
+`src/assets`; there is intentionally no static media-import alias.
 
 
 ## Easy example
@@ -1112,3 +1111,10 @@ export function tutorial_easy2(): AnimatedScene {
 ## Contact
 
  If you have any questions, feel free to contact me Hugo Olsson at hugo.contact01@gmail.com
+
+## Repository development
+
+The framework lives in `packages/definedmotion`, the small generator lives in
+`packages/create-definedmotion`, and `playground` is a private consumer project. See
+[`docs/package-architecture.md`](docs/package-architecture.md) for the publication boundary and
+reference-corpus rules.

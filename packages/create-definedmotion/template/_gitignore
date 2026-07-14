@@ -1,11 +1,7 @@
 node_modules
+.definedmotion
 dist
 out
+renders
 .DS_Store
-.eslintcache
 *.log*
-/image_renders
-/rendered_videos
-/audio_renders
-/.definedmotion
-/src/renderer/src/scenes/hugoScenes

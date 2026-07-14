@@ -1,0 +1,341 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "id": "alternatives",
+      "name": "Alternatives",
+      "kind": "example",
+      "source": "examples/alternativesScene.scene.ts"
+    },
+    {
+      "id": "dependency",
+      "name": "Dependency Scene",
+      "kind": "example",
+      "source": "examples/dependencyScene.scene.ts"
+    },
+    {
+      "id": "fourier-series",
+      "name": "Fourier Series",
+      "kind": "example",
+      "source": "examples/fourierSeriesScene.scene.ts"
+    },
+    {
+      "id": "fourier-square-wave",
+      "name": "Fourier Square Wave",
+      "kind": "example",
+      "source": "examples/fourierSquareWave.scene.ts"
+    },
+    {
+      "id": "fractal-tree-growth",
+      "name": "Growing Fractal Tree",
+      "kind": "example",
+      "source": "examples/fractalTreeGrowth.scene.ts"
+    },
+    {
+      "id": "functions",
+      "name": "Visualizing Functions",
+      "kind": "example",
+      "source": "examples/visulizingFunctions.scene.ts"
+    },
+    {
+      "id": "galton-board",
+      "name": "Galton Board: The Normal Distribution",
+      "kind": "example",
+      "source": "examples/galtonBoard.scene.ts"
+    },
+    {
+      "id": "keyboard",
+      "name": "Keyboard",
+      "kind": "example",
+      "source": "examples/keyboardScene.scene.ts"
+    },
+    {
+      "id": "latex-text-transitions",
+      "name": "LaTeX Text Transitions",
+      "kind": "example",
+      "source": "examples/latex_text_transitions_scene.scene.ts"
+    },
+    {
+      "id": "matrix-multiplication",
+      "name": "Matrix Multiplication as Transformation",
+      "kind": "example",
+      "source": "examples/matrixMultiplication.scene.ts"
+    },
+    {
+      "id": "newtons-second-law",
+      "name": "Newton",
+      "kind": "example",
+      "source": "examples/newtonsSecondLaw.scene.ts"
+    },
+    {
+      "id": "surface",
+      "name": "Surface",
+      "kind": "example",
+      "source": "examples/surfaceScene.scene.ts"
+    },
+    {
+      "id": "test-2d-camera-centers-labels",
+      "name": "2D Camera Centers Labels",
+      "kind": "test",
+      "source": "tests/camera/test_2d_camera_centers_labels.scene.ts"
+    },
+    {
+      "id": "test-2d-camera-hits-markers",
+      "name": "2D Camera Hits Markers",
+      "kind": "test",
+      "source": "tests/camera/test_2d_camera_hits_markers.scene.ts"
+    },
+    {
+      "id": "test-asset-references",
+      "name": "Asset References",
+      "kind": "test",
+      "source": "tests/assets/test_asset_references.scene.ts"
+    },
+    {
+      "id": "test-basic-latex-query",
+      "name": "Basic LaTeX Query",
+      "kind": "test",
+      "source": "tests/svg/test_basic_latex_query.scene.ts"
+    },
+    {
+      "id": "test-basic-svg",
+      "name": "Basic SVG",
+      "kind": "test",
+      "source": "tests/svg/test_basic_svg.scene.ts"
+    },
+    {
+      "id": "test-camera-rotate-quaternion",
+      "name": "Camera Rotate Quaternion",
+      "kind": "test",
+      "source": "tests/camera/test_camera_rotate_quaternion.scene.ts"
+    },
+    {
+      "id": "test-camera-waypoints-sequential",
+      "name": "Camera Waypoints Sequential",
+      "kind": "test",
+      "source": "tests/camera/test_camera_waypoints_sequential.scene.ts"
+    },
+    {
+      "id": "test-colored-latex-to-svg",
+      "name": "Colored LaTeX To SVG",
+      "kind": "test",
+      "source": "tests/svg/test_colored_latex_to_svg.scene.ts"
+    },
+    {
+      "id": "test-complex-latex-to-svg",
+      "name": "Complex LaTeX To SVG",
+      "kind": "test",
+      "source": "tests/svg/test_complex_latex_to_svg.scene.ts"
+    },
+    {
+      "id": "test-deferred-anims",
+      "name": "Deferred Animations",
+      "kind": "test",
+      "source": "tests/deferred/testing_deferredAnims.scene.ts"
+    },
+    {
+      "id": "test-deferred-anims-2",
+      "name": "Deferred Anims2",
+      "kind": "test",
+      "source": "tests/deferred/testing_deferredAnims2.scene.ts"
+    },
+    {
+      "id": "test-fly-minimal-two-poses",
+      "name": "Fly Minimal Two Poses",
+      "kind": "test",
+      "source": "tests/camera/test_fly_camera_waypoints_verifiable.scene.ts"
+    },
+    {
+      "id": "test-hdri-performance",
+      "name": "HDRI Performance",
+      "kind": "test",
+      "source": "tests/environment/test_hdri_performance.scene.ts"
+    },
+    {
+      "id": "test-iphone-screen-recording",
+      "name": "iPhone Screen Recording",
+      "kind": "test",
+      "source": "tests/video/iphone-screen-recording.scene.ts"
+    },
+    {
+      "id": "test-latex-blue-particle-transition",
+      "name": "LaTeX Blue Particle Transition",
+      "kind": "test",
+      "source": "tests/latex/test_latex_blue_particle_transition.scene.ts"
+    },
+    {
+      "id": "test-latex-highlight-animation",
+      "name": "LaTeX Highlight Animation",
+      "kind": "test",
+      "source": "tests/latex/test_latex_highlight_animation.scene.ts"
+    },
+    {
+      "id": "test-latex-mark-animation",
+      "name": "LaTeX Mark Animation",
+      "kind": "test",
+      "source": "tests/latex/test_latex_mark_animation.scene.ts"
+    },
+    {
+      "id": "test-latex-particle-transition",
+      "name": "LaTeX Particle Transition",
+      "kind": "test",
+      "source": "tests/latex/test_latex_particle_transition.scene.ts"
+    },
+    {
+      "id": "test-latex-particle-transition-complex",
+      "name": "LaTeX Particle Transition Complex",
+      "kind": "test",
+      "source": "tests/latex/test_latex_particle_transition_complex.scene.ts"
+    },
+    {
+      "id": "test-latex-particle-transition-super-complex",
+      "name": "LaTeX Particle Transition Super Complex",
+      "kind": "test",
+      "source": "tests/latex/test_latex_particle_transition_super_complex.scene.ts"
+    },
+    {
+      "id": "test-latex-query-variables",
+      "name": "LaTeX Query Variables",
+      "kind": "test",
+      "source": "tests/svg/test_query_latex_variables.scene.ts"
+    },
+    {
+      "id": "test-latex-to-svg",
+      "name": "LaTeX To SVG",
+      "kind": "test",
+      "source": "tests/svg/test_latex_to_svg.scene.ts"
+    },
+    {
+      "id": "test-long-audio",
+      "name": "Long Audio",
+      "kind": "test",
+      "source": "tests/audio/test_long_audio.scene.ts"
+    },
+    {
+      "id": "test-many-short-sounds",
+      "name": "Many Short Sounds",
+      "kind": "test",
+      "source": "tests/audio/test_many_short_sounds.scene.ts"
+    },
+    {
+      "id": "test-many-video-planes",
+      "name": "Many Timeline Video Planes",
+      "kind": "test",
+      "source": "tests/video/test_many_video_planes.scene.ts"
+    },
+    {
+      "id": "test-material-on-latex",
+      "name": "Material On LaTeX",
+      "kind": "test",
+      "source": "tests/svg/test_material_on_latex.scene.ts"
+    },
+    {
+      "id": "test-regular-text-latex",
+      "name": "Regular Text LaTeX",
+      "kind": "test",
+      "source": "tests/svg/test_regular_text_latex.scene.ts"
+    },
+    {
+      "id": "test-scene-inspection",
+      "name": "Scene Inspection",
+      "kind": "test",
+      "source": "tests/inspection/test_scene_inspection.scene.ts"
+    },
+    {
+      "id": "test-super-complex-latex-to-svg",
+      "name": "Super Complex LaTeX To SVG",
+      "kind": "test",
+      "source": "tests/svg/test_super_complex_latex_to_svg.scene.ts"
+    },
+    {
+      "id": "test-transition-svgs",
+      "name": "Transition Svgs",
+      "kind": "test",
+      "source": "tests/svg/test_transition_svgs.scene.ts"
+    },
+    {
+      "id": "test-update-svg-object",
+      "name": "Update SVG Object",
+      "kind": "test",
+      "source": "tests/svg/test_update_svg_object.scene.ts"
+    },
+    {
+      "id": "test-updater-1",
+      "name": "Updater1",
+      "kind": "test",
+      "source": "tests/animation/test_updater.scene.ts"
+    },
+    {
+      "id": "test-video-plane",
+      "name": "Timeline Video Plane",
+      "kind": "test",
+      "source": "tests/video/test_video_plane.scene.ts"
+    },
+    {
+      "id": "test-with-environment-latex-particle-transition",
+      "name": "With Environment LaTeX Particle Transition",
+      "kind": "test",
+      "source": "tests/latex/test_with_environment_latex_particle_transition.scene.ts"
+    },
+    {
+      "id": "test-write-latex-animation",
+      "name": "Write LaTeX Animation",
+      "kind": "test",
+      "source": "tests/latex/test_write_latex_animation.scene.ts"
+    },
+    {
+      "id": "test-write-latex-animation-2",
+      "name": "Write LaTeX Animation 2",
+      "kind": "test",
+      "source": "tests/latex/test_write_latex_animation_2.scene.ts"
+    },
+    {
+      "id": "test-write-latex-animation-3",
+      "name": "Write LaTeX Animation 3",
+      "kind": "test",
+      "source": "tests/latex/test_write_latex_animation_3.scene.ts"
+    },
+    {
+      "id": "test-yellow-grip-symbol-svg",
+      "name": "Yellow Grip Symbol SVG",
+      "kind": "test",
+      "source": "tests/svg/test_yellow_grip_symbol_svg.scene.ts"
+    },
+    {
+      "id": "test-zoom-perspective-sequential",
+      "name": "Zoom Perspective Sequential",
+      "kind": "test",
+      "source": "tests/camera/test_zoom_perspective_sequential.scene.ts"
+    },
+    {
+      "id": "tutorial-easy-1",
+      "name": "Tutorial: Easy 1",
+      "kind": "example",
+      "source": "examples/tutorials/easy1.scene.ts"
+    },
+    {
+      "id": "tutorial-easy-2",
+      "name": "Tutorial: Easy 2",
+      "kind": "example",
+      "source": "examples/tutorials/easy2.scene.ts"
+    },
+    {
+      "id": "tutorial-easy-3",
+      "name": "Tutorial: Easy 3",
+      "kind": "example",
+      "source": "examples/tutorials/easy3.scene.ts"
+    },
+    {
+      "id": "tutorial-medium-1",
+      "name": "Tutorial: Medium 1",
+      "kind": "example",
+      "source": "examples/tutorials/medium1.scene.ts"
+    },
+    {
+      "id": "vector-field",
+      "name": "Vector Field",
+      "kind": "example",
+      "source": "examples/vectorField.scene.ts"
+    }
+  ]
+}

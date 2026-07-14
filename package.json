@@ -1,0 +1,15 @@
+{
+  "name": "definedmotion-workspace",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "playground"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace definedmotion",
+    "typecheck": "npm run typecheck --workspace definedmotion",
+    "pack:check": "npm run pack:check --workspace definedmotion && npm run pack:check --workspace create-definedmotion",
+    "test:package": "node ./tests/packed-project-smoke-test.mjs"
+  }
+}

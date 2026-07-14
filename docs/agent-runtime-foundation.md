@@ -6,12 +6,11 @@ renderer. Automation must not reimplement scene execution.
 
 ## Runtime boundaries
 
-- `src/definedmotion.config.ts` owns the fixed timeline FPS, render sampling,
+- The consuming project's `definedmotion.config.ts` owns the fixed timeline FPS, render sampling,
   and deterministic seed. Timeline FPS never depends on monitor refresh rate.
-- Bundled `src/example_scenes/**/*.scene.ts` modules and user-authored
-  `src/scenes/**/*.scene.ts` modules describe themselves through `defineScene()`.
-  Vite discovers both automatically, while `src/entry.ts` remains a small
-  framework bootstrap with backwards-compatible exports.
+- Version-matched `definedmotion/reference/{examples,tests}/**/*.scene.ts` modules and
+  user-authored `src/scenes/**/*.scene.ts` modules describe themselves through
+  `defineScene()`. Vite discovers and combines both registries automatically.
 - `AnimatedScene.seekExact(frame)` rebuilds from initial state, resets seeded
   randomness, traces every preceding tick, validates the requested frame, and
   renders at logical output resolution.
@@ -28,7 +27,7 @@ renderer. Automation must not reimplement scene execution.
 - `AnimatedScene.exposeCamera()` gives authored debug viewpoints stable IDs.
   Inspection cameras follow the same scene lifecycle and incur no extra render
   work until explicitly requested.
-- `scripts/definedmotion.mjs` uses a compatible project runtime automatically,
+- The `definedmotion` CLI uses a compatible project runtime automatically,
   or builds and invokes an isolated hidden renderer as a fallback. JSON mode
   reserves stdout for the final machine-readable result.
 
@@ -221,7 +220,7 @@ user-only and is removed when the runtime stops.
 Create a default-exported `*.scene.ts` module anywhere under `src/scenes`:
 
 ```ts
-import { defineScene } from '../project'
+import { defineScene } from 'definedmotion'
 import { myScene } from './myScene'
 
 export default defineScene({
@@ -234,7 +233,7 @@ export default defineScene({
 No central registry edit is required. Discovery fails with an actionable error
 when a module has an invalid default export or two modules use the same ID.
 Choose the initial Studio scene through `defaultScene` in
-`src/definedmotion.config.ts`.
+`definedmotion.config.ts`.
 
 Scene modules are currently imported eagerly, but their project media is not.
 Create references and load assets inside the scene build path rather than at
