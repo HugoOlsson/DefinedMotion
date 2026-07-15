@@ -7,6 +7,7 @@ import {
 } from '../animation/protocols'
 import { generateID } from '../id'
 import { sleep } from '../rendering/helpers'
+import { InteractiveViewportScheduler } from '../rendering/interactiveViewportScheduler'
 import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
 import Alea from 'alea'
@@ -106,7 +107,7 @@ export const setGlobalContainerRef = (ref: HTMLElement) => {
 
 /**
  * Configures whether newly-created scenes attach editor-only behavior such as
- * OrbitControls, ResizeObserver and a continuous requestAnimationFrame loop.
+ * OrbitControls, ResizeObserver and change-driven viewport rendering.
  */
 export const setGlobalInteractiveMode = (interactive: boolean): void => {
   globalInteractiveMode = interactive
@@ -168,7 +169,7 @@ export class AnimatedScene {
   public hotReloadSetting: HotReloadSetting
   private traceFromStart: boolean
 
-  private controlsAnimationFrameId: number | null = null
+  private interactiveViewport?: InteractiveViewportScheduler
   private animationFrameId: number | null = null
 
   private isBuilding = false
@@ -237,7 +238,11 @@ export class AnimatedScene {
 
     if (this.interactive) {
       this.attachScreenSizeListener(globalContainerRef, threeDim)
-      this.startControls()
+      this.interactiveViewport = new InteractiveViewportScheduler(
+        this.controls,
+        () => this.renderCurrentFrame()
+      )
+      this.interactiveViewport.resume()
     } else {
       this.controls.enabled = false
     }
@@ -251,7 +256,8 @@ export class AnimatedScene {
     this.isPlaying = false
     this.unregisterDestroy?.()
     this.unregisterDestroy = undefined
-    this.stopControls()
+    this.interactiveViewport?.dispose()
+    this.controls.dispose()
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
     this.resizeObserver?.disconnect()
     this.clearExposedObjects()
@@ -487,8 +493,19 @@ export class AnimatedScene {
 
   jumpToFrameAtIndex(index: number, notSize: boolean = false): Promise<void> {
     return this.runPresentationOperation('seek', () =>
-      this.presentFrameAtIndex(index, notSize, 'exact')
+      this.presentInteractiveFrameAtIndex(index, notSize)
     )
+  }
+
+  private async presentInteractiveFrameAtIndex(index: number, notSize: boolean): Promise<void> {
+    this.interactiveViewport?.suspend()
+    try {
+      await this.presentFrameAtIndex(index, notSize, 'exact')
+    } finally {
+      if (!this.destroyed && !this.isPlaying && !this.isRendering) {
+        this.interactiveViewport?.resume()
+      }
+    }
   }
 
   private async presentFrameAtIndex(
@@ -519,6 +536,7 @@ export class AnimatedScene {
     this.sceneRenderTick = index
     if (presentation === 'exact') await this.prepareExactFrame()
     else this.updateRealtimeFrame({ discontinuity: true })
+    if (this.interactive) this.syncControlsWithCamera()
     this.renderCurrentFrame()
     await this.playEffectFunction()
 
@@ -618,65 +636,14 @@ export class AnimatedScene {
     return this.pixelsWidth / this.pixelsHeight
   }
 
-  private syncControlsWithCamera() {
-  const dir = new THREE.Vector3();
-  this.camera.getWorldDirection(dir); // works for both camera types
-
-  const distance =
-    this.playbackTargetDistance ??
-    this.controls.target.distanceTo(this.camera.position);
-
-  const newTarget = this.camera.position.clone().add(dir.multiplyScalar(distance));
-  this.controls.target.copy(newTarget);
-  this.controls.update();
-} 
-
-  private startControls() {
-    this.controls.enabled = true
-    let animateCounter = 0
-
-    let isInteracting = false
-
-    // Add these event listeners
-    this.controls.addEventListener('start', () => (isInteracting = true))
-    this.controls.addEventListener('end', () => (isInteracting = false))
-    // Animation loop
-    const animate = () => {
-      if (this.isPlaying) return
-      this.controlsAnimationFrameId = requestAnimationFrame(animate)
-
-      if (isInteracting) {
-        this.controls.update()
-      } else {
-        //Set current camera state to the controls so its correct when we later interact
-        // Get the camera's forward direction.
-        const camDirection = new THREE.Vector3()
-        this.camera.getWorldDirection(camDirection)
-
-        // Compute the current distance between camera and controls target.
-        const distance = this.controls.target.distanceTo(this.camera.position)
-
-        // Define the new target using the same distance.
-        const newTarget = new THREE.Vector3()
-          .copy(this.camera.position)
-          .add(camDirection.multiplyScalar(distance))
-
-        // Update the controls with the new target.
-        this.controls.target.copy(newTarget)
-        this.controls.update()
-      }
-
-      this.renderCurrentFrame()
-      animateCounter++
-    }
-    animate()
-  }
-
-  private stopControls() {
-    this.controls.enabled = false
-    if (this.controlsAnimationFrameId !== null) {
-      cancelAnimationFrame(this.controlsAnimationFrameId)
-    }
+  private syncControlsWithCamera(): void {
+    const direction = new THREE.Vector3()
+    this.camera.getWorldDirection(direction)
+    const distance =
+      this.playbackTargetDistance ?? this.controls.target.distanceTo(this.camera.position)
+    const target = this.camera.position.clone().add(direction.multiplyScalar(distance))
+    this.controls.target.copy(target)
+    this.controls.update()
   }
 
   private attachScreenSizeListener(container: HTMLElement, threeDim: boolean) {
@@ -738,7 +705,7 @@ export class AnimatedScene {
     this.syncControlsWithCamera();
     this.playbackTargetDistance = null;
 
-    if (this.interactive) this.startControls()
+    this.interactiveViewport?.resume(true)
   }
 
   render(): Promise<void> {
@@ -761,7 +728,7 @@ export class AnimatedScene {
     this.isPlaying = true
 
     try {
-      this.stopControls()
+      this.interactiveViewport?.suspend()
       ro?.disconnect()
 
       div.style.position = 'absolute'
@@ -814,7 +781,7 @@ export class AnimatedScene {
       this.renderer.setPixelRatio(window.devicePixelRatio)
       this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
       ro?.observe(this.container)
-      if (this.interactive) this.startControls()
+      this.interactiveViewport?.resume(true)
       this.renderingEventFunction(false)
     }
   }
@@ -831,7 +798,7 @@ export class AnimatedScene {
 
   private async startPlayback(fromFrame: number, toFrame: number): Promise<void> {
     this.isPlaying = true
-    this.stopControls()
+    this.interactiveViewport?.suspend()
     try {
       await this.presentFrameAtIndex(fromFrame, false, 'exact')
     } catch (error) {

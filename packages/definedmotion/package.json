@@ -1,6 +1,6 @@
 {
   "name": "definedmotion",
-  "version": "0.4.0-alpha.6",
+  "version": "0.4.0-alpha.7",
   "description": "Programmatic 2D and 3D animation runtime, Studio, and agent reference",
   "author": "Hugo Olsson",
   "license": "Apache-2.0",
@@ -76,6 +76,7 @@
     "reference:verify": "node ./scripts/verify-reference.mjs",
     "prepack": "npm run reference:generate && npm run reference:verify && npm run types:generate",
     "test:automation": "node ./scripts/automation-smoke-test.mjs",
+    "test:viewport-scheduler": "node ./scripts/interactive-viewport-scheduler-test.mjs",
     "test:runtime-session": "node ./scripts/runtime-session-smoke-test.mjs"
   },
   "dependencies": {
