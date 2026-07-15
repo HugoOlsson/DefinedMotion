@@ -107,22 +107,6 @@ const projectModulesPlugin = (): Plugin => ({
     if (id === '\0virtual:definedmotion-config') return virtualConfigModule()
     if (id === '\0virtual:definedmotion-project') return virtualProjectModule()
     return undefined
-  },
-  handleHotUpdate(context) {
-    if (!isProjectSourcePath(context.file) && context.file !== projectConfigPath) return
-    invalidateProjectModules(context.server)
-  },
-  configureServer(server) {
-    const handleFileSetChange = (event: string, file: string): void => {
-      if (
-        (event === 'add' || event === 'unlink' || event === 'addDir' || event === 'unlinkDir') &&
-        isProjectSourcePath(file)
-      ) {
-        invalidateProjectModules(server)
-      }
-    }
-    server.watcher.on('all', handleFileSetChange)
-    server.httpServer?.once('close', () => server.watcher.off('all', handleFileSetChange))
   }
 })
 
@@ -138,8 +122,8 @@ const sourceModuleExtensions = new Set([
   '.svelte', '.ts', '.tsx', '.vue', '.wgsl'
 ])
 
-const persistentRuntimeReloadPlugin = (): Plugin => ({
-  name: 'definedmotion:persistent-runtime-reload',
+const projectSourceReloadPlugin = (): Plugin => ({
+  name: 'definedmotion:project-source-reload',
   handleHotUpdate(context) {
     if (isProjectSourcePath(context.file) || context.file === projectConfigPath) return []
     return undefined
@@ -191,6 +175,7 @@ const validateAndReloadSource = async (
 ): Promise<void> => {
   const revision = computeSourceRevision(projectRoot)
   try {
+    invalidateProjectModules(server)
     for (const file of files) {
       if (!existsSync(file) || !sourceModuleExtensions.has(path.extname(file).toLowerCase())) continue
       await server.transformRequest(fsImport(file))
@@ -199,7 +184,11 @@ const validateAndReloadSource = async (
     server.ws.send({ type: 'full-reload' })
   } catch (error) {
     if (sequence !== currentSequence()) return
-    reportSourceFailure(revision, sourceDiagnostic(error, files.at(-1)))
+    const diagnostic = sourceDiagnostic(error, files.at(-1))
+    reportSourceFailure(revision, diagnostic)
+    if (!process.env['DEFINEDMOTION_SESSION_TOKEN']) {
+      server.config.logger.error(`[definedmotion] ${diagnostic.message}`)
+    }
   }
 }
 
@@ -252,10 +241,6 @@ const positiveInteger = (value: unknown): number | undefined =>
 const nonNegativeInteger = (value: unknown): number | undefined =>
   Number.isInteger(value) && Number(value) >= 0 ? Number(value) : undefined
 
-const persistentRuntimePlugins = process.env['DEFINEDMOTION_SESSION_TOKEN']
-  ? [persistentRuntimeReloadPlugin()]
-  : []
-
 const definedMotionPublicImports = [
   'definedmotion',
   'definedmotion/animation',
@@ -303,10 +288,10 @@ export default defineConfig({
     cacheDir: path.join(projectRoot, '.definedmotion', 'vite'),
     plugins: [
       projectModulesPlugin(),
+      projectSourceReloadPlugin(),
       svelte({ configFile: path.join(packageRoot, 'svelte.config.mjs') }),
       tailwindcss(),
-      glsl(),
-      ...persistentRuntimePlugins
+      glsl()
     ],
     resolve: {
       alias: [

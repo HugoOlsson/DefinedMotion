@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
+  appendFileSync,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -55,7 +56,7 @@ const processTree = (pid) => {
   return [pid, ...children.flatMap(processTree)]
 }
 
-const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPromise) => {
+const verifyDevelopmentStartup = (cwd, sceneFile) => new Promise((resolvePromise, rejectPromise) => {
   const child = spawn('npm', ['run', 'dev'], {
     cwd,
     env: { ...npmEnvironment, DEFINEDMOTION_DEV_SMOKE: '1' },
@@ -63,6 +64,9 @@ const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPro
   })
   let output = ''
   let settled = false
+  let readyCount = 0
+  let hotReloadApplied = false
+  let sceneChanged = false
   let timeout
 
   const finish = (error) => {
@@ -93,7 +97,10 @@ const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPro
     }, 500)
   }
   const inspect = (chunk) => {
-    output += chunk.toString()
+    const text = chunk.toString()
+    output += text
+    readyCount += text.match(/DEFINEDMOTION_RENDERER_READY/g)?.length ?? 0
+    if (text.includes('DEFINEDMOTION_HOT_RELOAD_APPLIED')) hotReloadApplied = true
     if (
       output.includes('error while updating dependencies') ||
       output.includes('No loader is configured for ".glsl"') ||
@@ -106,7 +113,11 @@ const verifyDevelopmentStartup = (cwd) => new Promise((resolvePromise, rejectPro
       finish(new Error(`Packed consumer development startup failed\n${output}`))
       return
     }
-    if (output.includes('DEFINEDMOTION_RENDERER_READY')) finish()
+    if (readyCount === 1 && !sceneChanged) {
+      sceneChanged = true
+      appendFileSync(sceneFile, '\nconsole.log("DEFINEDMOTION_HOT_RELOAD_APPLIED")\n')
+    }
+    if (readyCount >= 2 && hotReloadApplied) finish()
   }
   child.stdout.on('data', inspect)
   child.stderr.on('data', inspect)
@@ -170,9 +181,9 @@ try {
   }
 
   const userScene = join(consumerRoot, 'src', 'scenes', 'my-first-scene.scene.ts')
-  const userSceneBeforeUpgrade = hashFile(userScene)
   run('npm', ['run', 'build'], { cwd: consumerRoot })
-  await verifyDevelopmentStartup(consumerRoot)
+  await verifyDevelopmentStartup(consumerRoot, userScene)
+  const userSceneBeforeUpgrade = hashFile(userScene)
   const scenesOutput = run(
     'npm',
     ['run', 'dm', '--', 'scenes', '--no-build', '--json'],
@@ -193,7 +204,7 @@ try {
   }
 
   process.stdout.write(
-    `Packed consumer verified production and development startup with ` +
+    `Packed consumer verified production, development startup, and hot reload with ` +
       `${result.scenes.length} packaged and project scenes; ` +
       `dependency reinstall preserved the user scene\n`
   )
