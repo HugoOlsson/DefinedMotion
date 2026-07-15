@@ -19,11 +19,11 @@ export const createScene = (
   // Create the scene
   const scene: THREE.Scene = new THREE.Scene()
 
-  // Get the container dimensions
-  const width: number = container.clientWidth
-  const height: number = container.clientHeight
-  // Use the provided dimensions for aspect ratio calculation
+  // Reserve the final viewport size before creating the WebGL canvas.
   const aspect: number = pixelsWidth / pixelsHeight
+  const width: number = container.clientWidth
+  const height: number = width / aspect
+  container.style.height = `${height}px`
 
   // Camera setup
   let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
@@ -69,8 +69,6 @@ export const createScene = (
 
   // Append the renderer's canvas element to the provided container
   container.appendChild(renderer.domElement)
-
-  renderer.render(scene, camera)
 
   // Return the created objects for further manipulation if needed
   return { scene, camera, renderer, controls }

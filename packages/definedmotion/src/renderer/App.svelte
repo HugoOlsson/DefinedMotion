@@ -130,7 +130,6 @@ function updateUIImmediate() {
 
   onMount(async () => {
     if (!entryScene) return
-    await loadFonts()
     const animationWindow = document.getElementById(animationWindowID)
     
     if (!animationWindow || !sliderElement) return
@@ -151,7 +150,8 @@ function updateUIImmediate() {
         updateUIImmediate()
       }
     }
-   
+
+    await loadFonts()
     await setStateInScene(scene)
     hasInitScene = true
     urlUpdaterInterval = setInterval(() => {
@@ -199,7 +199,14 @@ export async function copyToClipboard(text: string): Promise<void> {
 </script>
 
 <div class=" flex flex-col p-2">
-  <div id={animationWindowID} class="w-full rounded-sm overflow-clip"></div>
+  <div class="relative w-full rounded-sm overflow-clip bg-neutral-100">
+    <div id={animationWindowID} class="w-full" class:invisible={!hasInitScene}></div>
+    {#if !hasInitScene}
+      <div class="absolute inset-0 flex items-center justify-center text-xs text-black/35">
+        Building scene…
+      </div>
+    {/if}
+  </div>
   {#if isRendering}
  <p class="text-[17px] self-center p-6 pb-1">Do <strong>not save</strong> code during rendering</p>
    <p class="text-xs self-center pt-0 p-2">The viewer might hot reload and affect the result</p>
