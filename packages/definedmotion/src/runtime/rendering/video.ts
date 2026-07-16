@@ -26,6 +26,8 @@ export interface VideoPlayOptions {
 
 export interface VideoPlane extends THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> {
   play(durationMs: number, options?: VideoPlayOptions): UserAnimation
+  /** Plays the complete source at 1x while routing its embedded audio through the scene timeline. */
+  playWithAudio(): Promise<UserAnimation>
 }
 
 interface VideoFrameState {
@@ -101,9 +103,19 @@ export function createVideoPlane(
     }
   })
 
-  Object.defineProperty(mesh, 'play', {
-    value: (durationMs: number, playOptions: VideoPlayOptions = {}) =>
-      videoAnimation(videoSource, state, durationMs, playOptions)
+  Object.defineProperties(mesh, {
+    play: {
+      value: (durationMs: number, playOptions: VideoPlayOptions = {}) =>
+        videoAnimation(videoSource, state, durationMs, playOptions)
+    },
+    playWithAudio: {
+      value: async () => {
+        const durationMs = await videoSource.getDurationMs()
+        scene.registerAudio(source)
+        scene.playAudio(source)
+        return videoAnimation(videoSource, state, durationMs, {})
+      }
+    }
   })
   return mesh
 }
@@ -157,6 +169,16 @@ class VideoSource implements FrameResource {
 
   get ready(): boolean {
     return this.metadataReady
+  }
+
+  async getDurationMs(): Promise<number> {
+    if (this.disposed) throw new Error('Video source has been disposed')
+    await this.metadata
+    if (this.disposed) throw new Error('Video source has been disposed')
+    if (!Number.isFinite(this.video.duration) || this.video.duration <= 0) {
+      throw new Error('Video source does not have a finite positive duration')
+    }
+    return this.video.duration * 1000
   }
 
   async prepareExact(state: VideoFrameState, context: ExactFramePreparationContext): Promise<void> {

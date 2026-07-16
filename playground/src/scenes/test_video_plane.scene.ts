@@ -28,11 +28,11 @@ export function createVideoPlaneTest(): AnimatedScene {
       )
       video.name = 'timeline-video-plane'
       scene.expose('video-plane', video, {
-        description: 'A video plane controlled by a normal DefinedMotion animation',
-        tags: ['video', 'primary-subject']
+        description: 'A video plane with embedded audio controlled by the scene timeline',
+        tags: ['video', 'audio', 'primary-subject']
       })
       scene.add(video)
-      scene.addAnims(video.play(11_000).scaleLength(0.1))
+      scene.addAnims(await video.playWithAudio())
     }
   )
 }

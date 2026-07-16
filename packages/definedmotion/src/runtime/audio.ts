@@ -87,7 +87,9 @@ export const seekToTick = (
   stopAll()
 
   for (const [startTick, list] of planned.entries()) {
-    if (startTick > tick) continue
+    // Sounds beginning on the requested tick are started by that tick's trace.
+    // Recreating them here as well would play the same source twice.
+    if (startTick >= tick) continue
     for (const item of list) {
       const buf = loadedAudio.get(item.audioPath)
       if (!buf) continue

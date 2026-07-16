@@ -140,7 +140,7 @@ function createIphoneScreenRecordingScene(): AnimatedScene {
         phone.rotation.z = Math.sin(progress * Math.PI * 2) * 0.025
       })
 
-      scene.addAnims(screen.play(DURATION_MS), orbit)
+      scene.addAnims(await screen.playWithAudio(), orbit)
     }
   )
 }

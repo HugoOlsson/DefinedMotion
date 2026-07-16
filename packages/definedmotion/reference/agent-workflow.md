@@ -462,6 +462,20 @@ Paths are relative to `src/assets`, use forward slashes, and cannot be absolute 
 
 Create references inside the selected scene’s build path. Avoid importing videos, models, HDRIs, audio, or datasets at module scope; catalogue discovery imports scene code but should not load every scene’s media.
 
+For a video with embedded audio, schedule its complete unmodified playback directly at the desired
+scene position:
+
+```ts
+scene.addAnims(await video.playWithAudio(), simultaneousAnimation)
+```
+
+`playWithAudio()` reuses the normal scene audio timeline for preview, seeking, pause/resume, and
+export. It reads the source duration from the video's cached metadata, starts at the beginning of
+the media, runs at 1x, and does not loop. The scene build callback must be `async`. Use
+`video.play()` for silent video with source offsets, looping, rate changes, reversing, or duration
+scaling. Await `playWithAudio()` directly inside `addAnims()` so its audio is scheduled at the same
+scene tick as the video animation.
+
 Published examples and visual tests may import `referenceAsset()` from `definedmotion/assets` for
 files below the installed package's `reference/assets`. A project scene can keep that reference
 when intentionally reusing a bundled sample. For project-owned media, copy the file into

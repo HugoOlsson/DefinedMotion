@@ -78,7 +78,7 @@ try {
   const videoFrameA = join(temporaryDirectory, 'video-frame-a.png')
   const videoFrameARepeat = join(temporaryDirectory, 'video-frame-a-repeat.png')
   const videoFrameB = join(temporaryDirectory, 'video-frame-b.png')
-  run([
+  const videoResult = run([
     'still',
     'test-video-plane',
     '--frame',
@@ -87,6 +87,9 @@ try {
     videoFrameA,
     '--no-build'
   ])
+  if (videoResult.durationInFrames !== 680) {
+    throw new Error('Video scene did not derive its 680-frame duration from media metadata')
+  }
   run([
     'still',
     'test-video-plane',
