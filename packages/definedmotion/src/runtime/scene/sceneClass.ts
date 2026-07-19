@@ -600,6 +600,32 @@ export class AnimatedScene {
     return this.runPresentationOperation('capture', () => this.captureExactPng(camera))
   }
 
+  captureViewportPng(): Promise<Blob> {
+    return this.runPresentationOperation('viewport capture', () =>
+      this.captureFullResolutionViewportPng()
+    )
+  }
+
+  private async captureFullResolutionViewportPng(): Promise<Blob> {
+    const originalPixelRatio = this.renderer.getPixelRatio()
+    const originalSize = this.renderer.getSize(new THREE.Vector2())
+    const originalViewport = this.renderer.getViewport(new THREE.Vector4())
+    this.interactiveViewport?.suspend()
+
+    try {
+      this.prepareOutputViewport()
+      return await this.captureExactPng(this.camera)
+    } finally {
+      this.renderer.setPixelRatio(originalPixelRatio)
+      this.renderer.setSize(originalSize.x, originalSize.y, false)
+      this.renderer.setViewport(originalViewport)
+      this.resizeObserver?.observe(this.container)
+      if (!this.destroyed && !this.isPlaying && !this.isRendering) {
+        this.interactiveViewport?.resume(true)
+      }
+    }
+  }
+
   private async captureExactPng(camera: InspectionCamera): Promise<Blob> {
     await this.prepareExactFrame()
     this.renderCurrentFrame(camera)

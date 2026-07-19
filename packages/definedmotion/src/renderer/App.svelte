@@ -44,6 +44,7 @@
   let hasInitScene = $state(false)
 
   let isPlayingStateVar = $state(false)
+  let isSavingFrame = $state(false)
 
   let pendingSliderValue: number | undefined
   let sliderDrain: Promise<void> | undefined
@@ -70,6 +71,23 @@
         isPlayingStateVar = false
         console.error('Could not start playback:', error)
       })
+  }
+
+  async function saveCurrentFrame(): Promise<void> {
+    if (!scene || scene.isPlaying || isRendering || isSavingFrame) return
+    isSavingFrame = true
+    try {
+      const png = await scene.captureViewportPng()
+      const bytes = new Uint8Array(await png.arrayBuffer())
+      const now = new Date()
+      const pad = (value: number): string => String(value).padStart(2, '0')
+      const timestamp =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-` +
+        `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+      await window.api.saveFrame(`definedmotion-framecapture-${timestamp}.png`, bytes)
+    } finally {
+      isSavingFrame = false
+    }
   }
 
   async function drainSliderChanges(): Promise<void> {
@@ -235,15 +253,26 @@ export async function copyToClipboard(text: string): Promise<void> {
     <p bind:this={frameValueElement} class="font-normal text-[0.7rem] leading-none mr-2 w-[83px]">Frame:</p>
       <p bind:this={timeValueElement} class="font-normal text-[0.7rem] leading-none w-[93px] ">Time:</p>
       </div>
-    <button
-    disabled={!hasInitScene || isRendering || isPlayingStateVar}
-    class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full  p-1 hover:bg-black/10 transition"
-      onclick={() => {
-        void scene
-          .render()
-          .catch((error) => console.error('Could not render the scene:', error))
-      }}>Render</button
-    >
+    <div class="flex gap-2">
+      <button
+        disabled={!hasInitScene || isRendering || isPlayingStateVar || isSavingFrame}
+        class="w-[80px] text-xs cursor-pointer bg-black/5 rounded-full p-1 hover:bg-black/10 transition"
+        onclick={() => {
+          void saveCurrentFrame().catch((error) =>
+            console.error('Could not save the current frame:', error)
+          )
+        }}>{isSavingFrame ? 'Saving…' : 'Save frame'}</button
+      >
+      <button
+      disabled={!hasInitScene || isRendering || isPlayingStateVar || isSavingFrame}
+      class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full  p-1 hover:bg-black/10 transition"
+        onclick={() => {
+          void scene
+            .render()
+            .catch((error) => console.error('Could not render the scene:', error))
+        }}>Render</button
+      >
+    </div>
   </div>
   <div class="w-full px-0 mx-0">
     <input

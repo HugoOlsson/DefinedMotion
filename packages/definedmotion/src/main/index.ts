@@ -1,6 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain, nativeTheme, screen } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain, nativeTheme, screen } from 'electron'
 import { join } from 'path'
-import { dirname, resolve } from 'path'
+import { basename, dirname, resolve } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -211,6 +211,29 @@ app.whenReady().then(() => {
       await mkdir(dirname(absolutePath), { recursive: true })
       await writeFile(absolutePath, Buffer.from(bytes))
       return absolutePath
+    }
+  )
+
+  ipcMain.handle(
+    'definedmotion:save-frame',
+    async (event, suggestedName: string, bytes: Uint8Array) => {
+      if (isRuntimeMode || event.sender !== mainWindow?.webContents) {
+        throw new Error('Frame saving is only available in the interactive viewer')
+      }
+      const owner = BrowserWindow.fromWebContents(event.sender)
+      if (!owner) throw new Error('Could not find the DefinedMotion viewer window')
+      const defaultName = basename(suggestedName || 'definedmotion-framecapture.png')
+      const selection = await dialog.showSaveDialog(owner, {
+        title: 'Save frame',
+        defaultPath: defaultName,
+        filters: [{ name: 'PNG image', extensions: ['png'] }]
+      })
+      if (selection.canceled || !selection.filePath) return undefined
+      const outputPath = selection.filePath.toLowerCase().endsWith('.png')
+        ? selection.filePath
+        : `${selection.filePath}.png`
+      await writeFile(outputPath, Buffer.from(bytes))
+      return outputPath
     }
   )
 

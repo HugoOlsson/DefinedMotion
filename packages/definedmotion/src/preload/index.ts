@@ -69,6 +69,9 @@ const customAPI = {
   writeAutomationFile: (outputPath: string, bytes: Uint8Array): Promise<string> =>
     ipcRenderer.invoke('definedmotion:write-automation-file', outputPath, bytes),
 
+  saveFrame: (suggestedName: string, bytes: Uint8Array): Promise<string | undefined> =>
+    ipcRenderer.invoke('definedmotion:save-frame', suggestedName, bytes),
+
   completeAutomation: (result: AutomationResult) =>
     ipcRenderer.send('definedmotion:automation-complete', result),
 

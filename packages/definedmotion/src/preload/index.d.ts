@@ -15,6 +15,7 @@ export interface DefinedMotionAPI {
   getDisplayHz(): Promise<number>
   getAutomationRequest(): Promise<AutomationRequest>
   writeAutomationFile(outputPath: string, bytes: Uint8Array): Promise<string>
+  saveFrame(suggestedName: string, bytes: Uint8Array): Promise<string | undefined>
   completeAutomation(result: AutomationResult): void
   runtimeReady(sourceRevision: string): void
   onRuntimeRequest(callback: (request: RuntimeRendererRequest) => void): () => void
