@@ -116,6 +116,12 @@
       "source": "tests/camera/test_camera_waypoints_sequential.scene.ts"
     },
     {
+      "id": "test-chart-layout-positioning",
+      "name": "Positioning: Responsive Chart Layout",
+      "kind": "test",
+      "source": "tests/positioning/test_chart_layout_positioning.scene.ts"
+    },
+    {
       "id": "test-colored-latex-to-svg",
       "name": "Colored LaTeX To SVG",
       "kind": "test",
@@ -138,6 +144,12 @@
       "name": "Deferred Anims2",
       "kind": "test",
       "source": "tests/deferred/testing_deferredAnims2.scene.ts"
+    },
+    {
+      "id": "test-dynamic-bounds-positioning",
+      "name": "Positioning: Dynamic Bounds and Shape Changes",
+      "kind": "test",
+      "source": "tests/positioning/test_dynamic_bounds_positioning.scene.ts"
     },
     {
       "id": "test-fly-minimal-two-poses",
@@ -218,10 +230,28 @@
       "source": "tests/svg/test_material_on_latex.scene.ts"
     },
     {
+      "id": "test-place-once-positioning",
+      "name": "Positioning: Persistent Compared with Place Once",
+      "kind": "test",
+      "source": "tests/positioning/test_place_once_positioning.scene.ts"
+    },
+    {
+      "id": "test-product-layout-positioning",
+      "name": "Positioning: 3D Product Layout",
+      "kind": "test",
+      "source": "tests/positioning/test_product_layout_positioning.scene.ts"
+    },
+    {
       "id": "test-regular-text-latex",
       "name": "Regular Text LaTeX",
       "kind": "test",
       "source": "tests/svg/test_regular_text_latex.scene.ts"
+    },
+    {
+      "id": "test-relative-positioning",
+      "name": "Relative Positioning",
+      "kind": "test",
+      "source": "tests/positioning/test_relative_positioning.scene.ts"
     },
     {
       "id": "test-scene-inspection",
@@ -234,6 +264,12 @@
       "name": "Super Complex LaTeX To SVG",
       "kind": "test",
       "source": "tests/svg/test_super_complex_latex_to_svg.scene.ts"
+    },
+    {
+      "id": "test-transformed-dependency-chain-positioning",
+      "name": "Positioning: Transformed 3D Dependency Chain",
+      "kind": "test",
+      "source": "tests/positioning/test_transformed_dependency_chain_positioning.scene.ts"
     },
     {
       "id": "test-transition-svgs",

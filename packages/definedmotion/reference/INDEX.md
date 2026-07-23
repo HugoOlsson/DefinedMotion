@@ -25,10 +25,12 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-basic-svg | test | Basic SVG | `tests/svg/test_basic_svg.scene.ts` |
 | test-camera-rotate-quaternion | test | Camera Rotate Quaternion | `tests/camera/test_camera_rotate_quaternion.scene.ts` |
 | test-camera-waypoints-sequential | test | Camera Waypoints Sequential | `tests/camera/test_camera_waypoints_sequential.scene.ts` |
+| test-chart-layout-positioning | test | Positioning: Responsive Chart Layout | `tests/positioning/test_chart_layout_positioning.scene.ts` |
 | test-colored-latex-to-svg | test | Colored LaTeX To SVG | `tests/svg/test_colored_latex_to_svg.scene.ts` |
 | test-complex-latex-to-svg | test | Complex LaTeX To SVG | `tests/svg/test_complex_latex_to_svg.scene.ts` |
 | test-deferred-anims | test | Deferred Animations | `tests/deferred/testing_deferredAnims.scene.ts` |
 | test-deferred-anims-2 | test | Deferred Anims2 | `tests/deferred/testing_deferredAnims2.scene.ts` |
+| test-dynamic-bounds-positioning | test | Positioning: Dynamic Bounds and Shape Changes | `tests/positioning/test_dynamic_bounds_positioning.scene.ts` |
 | test-fly-minimal-two-poses | test | Fly Minimal Two Poses | `tests/camera/test_fly_camera_waypoints_verifiable.scene.ts` |
 | test-hdri-performance | test | HDRI Performance | `tests/environment/test_hdri_performance.scene.ts` |
 | test-latex-blue-particle-transition | test | LaTeX Blue Particle Transition | `tests/latex/test_latex_blue_particle_transition.scene.ts` |
@@ -42,9 +44,13 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-long-audio | test | Long Audio | `tests/audio/test_long_audio.scene.ts` |
 | test-many-short-sounds | test | Many Short Sounds | `tests/audio/test_many_short_sounds.scene.ts` |
 | test-material-on-latex | test | Material On LaTeX | `tests/svg/test_material_on_latex.scene.ts` |
+| test-place-once-positioning | test | Positioning: Persistent Compared with Place Once | `tests/positioning/test_place_once_positioning.scene.ts` |
+| test-product-layout-positioning | test | Positioning: 3D Product Layout | `tests/positioning/test_product_layout_positioning.scene.ts` |
 | test-regular-text-latex | test | Regular Text LaTeX | `tests/svg/test_regular_text_latex.scene.ts` |
+| test-relative-positioning | test | Relative Positioning | `tests/positioning/test_relative_positioning.scene.ts` |
 | test-scene-inspection | test | Scene Inspection | `tests/inspection/test_scene_inspection.scene.ts` |
 | test-super-complex-latex-to-svg | test | Super Complex LaTeX To SVG | `tests/svg/test_super_complex_latex_to_svg.scene.ts` |
+| test-transformed-dependency-chain-positioning | test | Positioning: Transformed 3D Dependency Chain | `tests/positioning/test_transformed_dependency_chain_positioning.scene.ts` |
 | test-transition-svgs | test | Transition Svgs | `tests/svg/test_transition_svgs.scene.ts` |
 | test-update-svg-object | test | Update SVG Object | `tests/svg/test_update_svg_object.scene.ts` |
 | test-updater-1 | test | Updater1 | `tests/animation/test_updater.scene.ts` |

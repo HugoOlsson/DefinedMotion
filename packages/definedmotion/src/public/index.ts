@@ -30,3 +30,11 @@ export type {
   ExposedSceneObject,
   InspectionCamera
 } from '../runtime/scene/sceneClass'
+export { Axis } from '../runtime/positioning'
+export type {
+  CenterWithOptions,
+  GapPlacementOptions,
+  PositionBuilder,
+  PositionGap,
+  Positioning
+} from '../runtime/positioning'

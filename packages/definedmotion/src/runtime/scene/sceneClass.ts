@@ -49,6 +49,7 @@ import {
   type FrameResource,
   type FrameResourceDependency
 } from './frameResource'
+import { type Positioning, PositioningSystem } from '../positioning'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -134,6 +135,7 @@ export class AnimatedScene {
   private exposureRegistry = new SceneExposureRegistry()
   private cameraRegistry = new SceneCameraRegistry()
   private readonly frameResources = new FrameResourceHost()
+  private readonly positioningSystem = new PositioningSystem()
 
   private pixelsWidth
   private pixelsHeight
@@ -267,6 +269,11 @@ export class AnimatedScene {
 
   add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
     elements.forEach((e) => this.scene.add(e))
+  }
+
+  /** Registers one-way positioning relationships using world-axis-aligned bounds. */
+  positioning(): Positioning {
+    return this.positioningSystem
   }
 
   do(instruction: SceneInstruction) {
@@ -436,6 +443,7 @@ export class AnimatedScene {
   }
 
   end() {
+    this.positioningSystem.compile()
     const lastAnimationTick = this.sceneAnimations.reduce(
       (latest, animation) => Math.max(latest, animation.endTick + 1),
       0
@@ -998,6 +1006,8 @@ export class AnimatedScene {
       for (let d = 0; d < this.sceneDependencies.length; d++) {
         await this.sceneDependencies[d](index, ticksToMillis(index))
       }
+
+      this.positioningSystem.solve(this.scene)
     })
   }
 
@@ -1046,6 +1056,7 @@ export class AnimatedScene {
     this.totalSceneTicks = 0
     this.sceneAnimations = []
     this.sceneDependencies = []
+    this.positioningSystem.reset()
     this.sceneInstructions = new Map()
     this.planedSounds = new Map()
     this.randomGenerator = Alea(definedMotionConfig.seed)
