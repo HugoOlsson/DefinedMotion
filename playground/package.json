@@ -10,7 +10,7 @@
     "dm": "definedmotion"
   },
   "dependencies": {
-    "definedmotion": "0.4.0-alpha.10",
+    "definedmotion": "0.4.0-alpha.11",
     "three": "^0.175.0"
   }
 }

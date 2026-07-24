@@ -34,8 +34,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 57) {
-    throw new Error(`Expected 57 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 63) {
+    throw new Error(`Expected 63 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
