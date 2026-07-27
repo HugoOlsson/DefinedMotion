@@ -179,6 +179,10 @@ export class AnimatedScene {
   private presentationOperation?: string
   private doNotPlayAudio = false
   private renderingAudioGather: AudioInScene[] = []
+  private renderingAudioByFrame = new Map<
+    number,
+    Map<string, AudioInScene>
+  >()
 
   private playbackTargetDistance: number | null = null
 
@@ -484,12 +488,20 @@ export class AnimatedScene {
         })
       }
     } else if (this.isRendering) {
-      // Handle rendering scenerio soon
-      this.renderingAudioGather.push({
-        audioPath,
-        volume,
-        atFrame: Math.round(this.sceneRenderTick / renderSkip)
-      })
+      const atFrame = Math.round(this.sceneRenderTick / renderSkip)
+      let audioForFrame = this.renderingAudioByFrame.get(atFrame)
+      if (!audioForFrame) {
+        audioForFrame = new Map()
+        this.renderingAudioByFrame.set(atFrame, audioForFrame)
+      }
+      const existing = audioForFrame.get(audioPath)
+      if (existing) {
+        existing.volume += volume
+      } else {
+        const event = { audioPath, volume, atFrame }
+        audioForFrame.set(audioPath, event)
+        this.renderingAudioGather.push(event)
+      }
     } else if (this.isPlaying && this.doNotPlayAudio === false) {
       playAudio(audioPath, volume)
     }
@@ -760,6 +772,7 @@ export class AnimatedScene {
     this.renderingEventFunction(true)
     this.isRendering = true
     this.isPlaying = true
+    this.clearRenderingAudioGather()
 
     try {
       this.interactiveViewport?.suspend()
@@ -796,9 +809,13 @@ export class AnimatedScene {
         }
       }
 
-      triggerEncoder(this.pixelsWidth, this.pixelsHeight, this.renderingAudioGather)
+      await triggerEncoder(
+        this.pixelsWidth,
+        this.pixelsHeight,
+        this.renderingAudioGather
+      )
 
-      this.renderingAudioGather = []
+      this.clearRenderingAudioGather()
       this.isRendering = false
       this.isPlaying = false
       await this.presentFrameAtIndex(0, false, 'exact')
@@ -806,7 +823,7 @@ export class AnimatedScene {
     } finally {
       this.isPlaying = false
       this.isRendering = false
-      this.renderingAudioGather = []
+      this.clearRenderingAudioGather()
       div.style.position = originalPosition
       div.style.top = originalTop
       div.style.left = originalLeft
@@ -1059,12 +1076,18 @@ export class AnimatedScene {
     this.positioningSystem.reset()
     this.sceneInstructions = new Map()
     this.planedSounds = new Map()
+    this.clearRenderingAudioGather()
     this.randomGenerator = Alea(definedMotionConfig.seed)
     this.patchedMathRandomGenerator = Alea(definedMotionConfig.seed)
   }
 
   private clearExposedObjects(): void {
     this.exposureRegistry.clear()
+  }
+
+  private clearRenderingAudioGather(): void {
+    this.renderingAudioGather = []
+    this.renderingAudioByFrame.clear()
   }
 
   private clearExposedCameras(): void {

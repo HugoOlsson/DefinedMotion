@@ -62,11 +62,11 @@ export const triggerEncoder = async (
     })
     if (response.success) {
       console.log('Video rendered successfully at:', response.outputFile)
-      // You can update the UI to show the output file path or provide a link to view it
     } else {
-      console.error('Video render failed:', response.error)
+      throw new Error(response.error ?? 'Video render failed')
     }
   } catch (error) {
     console.error('Error calling render:', error)
+    throw error
   }
 }

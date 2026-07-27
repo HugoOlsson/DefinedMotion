@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import { assetUrlToFilePath } from './assets'
+import { mixAudioEvents, runProcess } from './audioMixer'
 import {
   getAudioCacheRoot,
   getFrameCacheRoot,
@@ -12,6 +12,7 @@ import {
 
 export interface AudioInScene {
   audioPath: string
+  fsPath?: string
   volume: number
   atFrame: number
 }
@@ -32,119 +33,75 @@ export const generateID = (numCharacters: number = 10) =>
  * @param options.fps - Frames per second to use (default is 30).
  * @returns A promise that resolves to the output file path.
  */
-export function renderVideo(options: RenderOptions): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log(`Converting frames to video at ${options.fps} fps`)
+export async function renderVideo(options: RenderOptions): Promise<string> {
+  console.log(`Converting frames to video at ${options.fps} fps`)
 
-      //  console.log('THE AUDIO DATA IS', options.renderingAudioGather)
+  const rootDir = getFrameCacheRoot()
+  const audioRendersDir = getAudioCacheRoot()
+  const outputDir = getRenderOutputRoot()
+  fs.mkdirSync(outputDir, { recursive: true })
+  fs.mkdirSync(audioRendersDir, { recursive: true })
 
-      // Define directories
-      const rootDir = getFrameCacheRoot()
-      const audioRendersDir = getAudioCacheRoot()
-      const outputDir = getRenderOutputRoot()
+  const audioID = generateID(10)
+  const audioEvents = options.renderingAudioGather
+    .filter((audio) => audio.volume !== 0)
+    .map((audio) => ({
+      sourcePath: audio.fsPath ?? toFsPath(audio.audioPath),
+      volume: audio.volume,
+      atFrame: audio.atFrame
+    }))
+  const includeAudio = audioEvents.length > 0
+  const audioFile = path.join(audioRendersDir, `${audioID}.wav`)
 
-      // Ensure output directory exists.
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true })
-      }
+  if (includeAudio) {
+    const mixResult = await mixAudioEvents({
+      events: audioEvents,
+      fps: options.fps,
+      outputFile: audioFile,
+      workingDirectory: audioRendersDir
+    })
+    console.log(
+      `Audio created in ${mixResult.durationSeconds.toFixed(2)} seconds ` +
+        `(${mixResult.coalescedEventCount} placements)`
+    )
+  }
 
-      // Ensure output directory exists.
-      if (!fs.existsSync(audioRendersDir)) {
-        fs.mkdirSync(audioRendersDir, { recursive: true })
-      }
-      const audioID = generateID(10)
-      const includeAudio = options.renderingAudioGather.length > 0
-      if (includeAudio) {
-        const audioCommand = buildAudioMixCommand(options, audioRendersDir, audioID)
+  const latestDir = findLatestDir(rootDir)
+  const dirName = path.basename(latestDir)
+  console.log(`Processing directory: ${dirName}`)
 
-        console.log(`Building audio...`)
-        const audioResult = spawnSync(audioCommand, { stdio: 'inherit', shell: true })
-        if (audioResult.status !== 0) {
-          return reject(new Error('FFmpeg command failed'))
-        }
-      }
+  const framePattern = path.join(latestDir, 'frame_%05d.jpeg')
+  const outputFile = path.join(outputDir, `${dirName}.mp4`)
+  const ffmpegArguments = [
+    '-y',
+    '-framerate',
+    options.fps.toString(),
+    '-i',
+    framePattern
+  ]
 
-      // Find the latest render directory.
-      const latestDir = findLatestDir(rootDir)
-      const dirName = path.basename(latestDir)
-      console.log(`Processing directory: ${dirName}`)
+  if (includeAudio) ffmpegArguments.push('-i', audioFile)
+  ffmpegArguments.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p')
+  if (includeAudio) {
+    ffmpegArguments.push('-c:a', 'aac', '-af', 'apad', '-shortest')
+  }
+  ffmpegArguments.push('-preset', 'fast', '-crf', '23', outputFile)
 
-      // Define the frame pattern and output file path.
-      const framePattern = path.join(latestDir, 'frame_%05d.jpeg')
-      const outputFile = path.join(outputDir, `${dirName}.mp4`)
+  console.log('Encoding final video...')
+  await runProcess('ffmpeg', ffmpegArguments)
+  console.log(`Video created successfully: ${outputFile}`)
 
-      // Start building the ffmpeg arguments array.
-      const ffmpegArgs = [
-        '-y', // Overwrite output if it exists.
-        '-framerate',
-        options.fps.toString(), // Frame rate for the video.
-        '-i',
-        framePattern // Input frames pattern.
-      ]
-
-      // Conditionally add the audio input if needed.
-      if (includeAudio) {
-        ffmpegArgs.push(
-          '-i',
-          `${audioRendersDir}/${audioID}.mp3` // Input audio file.
-        )
-      }
-
-      // Common encoding parameters for video.
-      ffmpegArgs.push(
-        '-c:v',
-        'libx264', // Video codec.
-        '-pix_fmt',
-        'yuv420p' // Pixel format.
-      )
-
-      // Conditionally add audio codec settings only if audio is included.
-      if (includeAudio) {
-        ffmpegArgs.push(
-          '-c:a',
-          'aac', // Audio codec.
-          '-af',
-          'apad', // <-- pad audio with silence
-          '-shortest' // <-- cut output to shortest input (i.e. video)
-        )
-      }
-
-      // Additional encoding options for both scenarios.
-      ffmpegArgs.push(
-        '-preset',
-        'fast', // Preset for encoding speed/quality.
-        '-crf',
-        '23', // Quality/size balance.
-        outputFile // Output file.
-      )
-
-      console.log('Executing FFmpeg command:')
-      console.log(`ffmpeg ${ffmpegArgs.join(' ')}`)
-
-      // Execute FFmpeg synchronously.
-      const result = spawnSync('ffmpeg', ffmpegArgs, { stdio: 'inherit' })
-      if (result.status !== 0) {
-        return reject(new Error('FFmpeg command failed'))
-      }
-
-      console.log(`Video created successfully: ${outputFile}`)
-
-      // Delete the render directory with all its images.
-      fs.rmSync(latestDir, { recursive: true, force: true })
-      fs.readdirSync(audioRendersDir)
-        .filter((item) => !item.startsWith('.'))
-        .forEach((item) => {
-          const itemPath = path.join(audioRendersDir, item)
-          fs.rmSync(itemPath, { recursive: true, force: true })
-        })
-      console.log(`Deleted render folder: ${latestDir}`)
-
-      resolve(outputFile)
-    } catch (err) {
-      reject(err)
-    }
-  })
+  fs.rmSync(latestDir, { recursive: true, force: true })
+  fs.readdirSync(audioRendersDir)
+    .filter((item) => !item.startsWith('.'))
+    .forEach((item) => {
+      fs.rmSync(path.join(audioRendersDir, item), {
+        recursive: true,
+        force: true
+      })
+    })
+  console.log(`Deleted render folder: ${latestDir}`)
+  return outputFile
 }
 
 
@@ -154,64 +111,29 @@ function toFsPath(p: string): string {
   const projectAssetPath = assetUrlToFilePath(p)
   if (projectAssetPath) return projectAssetPath
 
-    // Handle Vite dev absolute path
+  // Handle Vite dev absolute path
   if (p.startsWith('/@fs/')) {
-    // Keep the leading slash before "Users"
-    return decodeURIComponent(p.slice(4))  // results in "/Users/…"
-    // Alternatively:
-    // return decodeURIComponent(p.replace(/^\/@fs/, ''))
+    return decodeURIComponent(p.slice(4))
   }
 
-  // 2) file:// URL
   try {
     const u = new URL(p)
     if (u.protocol === 'file:') return fileURLToPath(u)
   } catch {/* not a URL */}
 
-  // 3) already absolute on disk
   if (path.isAbsolute(p)) return p
 
-  // 4) fallback: try typical asset roots
-  const cleaned = p.replace(/^\/?assets\//, '') // allow "assets/foo.mp3" or "/assets/foo.mp3"
+  const cleaned = p.replace(/^\/?assets\//, '')
   const guesses = [
-    path.join(getProjectRoot(), 'src', 'renderer', 'assets', cleaned),     // dev
-    path.join(process.resourcesPath, 'assets', cleaned),                 // prod packaged
-    path.join(getProjectRoot(), cleaned)                                    // last resort
+    path.join(getProjectRoot(), 'src', 'renderer', 'assets', cleaned),
+    path.join(process.resourcesPath, 'assets', cleaned),
+    path.join(getProjectRoot(), cleaned)
   ]
   for (const g of guesses) {
     if (fs.existsSync(g)) return g
   }
 
-  // final fallback: return as-is (FFmpeg will error, but at least we see the attempted path)
   return p
-}
-
-function buildAudioMixCommand(renderOptions: RenderOptions, outputFolder: string, id: string) {
-  const { fps, renderingAudioGather } = renderOptions
-  let inputs: string[] = []
-  let filters: string[] = []
-  let inputIndexes: string[] = []
-
-  renderingAudioGather.forEach((audio, index) => {
-     // Prefer an already-provided absolute fsPath (if you later add it); else normalize here
-    const inputPath = (audio as any).fsPath ?? toFsPath(audio.audioPath)
-    inputs.push(`-i "${inputPath}"`)
-    const delayMs = Math.floor((audio.atFrame / fps) * 1000)
-    // adelay syntax: "adelay=delay_in_ms|delay_in_ms"
-    filters.push(`[${index}:a]adelay=${delayMs}|${delayMs},volume=${audio.volume}[a${index}]`)
-    inputIndexes.push(`[a${index}]`)
-  })
-
-  const filterComplex =
-    filters.join('; ') +
-    '; ' +
-    inputIndexes.join('') +
-    `amix=inputs=${renderingAudioGather.length}:duration=longest:normalize=0[out]`
-
-  // Adding -hide_banner and -loglevel error to reduce terminal output.
-  const outputFile = path.join(outputFolder, `${id}.mp3`)
-  const command = `ffmpeg -hide_banner -loglevel error ${inputs.join(' ')} -filter_complex "${filterComplex}" -map "[out]" "${outputFile}"`
-  return command
 }
 
 /**
