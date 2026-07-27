@@ -13,11 +13,11 @@ const projectRoot = resolve(scriptDirectory, '..', '..', '..', 'playground')
 const cli = join(scriptDirectory, '..', 'cli', 'index.mjs')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'definedmotion-smoke-'))
 
-function run(arguments_, expectSuccess = true) {
+function run(arguments_, expectSuccess = true, captureProgress = false) {
   const result = spawnSync(process.execPath, [cli, ...arguments_, '--json'], {
     cwd: projectRoot,
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit']
+    stdio: ['ignore', 'pipe', captureProgress ? 'pipe' : 'inherit']
   })
 
   if (!result.stdout) throw new Error(`CLI returned no JSON for: ${arguments_.join(' ')}`)
@@ -25,7 +25,19 @@ function run(arguments_, expectSuccess = true) {
   if (expectSuccess && (result.status !== 0 || !parsed.success)) {
     throw new Error(parsed.error?.message ?? `CLI failed with code ${result.status}`)
   }
-  return parsed
+  if (!captureProgress) return parsed
+  const progress = result.stderr
+    .split('\n')
+    .filter(Boolean)
+    .flatMap((line) => {
+      try {
+        const value = JSON.parse(line)
+        return value.type === 'progress' ? [value] : []
+      } catch {
+        return []
+      }
+    })
+  return { result: parsed, progress }
 }
 
 function sha256(path) {
@@ -73,6 +85,47 @@ try {
   ])
   if (assetResult.durationInFrames !== 1) {
     throw new Error('Asset reference test did not render its expected one-frame scene')
+  }
+
+  const videoOutput = join(temporaryDirectory, 'cli-render.mp4')
+  const cliVideo = run(
+    ['render', 'test-asset-references', '--output', videoOutput, '--no-build'],
+    true,
+    true
+  )
+  const probe = spawnSync(
+    'ffprobe',
+    [
+      '-v',
+      'error',
+      '-show_entries',
+      'stream=codec_type,width,height',
+      '-of',
+      'json',
+      videoOutput
+    ],
+    { encoding: 'utf8' }
+  )
+  const probeResult = probe.status === 0 ? JSON.parse(probe.stdout) : undefined
+  const progressPhases = new Set(cliVideo.progress.map((progress) => progress.phase))
+  if (
+    cliVideo.result.command !== 'render' ||
+    cliVideo.result.output !== videoOutput ||
+    cliVideo.result.durationInFrames !== 1 ||
+    cliVideo.result.outputFrameCount !== 1 ||
+    cliVideo.result.fps !== 60 ||
+    !probeResult?.streams?.some(
+      (stream) =>
+        stream.codec_type === 'video' &&
+        stream.width === 320 &&
+        stream.height === 180
+    ) ||
+    !progressPhases.has('preparing') ||
+    !progressPhases.has('rendering-frames') ||
+    !progressPhases.has('encoding-video') ||
+    !progressPhases.has('complete')
+  ) {
+    throw new Error('CLI video render output, metadata, or progress reporting was incorrect')
   }
 
   const videoFrameA = join(temporaryDirectory, 'video-frame-a.png')

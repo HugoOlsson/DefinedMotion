@@ -7,6 +7,7 @@ import type {
   CamerasAutomationRequest,
   InspectAutomationRequest,
   InspectSceneInfo,
+  RenderAutomationRequest,
   TimelineGridAutomationRequest
 } from './types'
 import { AutomationCommandError } from './errors'
@@ -16,6 +17,8 @@ import {
   setGlobalAssetNamespace,
   setGlobalContainerRef,
   setGlobalInteractiveMode,
+  renderOutputFps,
+  renderSkip,
   ticksToMillis,
   timelineFPS
 } from '../runtime/scene/sceneClass'
@@ -49,7 +52,8 @@ export class RenderSession {
       request.command !== 'timeline-grid' &&
       request.command !== 'inspect' &&
       request.command !== 'cameras' &&
-      request.command !== 'camera-grid'
+      request.command !== 'camera-grid' &&
+      request.command !== 'render'
     ) {
       throw new AutomationCommandError(
         'UNKNOWN_COMMAND',
@@ -79,7 +83,8 @@ export class RenderSession {
     if (
       request.command === 'still' ||
       request.command === 'timeline-grid' ||
-      request.command === 'camera-grid'
+      request.command === 'camera-grid' ||
+      request.command === 'render'
     ) {
       this.validateOutputRequest(request)
     }
@@ -123,6 +128,9 @@ export class RenderSession {
     if (request.command === 'inspect') {
       return await this.inspect(request, scene, definition.name, definition.isTest, startedAt)
     }
+    if (request.command === 'render') {
+      return await this.renderVideo(request, scene, startedAt)
+    }
 
     await scene.seekExact(request.frame)
     const selectedCamera = resolveInspectionCamera(scene, request.camera)
@@ -158,13 +166,41 @@ export class RenderSession {
   }
 
   private validateOutputRequest(
-    request: Extract<AutomationRequest, { command: 'still' | 'timeline-grid' | 'camera-grid' }>
+    request: Extract<
+      AutomationRequest,
+      { command: 'still' | 'timeline-grid' | 'camera-grid' | 'render' }
+    >
   ): void {
     if (typeof request.output !== 'string' || request.output === '') {
       throw new AutomationCommandError(
         'MISSING_OUTPUT',
         `The ${request.command} command requires an output path`
       )
+    }
+  }
+
+  private async renderVideo(
+    request: RenderAutomationRequest,
+    scene: AnimatedScene,
+    startedAt: number
+  ): Promise<AutomationResult> {
+    const output = await scene.renderToVideo({
+      outputFile: request.output,
+      reportProgress: true
+    })
+    return {
+      success: true,
+      command: 'render',
+      scene: request.scene,
+      durationInFrames: scene.totalSceneTicks,
+      outputFrameCount: Math.ceil(scene.totalSceneTicks / renderSkip),
+      durationMs: ticksToMillis(scene.totalSceneTicks),
+      fps: renderOutputFps(),
+      seed: project.seed,
+      width: scene.width,
+      height: scene.height,
+      output,
+      renderTimeMs: Math.round(performance.now() - startedAt)
     }
   }
 

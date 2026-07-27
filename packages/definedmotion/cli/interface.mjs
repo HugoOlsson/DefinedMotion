@@ -14,6 +14,7 @@ Usage:
   definedmotion session status [--json]
   definedmotion session stop [--json]
   definedmotion scenes [--exclude-tests] [--json] [--no-build] [--standalone]
+  definedmotion render <scene> [--output <video>] [--json] [--no-build]
   definedmotion still <scene> --frame <number> [--camera <id>] [--output <file>] [--json] [--no-build] [--standalone]
   definedmotion timeline-grid <scene> [--frames <list> | --count <number>] [--columns <number>] [--cell-width <pixels>] [--output <file>] [--json] [--no-build] [--standalone]
   definedmotion cameras <scene> [--frame <number>] [--json] [--no-build] [--standalone]
@@ -23,10 +24,12 @@ Usage:
 Session-aware commands use a running persistent runtime automatically.
 Pass --standalone to force a fresh build and Electron process, or
 --require-session to fail when no runtime session is available.
+The render command always uses an isolated Electron process.
 
 Examples:
   npm run dm -- session start
   npm run dm -- scenes
+  npm run dm -- render tutorial-easy-1 --output renders/tutorial.mp4
   npm run dm -- still tutorial-easy-1 --frame 30 --output .definedmotion/frame.png
   npm run dm -- timeline-grid tutorial-easy-1
   npm run dm -- cameras vector-field --frame 600 --json
@@ -71,6 +74,20 @@ export function parseArguments(values) {
 export function buildAutomationRequest(command, positionals, flags) {
   if (command === 'scenes') {
     return { command: 'scenes', excludeTests: flags['exclude-tests'] === true }
+  }
+
+  if (command === 'render') {
+    const scene = positionals[1]
+    if (!scene) {
+      throw new CliError('INVALID_ARGUMENTS', 'The render command requires a scene id')
+    }
+    const defaultOutput = join('renders', `${safeFileSegment(scene)}.mp4`)
+    const outputValue = typeof flags.output === 'string' ? flags.output : defaultOutput
+    return {
+      command: 'render',
+      scene,
+      output: isAbsolute(outputValue) ? outputValue : resolve(projectRoot, outputValue)
+    }
   }
 
   if (command === 'still') {
@@ -314,6 +331,15 @@ export function emit(result, json) {
   if (result.command === 'timeline-grid') {
     process.stdout.write(
       `Rendered ${result.cells?.length ?? 0} frames from ${result.scene} to ${result.output} (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
+    )
+    return
+  }
+
+  if (result.command === 'render') {
+    process.stdout.write(
+      `Rendered ${result.scene} to ${result.output} ` +
+        `(${result.outputFrameCount ?? 0} frames at ${result.fps} fps, ` +
+        `${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
     )
     return
   }

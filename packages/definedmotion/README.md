@@ -10,7 +10,9 @@ project scenes with `definedmotion scenes`.
 See `reference/INDEX.md` for examples, executable visual tests, and the agent workflow.
 
 Final video renders are written to the consumer project's `renders/` directory. Temporary frame
-and audio data stay under `.definedmotion/cache/`.
+and audio data stay under `.definedmotion/cache/`. Agents and scripts can export a scene with
+`definedmotion render <scene> --json`; progress is reported on stderr while the final structured
+result is written to stdout.
 
 ## Relative positioning
 

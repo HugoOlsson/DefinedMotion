@@ -5,6 +5,7 @@ export type AutomationCommand =
   | 'inspect'
   | 'cameras'
   | 'camera-grid'
+  | 'render'
 
 export interface ScenesAutomationRequest {
   command: 'scenes'
@@ -52,6 +53,12 @@ export interface CameraGridAutomationRequest {
   output: string
 }
 
+export interface RenderAutomationRequest {
+  command: 'render'
+  scene: string
+  output: string
+}
+
 export type AutomationRequest =
   | ScenesAutomationRequest
   | StillAutomationRequest
@@ -59,6 +66,7 @@ export type AutomationRequest =
   | InspectAutomationRequest
   | CamerasAutomationRequest
   | CameraGridAutomationRequest
+  | RenderAutomationRequest
 
 export interface AutomationSceneSummary {
   id: string
@@ -194,6 +202,8 @@ export interface AutomationSuccessResult {
   objectsTruncated?: boolean
   timeMs?: number
   durationInFrames?: number
+  outputFrameCount?: number
+  durationMs?: number
   fps?: number
   seed?: number | string
   width?: number

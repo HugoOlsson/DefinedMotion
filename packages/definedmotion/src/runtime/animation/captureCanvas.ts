@@ -50,18 +50,26 @@ export const captureCanvasFrame = async (
 export const triggerEncoder = async (
   width: number,
   height: number,
-  renderingAudioGather: AudioInScene[]
-) => {
+  renderingAudioGather: AudioInScene[],
+  options: {
+    outputFile?: string
+    renderName: string
+    frameCount: number
+  }
+): Promise<string> => {
   try {
     // Call the exposed function via the 'api' object.
     const response = await (window as any).api.startVideoRender({
       fps: renderOutputFps(),
       width,
       height,
-      renderingAudioGather
+      renderingAudioGather,
+      ...options
     })
     if (response.success) {
       console.log('Video rendered successfully at:', response.outputFile)
+      if (!response.outputFile) throw new Error('Video render returned no output file')
+      return response.outputFile
     } else {
       throw new Error(response.error ?? 'Video render failed')
     }

@@ -5,6 +5,7 @@ import type {
   AutomationResult,
   RuntimeRendererRequest
 } from '../automation/types'
+import type { RenderProgress } from '../renderProgress'
 
 export interface DefinedMotionAPI {
   startVideoRender(options: RenderOptions): Promise<{
@@ -15,6 +16,7 @@ export interface DefinedMotionAPI {
   getDisplayHz(): Promise<number>
   getAutomationRequest(): Promise<AutomationRequest>
   writeAutomationFile(outputPath: string, bytes: Uint8Array): Promise<string>
+  reportRenderProgress(progress: RenderProgress): void
   saveFrame(suggestedName: string, bytes: Uint8Array): Promise<string | undefined>
   completeAutomation(result: AutomationResult): void
   runtimeReady(sourceRevision: string): void

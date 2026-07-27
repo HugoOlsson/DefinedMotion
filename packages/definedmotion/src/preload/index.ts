@@ -7,6 +7,7 @@ import type {
   RuntimeRendererRequest,
   RuntimeSourceDiagnostic
 } from '../automation/types'
+import type { RenderProgress } from '../renderProgress'
 
 // ---- NEW helpers for event subscription
 function onDisplayHzChanged(cb: (hz: number) => void): () => void {
@@ -68,6 +69,9 @@ const customAPI = {
 
   writeAutomationFile: (outputPath: string, bytes: Uint8Array): Promise<string> =>
     ipcRenderer.invoke('definedmotion:write-automation-file', outputPath, bytes),
+
+  reportRenderProgress: (progress: RenderProgress): void =>
+    ipcRenderer.send('definedmotion:render-progress', progress),
 
   saveFrame: (suggestedName: string, bytes: Uint8Array): Promise<string | undefined> =>
     ipcRenderer.invoke('definedmotion:save-frame', suggestedName, bytes),

@@ -57,17 +57,16 @@ export function executeStandalone(request, flags) {
 
     const execution = spawnSync(electronPath, [mainEntry], {
       cwd: projectRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'ignore', 'pipe'],
+      stdio: ['ignore', 'ignore', 'inherit'],
       env: {
         ...runtimeEnvironment(),
         DEFINEDMOTION_AUTOMATION_REQUEST: JSON.stringify(request),
-        DEFINEDMOTION_AUTOMATION_RESULT: resultPath
+        DEFINEDMOTION_AUTOMATION_RESULT: resultPath,
+        DEFINEDMOTION_CLI_PROGRESS: flags.json === true ? 'json' : 'text'
       }
     })
 
     if (!existsSync(resultPath)) {
-      if (execution.stderr) process.stderr.write(execution.stderr)
       return cliFailure(
         request.command,
         'AUTOMATION_DID_NOT_RESPOND',
@@ -80,7 +79,6 @@ export function executeStandalone(request, flags) {
     }
 
     const result = JSON.parse(readFileSync(resultPath, 'utf8'))
-    if (!result.success && execution.stderr) process.stderr.write(execution.stderr)
     return result
   } finally {
     rmSync(temporaryDirectory, { recursive: true, force: true })

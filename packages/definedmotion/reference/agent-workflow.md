@@ -20,8 +20,9 @@ This guide is the operational reference for coding agents creating and evaluatin
 ```text
 scene source
     ↓  Vite loads the current source revision
-persistent Electron + Three.js runtime
-    ↓  builds a clean scene and seeks to an exact frame
+Electron + Three.js runtime
+    ↓  builds a clean scene
+    ├─ render         → isolated full MP4 render with progress
     ├─ still          → one full-resolution PNG
     ├─ timeline-grid  → several frames in one labeled PNG
     ├─ inspect        → scene, camera, object, and geometry JSON
@@ -57,7 +58,10 @@ npm run dm -- camera-grid my-scene --frame 240 --json
 
 # 6. Edit source and repeat against the same session.
 
-# 7. Stop the environment when finished.
+# 7. Render the approved scene to a complete video.
+npm run dm -- render my-scene --json
+
+# 8. Stop the environment when finished.
 npm run dm -- session stop --json
 ```
 
@@ -69,6 +73,7 @@ Start broad with a timeline grid. Narrow the investigation with stills, inspecti
 | -------------------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
 | Find renderable scenes                       | `scenes`                    | Returns stable IDs and identifies the default scene and visual tests.       |
 | Avoid repeated Electron/WebGL startup        | `session start`             | Keeps the renderer environment warm across many requests.                   |
+| Export the complete animation                | `render`                    | Writes an MP4 and reports frame and encoding progress.                       |
 | Learn scene duration                         | `inspect <scene> --frame 0` | `sceneInfo` includes duration, last valid frame, dimensions, FPS, and seed. |
 | See the complete progression                 | `timeline-grid`             | Places representative exact frames in one image.                            |
 | Check a visual detail                        | `still`                     | Produces one lossless, full-resolution frame.                               |
@@ -87,9 +92,11 @@ Run commands from the project root through the package script:
 npm run dm -- <command> [arguments] [flags]
 ```
 
-Use `--json` for agents. JSON mode reserves stdout for one machine-readable result. Without it, the CLI prints a short human summary.
+Use `--json` for agents. JSON mode reserves stdout for one machine-readable final result. Long
+video renders report newline-delimited progress objects on stderr, so progress never corrupts the
+final stdout JSON. Without JSON mode, the CLI prints readable progress and a short final summary.
 
-The render and inspection commands support these execution flags:
+Inspection commands support these execution flags:
 
 | Flag                | Behavior                                                                                                                                                                                                         |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -99,6 +106,9 @@ The render and inspection commands support these execution flags:
 | `--no-build`        | When using the standalone path, skip the Electron/Vite build and use existing `.definedmotion/build` files. Unsafe after source changes. A running session already uses Vite source freshness, so this flag is unnecessary there. |
 
 Without `--standalone` or `--require-session`, a command uses a compatible running session when available and otherwise falls back to a standalone build and process.
+
+`render` always launches an isolated process and supports `--json` and `--no-build`. This keeps a
+long export from blocking the persistent inspection session.
 
 ## Complete command reference
 
@@ -150,6 +160,33 @@ Returns:
 ```
 
 Use the returned `id` in every other command. `--exclude-tests` removes definitions marked with `isTest: true`. Tests remain normal renderable scenes in the complete catalogue.
+
+### `render`
+
+```bash
+npm run dm -- render <scene> \
+  [--output <video>] \
+  [--json] [--no-build]
+```
+
+- `--output` defaults to `renders/<scene>.mp4`.
+- Relative output paths resolve from the project root. Parent directories are created.
+- The complete authored timeline is rendered through the main scene camera.
+- Output FPS is `timelineFps / renderEveryNthFrame` from `definedmotion.config.ts`.
+- An existing output is replaced.
+- Temporary JPEG frames and mixed audio stay below `.definedmotion/cache/` and are removed after a
+  successful render.
+
+Progress phases are `preparing`, `rendering-frames`, `encoding-video`, and `complete`. Frame
+progress includes `completed`, `total`, `percent`, and `frame`. In JSON mode each update is a
+compact JSON object on stderr:
+
+```json
+{"type":"progress","command":"render","phase":"rendering-frames","completed":241,"total":900,"percent":26.78,"frame":240}
+```
+
+The final stdout result includes `scene`, `durationInFrames`, `outputFrameCount`, `durationMs`,
+output `fps`, dimensions, seed, absolute `output`, and `renderTimeMs`.
 
 ### `still`
 
@@ -517,7 +554,9 @@ If source changes repeatedly during a request, the CLI retries revision races up
 | Asset errors                                                | Asset path, existence, or loading failure                              | Correct the `src/assets`-relative path or loader usage.                                                           |
 | Exposure/camera registration errors                         | Invalid, duplicate, reserved, excessive, or out-of-build registration  | Correct the scene’s semantic registration according to the rules above.                                           |
 
-Unexpected scene exceptions return `AUTOMATION_FAILED` with a stack when available. A renderer request has a five-minute host timeout; the local socket response timeout is 17 seconds for ordinary client communication.
+Unexpected scene exceptions return `AUTOMATION_FAILED` with a stack when available. Ordinary
+renderer requests have a five-minute host timeout and a 17-second local socket timeout. Full video
+renders have a 24-hour timeout and continue reporting progress while they run.
 
 ## Effective workflows
 
@@ -531,6 +570,7 @@ Unexpected scene exceptions return `AUTOMATION_FAILED` with a stack when availab
 6. Inspect semantic objects for containment, transforms, and state.
 7. Use camera grids for 3D structure or ambiguous composition.
 8. Run dense frame samples around motion that still feels wrong.
+9. Export the approved full animation with `render`.
 
 ### Checking motion
 
@@ -561,6 +601,7 @@ Before handing off a change:
 
 Current limitations:
 
-- The agent CLI produces PNG stills and grids, not playable preview clips. Dense sampling helps, but final motion should be watched in Studio.
+- A final MP4 proves that the complete timeline can render, but visual judgment still requires
+  reviewing the video or representative frames.
 - Scene modules are discovered through eager code imports. `scene.asset()` prevents their media from being eagerly read or bundled, but module-scope computation should still stay lightweight.
 - Bounds describe geometry and camera projection, not visual occlusion or aesthetic quality.

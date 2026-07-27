@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { assetUrlToFilePath } from './assets'
 import { mixAudioEvents, runProcess } from './audioMixer'
+import { emitRenderProgress } from './renderProgress'
 import {
   getAudioCacheRoot,
   getFrameCacheRoot,
@@ -22,6 +23,9 @@ export interface RenderOptions {
   width: number
   height: number
   renderingAudioGather: AudioInScene[]
+  outputFile?: string
+  renderName?: string
+  frameCount?: number
 }
 
 export const generateID = (numCharacters: number = 10) =>
@@ -66,14 +70,25 @@ export async function renderVideo(options: RenderOptions): Promise<string> {
     )
   }
 
-  const latestDir = findLatestDir(rootDir)
+  const latestDir = options.renderName
+    ? path.join(rootDir, `render_${options.renderName}`)
+    : findLatestDir(rootDir)
   const dirName = path.basename(latestDir)
   console.log(`Processing directory: ${dirName}`)
 
   const framePattern = path.join(latestDir, 'frame_%05d.jpeg')
-  const outputFile = path.join(outputDir, `${dirName}.mp4`)
+  const outputFile = options.outputFile
+    ? path.resolve(options.outputFile)
+    : path.join(outputDir, `${dirName}.mp4`)
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true })
+  const frameCount =
+    options.frameCount ??
+    fs.readdirSync(latestDir).filter((entry) => /^frame_\d{5}\.jpeg$/.test(entry)).length
   const ffmpegArguments = [
     '-y',
+    '-hide_banner',
+    '-loglevel',
+    'error',
     '-framerate',
     options.fps.toString(),
     '-i',
@@ -88,19 +103,26 @@ export async function renderVideo(options: RenderOptions): Promise<string> {
   ffmpegArguments.push('-preset', 'fast', '-crf', '23', outputFile)
 
   console.log('Encoding final video...')
+  emitRenderProgress({
+    phase: 'encoding-video',
+    message: 'Encoding final video',
+    completed: 0,
+    total: frameCount,
+    percent: 0
+  })
   await runProcess('ffmpeg', ffmpegArguments)
   console.log(`Video created successfully: ${outputFile}`)
 
   fs.rmSync(latestDir, { recursive: true, force: true })
-  fs.readdirSync(audioRendersDir)
-    .filter((item) => !item.startsWith('.'))
-    .forEach((item) => {
-      fs.rmSync(path.join(audioRendersDir, item), {
-        recursive: true,
-        force: true
-      })
-    })
+  if (includeAudio) fs.rmSync(audioFile, { force: true })
   console.log(`Deleted render folder: ${latestDir}`)
+  emitRenderProgress({
+    phase: 'complete',
+    message: 'Render complete',
+    completed: frameCount,
+    total: frameCount,
+    percent: 100
+  })
   return outputFile
 }
 

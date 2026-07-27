@@ -42,7 +42,13 @@ try {
     else throw new CliError('INVALID_ARGUMENTS', 'Usage: definedmotion session <start|status|stop>')
   } else {
     const request = buildAutomationRequest(command, positionals, flags)
-    if (flags.standalone !== true) {
+    if (request.command === 'render' && flags['require-session'] === true) {
+      throw new CliError(
+        'INVALID_ARGUMENTS',
+        'The render command runs in an isolated process and cannot use --require-session'
+      )
+    }
+    if (request.command !== 'render' && flags.standalone !== true) {
       try {
         result = await executeWithRuntime(request)
       } catch (error) {

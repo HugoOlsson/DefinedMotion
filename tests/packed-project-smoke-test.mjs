@@ -196,6 +196,34 @@ try {
     if (!ids.has(id)) throw new Error(`Packed consumer did not discover ${id}`)
   }
 
+  const renderOutput = join(temporaryRoot, 'packed-consumer-render.mp4')
+  const renderCommandOutput = run(
+    'npm',
+    [
+      'run',
+      'dm',
+      '--',
+      'render',
+      'my-first-scene',
+      '--no-build',
+      '--json',
+      '--output',
+      renderOutput
+    ],
+    { cwd: consumerRoot }
+  )
+  const renderJsonStart = renderCommandOutput.indexOf('{')
+  const renderResult = JSON.parse(renderCommandOutput.slice(renderJsonStart))
+  if (
+    !renderResult.success ||
+    renderResult.command !== 'render' ||
+    renderResult.output !== renderOutput ||
+    renderResult.outputFrameCount !== 60 ||
+    !existsSync(renderOutput)
+  ) {
+    throw new Error('Packed consumer CLI did not render the expected video')
+  }
+
   run('npm', ['install', `definedmotion@file:${tarball}`, '--prefer-offline'], {
     cwd: consumerRoot
   })

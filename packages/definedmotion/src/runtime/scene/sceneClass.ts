@@ -50,6 +50,7 @@ import {
   type FrameResourceDependency
 } from './frameResource'
 import { type Positioning, PositioningSystem } from '../positioning'
+import type { RenderProgress } from '../../renderProgress'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -63,6 +64,11 @@ export const ticksToMillis = (ticks: number) => (ticks / timelineFPS) * 1000
 export const millisToTicks = (ms: number) => Math.ceil((ms / 1000) * timelineFPS)
 
 export const renderOutputFps = () => timelineFPS / renderSkip
+
+export interface RenderVideoOptions {
+  outputFile?: string
+  reportProgress?: boolean
+}
 
 
 export enum SpaceSetting {
@@ -755,10 +761,17 @@ export class AnimatedScene {
   }
 
   render(): Promise<void> {
-    return this.runPresentationOperation('render', () => this.renderAnimation())
+    return this.runPresentationOperation('render', async () => {
+      await this.renderAnimation({})
+    })
   }
 
-  private async renderAnimation(): Promise<void> {
+  /** @internal Used by the automation CLI to select an output and report progress. */
+  renderToVideo(options: RenderVideoOptions): Promise<string> {
+    return this.runPresentationOperation('render', () => this.renderAnimation(options))
+  }
+
+  private async renderAnimation(options: RenderVideoOptions): Promise<string> {
     const ro = this.resizeObserver
     const renderName = generateID(10)
     const cpu_free_time = 5
@@ -768,6 +781,9 @@ export class AnimatedScene {
     const originalLeft = div.style.left
     const originalZIndex = div.style.zIndex
     const originalOpacity = div.style.opacity
+    const reportProgress = (progress: RenderProgress): void => {
+      if (options.reportProgress) window.api.reportRenderProgress(progress)
+    }
 
     this.renderingEventFunction(true)
     this.isRendering = true
@@ -787,7 +803,14 @@ export class AnimatedScene {
       this.prepareOutputViewport()
       window.scrollTo(0, 0)
       const startFrame = 0
+      reportProgress({
+        phase: 'preparing',
+        message: 'Preparing scene'
+      })
       await this.presentFrameAtIndex(startFrame, true, 'exact')
+      const totalOutputFrames = Math.ceil(this.totalSceneTicks / renderSkip)
+      let renderedFrames = 0
+      let lastProgressAt = -Infinity
       for (let i = startFrame; i < this.totalSceneTicks; i++) {
         this.sceneRenderTick = i
         //To not trace start frame twice
@@ -802,6 +825,25 @@ export class AnimatedScene {
             renderName,
             this.renderer
           )
+          renderedFrames++
+          const now = performance.now()
+          if (
+            renderedFrames === 1 ||
+            renderedFrames === totalOutputFrames ||
+            now - lastProgressAt >= 1_000
+          ) {
+            const percent =
+              totalOutputFrames > 0 ? (renderedFrames / totalOutputFrames) * 100 : 100
+            reportProgress({
+              phase: 'rendering-frames',
+              message: 'Rendering frames',
+              completed: renderedFrames,
+              total: totalOutputFrames,
+              percent,
+              frame: this.sceneRenderTick
+            })
+            lastProgressAt = now
+          }
         }
         await this.playEffectFunction()
         if (i % 10 === 0) {
@@ -809,10 +851,15 @@ export class AnimatedScene {
         }
       }
 
-      await triggerEncoder(
+      const outputFile = await triggerEncoder(
         this.pixelsWidth,
         this.pixelsHeight,
-        this.renderingAudioGather
+        this.renderingAudioGather,
+        {
+          outputFile: options.outputFile,
+          renderName,
+          frameCount: renderedFrames
+        }
       )
 
       this.clearRenderingAudioGather()
@@ -820,6 +867,7 @@ export class AnimatedScene {
       this.isPlaying = false
       await this.presentFrameAtIndex(0, false, 'exact')
       this.renderCurrentFrame()
+      return outputFile
     } finally {
       this.isPlaying = false
       this.isRendering = false
