@@ -212,14 +212,19 @@ export async function stopRuntime() {
 export async function executeWithRuntime(request) {
   const descriptor = readRuntimeDescriptor()
   if (!descriptor) return undefined
+  const timeoutMs = request.command === 'layout-check' ? 24 * 60 * 60 * 1000 : 17_000
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const sourceRevision = computeSourceRevision(projectRoot)
-    const result = await sendRuntimeRequest(descriptor, {
-      action: 'execute',
-      sourceRevision,
-      request
-    })
+    const result = await sendRuntimeRequest(
+      descriptor,
+      {
+        action: 'execute',
+        sourceRevision,
+        request
+      },
+      timeoutMs
+    )
     const revisionAfterRequest = computeSourceRevision(projectRoot)
     const retryableRuntimeError =
       !result.success &&

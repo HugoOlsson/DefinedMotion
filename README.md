@@ -226,6 +226,29 @@ when `inspect` runs, along with the current content of text-bearing objects.
 Registrations are cleared before every deterministic scene rebuild and when the
 scene is destroyed.
 
+Register any object or group whose accidental overlap should be checked across
+the complete animation:
+
+```ts
+scene.watchCollisions('main-title', title, {
+  paddingPx: 8,
+  ignore: [titleBackground]
+})
+```
+
+Then run the full-timeline bounds check:
+
+```bash
+npm run dm -- layout-check my-scene --json
+```
+
+`layout-check` advances every authored frame as quickly as possible, compares the
+watched object with other visible renderable geometry through the main camera,
+groups nearby collisions into incidents, and saves one ordinary still at each
+incident's greatest-overlap frame. Text is a primary use case, but collision
+watches work with general Three.js objects and groups. Intentional overlaps can
+be excluded with `ignore`.
+
 Scenes can also expose purpose-built inspection cameras. They are ordinary
 Three.js cameras, so they can be placed, parented, or updated by scene code:
 

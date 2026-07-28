@@ -25,7 +25,7 @@ const persistentRuntimeConfig = getPersistentRuntimeConfig()
 const isPersistentRuntime = Boolean(persistentRuntimeConfig)
 const isRuntimeMode = isAutomation || isPersistentRuntime
 const isDevelopmentSmoke = process.env['DEFINEDMOTION_DEV_SMOKE'] === '1'
-const RENDER_TIMEOUT_MS = 24 * 60 * 60 * 1000
+const LONG_AUTOMATION_TIMEOUT_MS = 24 * 60 * 60 * 1000
 
 let automationRequest: AutomationRequest | undefined
 if (automationRequestRaw) {
@@ -328,12 +328,17 @@ app.whenReady().then(() => {
             new Error(
               automationRequest?.command === 'render'
                 ? 'Render timed out after 24 hours'
-                : 'Automation timed out after 5 minutes'
+                : automationRequest?.command === 'layout-check'
+                  ? 'Layout check timed out after 24 hours'
+                  : 'Automation timed out after 5 minutes'
             )
           )
         )
       },
-      automationRequest?.command === 'render' ? RENDER_TIMEOUT_MS : 5 * 60 * 1000
+      (automationRequest?.command === 'render' ||
+        automationRequest?.command === 'layout-check')
+        ? LONG_AUTOMATION_TIMEOUT_MS
+        : 5 * 60 * 1000
     )
   } else if (!isPersistentRuntime) {
     void deleteRenderedContent()

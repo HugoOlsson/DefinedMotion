@@ -25,6 +25,8 @@ export {
   timelineFPS
 } from '../runtime/scene/sceneClass'
 export type {
+  CollisionWatch,
+  CollisionWatchOptions,
   ExposedCameraMetadata,
   ExposedObjectMetadata,
   ExposedSceneObject,

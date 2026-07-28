@@ -14,6 +14,15 @@ and audio data stay under `.definedmotion/cache/`. Agents and scripts can export
 `definedmotion render <scene> --json`; progress is reported on stderr while the final structured
 result is written to stdout.
 
+## Collision checks
+
+`scene.watchCollisions(id, object, options)` registers any Three.js object or group for the
+general-purpose `definedmotion layout-check <scene> --json` command. The command evaluates every
+authored frame without real-time playback, compares screen-space bounds against other visible
+renderable objects, groups nearby overlaps into incidents, and saves one representative still per
+incident. Text is a common use case, but the API is not text-specific. Use `paddingPx` for visual
+clearance and `ignore` for intentional overlaps.
+
 ## Relative positioning
 
 `scene.positioning()` creates one-way relationships measured from world-aligned bounding boxes. The

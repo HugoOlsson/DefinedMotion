@@ -3,6 +3,7 @@ export type AutomationCommand =
   | 'still'
   | 'timeline-grid'
   | 'inspect'
+  | 'layout-check'
   | 'cameras'
   | 'camera-grid'
   | 'render'
@@ -37,6 +38,13 @@ export interface InspectAutomationRequest {
   camera?: string
 }
 
+export interface LayoutCheckAutomationRequest {
+  command: 'layout-check'
+  scene: string
+  outputDirectory: string
+  mergeGapFrames: number
+}
+
 export interface CamerasAutomationRequest {
   command: 'cameras'
   scene: string
@@ -64,6 +72,7 @@ export type AutomationRequest =
   | StillAutomationRequest
   | TimelineGridAutomationRequest
   | InspectAutomationRequest
+  | LayoutCheckAutomationRequest
   | CamerasAutomationRequest
   | CameraGridAutomationRequest
   | RenderAutomationRequest
@@ -118,6 +127,34 @@ export interface InspectScreenBounds {
   y: number
   width: number
   height: number
+}
+
+export interface LayoutCollisionOverlap extends InspectScreenBounds {
+  area: number
+}
+
+export interface LayoutCollisionIncident {
+  id: string
+  subjectId: string
+  subjectText?: string
+  obstacleId: string
+  obstacleName?: string
+  obstacleType: string
+  obstaclePath: string
+  startFrame: number
+  endFrame: number
+  representativeFrame: number
+  collisionFrameCount: number
+  paddingPx: number
+  subjectBounds: InspectScreenBounds
+  obstacleBounds: InspectScreenBounds
+  overlapPixels: LayoutCollisionOverlap
+  screenshotPath: string
+}
+
+export interface LayoutCheckWarning {
+  code: string
+  message: string
 }
 
 export interface InspectObjectMetadata {
@@ -200,6 +237,13 @@ export interface AutomationSuccessResult {
   objects?: InspectObjectResult[]
   totalExposedObjects?: number
   objectsTruncated?: boolean
+  checkedFrames?: number
+  watchedObjectCount?: number
+  incidentCount?: number
+  clean?: boolean
+  mergeGapFrames?: number
+  incidents?: LayoutCollisionIncident[]
+  warnings?: LayoutCheckWarning[]
   timeMs?: number
   durationInFrames?: number
   outputFrameCount?: number
@@ -215,6 +259,7 @@ export interface AutomationSuccessResult {
   cellWidth?: number
   cellHeight?: number
   output?: string
+  outputDirectory?: string
   renderTimeMs?: number
   runtimeId?: string
   generation?: number

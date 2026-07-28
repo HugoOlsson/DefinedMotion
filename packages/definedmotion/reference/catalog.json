@@ -212,6 +212,12 @@
       "source": "tests/svg/test_latex_to_svg.scene.ts"
     },
     {
+      "id": "test-layout-check",
+      "name": "Layout Check",
+      "kind": "test",
+      "source": "tests/inspection/test_layout_check.scene.ts"
+    },
+    {
       "id": "test-long-audio",
       "name": "Long Audio",
       "kind": "test",

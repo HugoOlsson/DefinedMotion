@@ -28,6 +28,11 @@ import {
   type InspectionCamera
 } from './sceneCamera'
 import {
+  SceneCollisionRegistry,
+  type CollisionWatch,
+  type CollisionWatchOptions
+} from './sceneCollision'
+import {
   assetUrl,
   createAssetReference,
   type AssetSource,
@@ -70,6 +75,11 @@ export interface RenderVideoOptions {
   reportProgress?: boolean
 }
 
+export interface ExactFrameVisit {
+  frame: number
+  timeMs: number
+  capturePng: (camera?: InspectionCamera) => Promise<Blob>
+}
 
 export enum SpaceSetting {
   ThreeDim,
@@ -88,6 +98,7 @@ export type {
   ExposedObjectMetadata,
   ExposedSceneObject
 } from './sceneExposure'
+export type { CollisionWatch, CollisionWatchOptions } from './sceneCollision'
 export { MAIN_CAMERA_ID } from './sceneCamera'
 export type { ExposedCameraMetadata, ExposedSceneCamera, InspectionCamera } from './sceneCamera'
 
@@ -140,6 +151,7 @@ export class AnimatedScene {
   private planedSounds: Map<number, AudioInScene[]> = new Map()
   private exposureRegistry = new SceneExposureRegistry()
   private cameraRegistry = new SceneCameraRegistry()
+  private collisionRegistry = new SceneCollisionRegistry()
   private readonly frameResources = new FrameResourceHost()
   private readonly positioningSystem = new PositioningSystem()
 
@@ -274,6 +286,7 @@ export class AnimatedScene {
     this.resizeObserver?.disconnect()
     this.clearExposedObjects()
     this.clearExposedCameras()
+    this.clearCollisionWatches()
     this.frameResources.dispose()
   }
 
@@ -345,6 +358,33 @@ export class AnimatedScene {
 
   get exposedObjectCount(): number {
     return this.exposureRegistry.size
+  }
+
+  /**
+   * Registers an object for screen-space collision checks by the layout-check CLI command.
+   * The watched object can be any renderable object or group; text is a common use case.
+   */
+  watchCollisions<T extends THREE.Object3D>(
+    id: string,
+    object: T,
+    options: CollisionWatchOptions = {}
+  ): T {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'COLLISION_WATCH_OUTSIDE_BUILD',
+        'scene.watchCollisions() must be called while the scene build function is running'
+      )
+    }
+    return this.collisionRegistry.watch(id, object, options)
+  }
+
+  /** Current-build collision registrations for tooling. The returned array is a snapshot. */
+  getCollisionWatches(): CollisionWatch[] {
+    return this.collisionRegistry.snapshot()
+  }
+
+  get collisionWatchCount(): number {
+    return this.collisionRegistry.size
   }
 
   /**
@@ -613,6 +653,41 @@ export class AnimatedScene {
     this.doNotPlayAudio = false
   }
 
+  /**
+   * @internal Builds once and visits authored frames sequentially without real-time playback.
+   * Returning false from the visitor stops the sequence early.
+   */
+  visitExactFrames(
+    visitor: (visit: ExactFrameVisit) => Promise<boolean | void> | boolean | void
+  ): Promise<number> {
+    return this.runPresentationOperation('exact frame sequence', async () => {
+      await this.prepareSceneForSeek(true, false)
+      if (this.totalSceneTicks <= 0) {
+        throw new SceneRuntimeError('EMPTY_SCENE', 'Scene has no frames')
+      }
+
+      this.prepareOutputViewport()
+      let visitedFrames = 0
+      for (let frame = 0; frame < this.totalSceneTicks; frame++) {
+        this.sceneRenderTick = frame
+        await this.traceCurrentFrame(frame, false, false)
+        await this.prepareExactFrame()
+        this.scene.updateMatrixWorld(true)
+        this.camera.updateProjectionMatrix()
+        this.camera.updateWorldMatrix(true, false)
+        visitedFrames++
+
+        const continueSequence = await visitor({
+          frame,
+          timeMs: ticksToMillis(frame),
+          capturePng: (camera = this.camera) => this.capturePreparedPng(camera)
+        })
+        if (continueSequence === false) break
+      }
+      return visitedFrames
+    })
+  }
+
   /** Sets the WebGL drawing buffer to the scene's logical output resolution. */
   prepareOutputViewport(): void {
     this.resizeObserver?.disconnect()
@@ -654,6 +729,10 @@ export class AnimatedScene {
 
   private async captureExactPng(camera: InspectionCamera): Promise<Blob> {
     await this.prepareExactFrame()
+    return await this.capturePreparedPng(camera)
+  }
+
+  private async capturePreparedPng(camera: InspectionCamera): Promise<Blob> {
     this.renderCurrentFrame(camera)
     const canvas = this.renderer.domElement
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
@@ -1116,6 +1195,7 @@ export class AnimatedScene {
   private resetSceneVars() {
     this.clearExposedObjects()
     this.clearExposedCameras()
+    this.clearCollisionWatches()
     this.sceneRenderTick = 0
     this.sceneCalculationTick = 0
     this.totalSceneTicks = 0
@@ -1140,6 +1220,10 @@ export class AnimatedScene {
 
   private clearExposedCameras(): void {
     this.cameraRegistry.clear()
+  }
+
+  private clearCollisionWatches(): void {
+    this.collisionRegistry.clear()
   }
 
   private async withSeededRandom<T>(operation: () => Promise<T> | T): Promise<T> {

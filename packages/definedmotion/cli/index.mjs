@@ -14,6 +14,7 @@ import {
 import { CliError, cliFailure } from './shared.mjs'
 import { executeStandalone } from './standalone.mjs'
 import { runLifecycleCommand } from './lifecycle.mjs'
+import { cleanupStaleLayoutCheckScreenshots } from './layout-output.mjs'
 
 const { positionals, flags } = parseArguments(process.argv.slice(2))
 const command = positionals[0]
@@ -64,6 +65,7 @@ try {
       }
       result = executeStandalone(request, flags)
     }
+    cleanupStaleLayoutCheckScreenshots(result)
   }
 } catch (error) {
   const normalized = error instanceof Error ? error : new Error(String(error))

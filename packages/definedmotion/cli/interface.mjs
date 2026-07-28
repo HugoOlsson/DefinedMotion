@@ -20,6 +20,7 @@ Usage:
   definedmotion cameras <scene> [--frame <number>] [--json] [--no-build] [--standalone]
   definedmotion camera-grid <scene> [--frame <number>] [--cameras <list|all>] [--columns <number>] [--cell-width <pixels>] [--output <file>] [--json] [--no-build] [--standalone]
   definedmotion inspect <scene> [--frame <number>] [--camera <id>] [--json] [--no-build] [--standalone]
+  definedmotion layout-check <scene> [--output-dir <directory>] [--merge-gap-frames <number>] [--json] [--no-build] [--standalone]
 
 Session-aware commands use a running persistent runtime automatically.
 Pass --standalone to force a fresh build and Electron process, or
@@ -35,6 +36,7 @@ Examples:
   npm run dm -- cameras vector-field --frame 600 --json
   npm run dm -- camera-grid vector-field --frame 600
   npm run dm -- inspect tutorial-easy-1 --frame 30 --json
+  npm run dm -- layout-check tutorial-easy-1 --json
   npm run dm -- session stop
 
 Agent interface guide:
@@ -227,6 +229,32 @@ export function buildAutomationRequest(command, positionals, flags) {
     return { command: 'inspect', scene, frame, camera }
   }
 
+  if (command === 'layout-check') {
+    const scene = positionals[1]
+    if (!scene) {
+      throw new CliError('INVALID_ARGUMENTS', 'The layout-check command requires a scene id')
+    }
+    if (flags['output-dir'] !== undefined && typeof flags['output-dir'] !== 'string') {
+      throw new CliError('INVALID_ARGUMENTS', '--output-dir requires a directory')
+    }
+    const mergeGapFrames = parseOptionalInteger(flags['merge-gap-frames'], 120)
+    if (mergeGapFrames < 0) {
+      throw new CliError(
+        'INVALID_ARGUMENTS',
+        '--merge-gap-frames must be a non-negative integer'
+      )
+    }
+    const defaultOutput = join('.definedmotion', 'layout-checks', safeFileSegment(scene))
+    const outputValue =
+      typeof flags['output-dir'] === 'string' ? flags['output-dir'] : defaultOutput
+    return {
+      command: 'layout-check',
+      scene,
+      mergeGapFrames,
+      outputDirectory: isAbsolute(outputValue) ? outputValue : resolve(projectRoot, outputValue)
+    }
+  }
+
   throw new CliError('UNKNOWN_COMMAND', `Unknown command "${command}"`)
 }
 
@@ -366,6 +394,17 @@ export function emit(result, json) {
   if (result.command === 'inspect') {
     process.stdout.write(
       `Inspected ${result.scene} frame ${result.frame} through ${result.cameraId ?? 'main'}: ${result.objects?.length ?? 0} exposed objects (${result.renderTimeMs} ms${result.runtimeId ? `, runtime generation ${result.generation}` : ''})\n`
+    )
+    return
+  }
+
+  if (result.command === 'layout-check') {
+    const watched = result.watchedObjectCount ?? 0
+    const incidents = result.incidentCount ?? 0
+    process.stdout.write(
+      watched === 0
+        ? `Layout check for ${result.scene} had no registered collision watches\n`
+        : `Layout check for ${result.scene} found ${incidents} collision incident${incidents === 1 ? '' : 's'} across ${result.checkedFrames ?? 0} frames (${result.renderTimeMs} ms)\n`
     )
     return
   }

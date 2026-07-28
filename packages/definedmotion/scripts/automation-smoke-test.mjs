@@ -2,7 +2,14 @@
 
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -46,8 +53,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 63) {
-    throw new Error(`Expected 63 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 64) {
+    throw new Error(`Expected 64 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -357,6 +364,73 @@ try {
     courseName.screenBounds.width <= 0
   ) {
     throw new Error('Dynamic text content and geometry were not synchronized before inspection')
+  }
+
+  const layoutCheckDirectory = join(temporaryDirectory, 'layout-check')
+  const layoutCheck = run([
+    'layout-check',
+    'test-layout-check',
+    '--output-dir',
+    layoutCheckDirectory,
+    '--no-build'
+  ])
+  const [firstIncident, parallelGuideIncident, guideIncident, finalIncident] =
+    layoutCheck.incidents
+  const layoutCheckScreenshots = readdirSync(layoutCheckDirectory).filter((file) =>
+    file.endsWith('.png')
+  )
+  if (
+    layoutCheck.command !== 'layout-check' ||
+    layoutCheck.checkedFrames !== 270 ||
+    layoutCheck.watchedObjectCount !== 1 ||
+    layoutCheck.incidentCount !== 4 ||
+    layoutCheck.clean ||
+    firstIncident?.obstacleId !== 'moving-obstacle' ||
+    firstIncident.startFrame !== 0 ||
+    firstIncident.endFrame !== 138 ||
+    firstIncident.collisionFrameCount !== 20 ||
+    parallelGuideIncident?.obstacleId !== 'parallel-guide' ||
+    parallelGuideIncident.startFrame !== 200 ||
+    parallelGuideIncident.endFrame !== 205 ||
+    guideIncident?.obstacleId !== 'thin-guide' ||
+    guideIncident.startFrame !== 200 ||
+    guideIncident.endFrame !== 205 ||
+    parallelGuideIncident.screenshotPath !== guideIncident.screenshotPath ||
+    layoutCheck.incidents.some((incident) => incident.obstacleId === 'far-clipped-obstacle') ||
+    finalIncident?.obstacleId !== 'moving-obstacle' ||
+    finalIncident.startFrame !== 259 ||
+    finalIncident.endFrame !== 269 ||
+    layoutCheckScreenshots.length !== 3 ||
+    layoutCheck.incidents.some(
+      (incident) =>
+        !existsSync(incident.screenshotPath) ||
+        dirname(incident.screenshotPath) !== layoutCheckDirectory
+    )
+  ) {
+    throw new Error('Layout collision detection, incident grouping, or still output was incorrect')
+  }
+
+  const unrelatedLayoutCheckImage = join(layoutCheckDirectory, 'reference.png')
+  writeFileSync(unrelatedLayoutCheckImage, 'preserve this unrelated file')
+  const unwatchedLayoutCheck = run([
+    'layout-check',
+    'tutorial-easy-1',
+    '--output-dir',
+    layoutCheckDirectory,
+    '--no-build'
+  ])
+  const staleLayoutCheckScreenshots = readdirSync(layoutCheckDirectory).filter((file) =>
+    /^(?:frame-\d+|incident-\d+-frame-\d+)\.png$/.test(file)
+  )
+  if (
+    unwatchedLayoutCheck.watchedObjectCount !== 0 ||
+    unwatchedLayoutCheck.checkedFrames !== 0 ||
+    unwatchedLayoutCheck.clean ||
+    unwatchedLayoutCheck.warnings?.[0]?.code !== 'NO_COLLISION_WATCHES' ||
+    staleLayoutCheckScreenshots.length !== 0 ||
+    !existsSync(unrelatedLayoutCheckImage)
+  ) {
+    throw new Error('Layout check did not report an unwatched scene or remove stale screenshots')
   }
 
   const exposureLifecycleGrid = run([

@@ -41,6 +41,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-latex-particle-transition-super-complex | test | LaTeX Particle Transition Super Complex | `tests/latex/test_latex_particle_transition_super_complex.scene.ts` |
 | test-latex-query-variables | test | LaTeX Query Variables | `tests/svg/test_query_latex_variables.scene.ts` |
 | test-latex-to-svg | test | LaTeX To SVG | `tests/svg/test_latex_to_svg.scene.ts` |
+| test-layout-check | test | Layout Check | `tests/inspection/test_layout_check.scene.ts` |
 | test-long-audio | test | Long Audio | `tests/audio/test_long_audio.scene.ts` |
 | test-many-short-sounds | test | Many Short Sounds | `tests/audio/test_many_short_sounds.scene.ts` |
 | test-material-on-latex | test | Material On LaTeX | `tests/svg/test_material_on_latex.scene.ts` |

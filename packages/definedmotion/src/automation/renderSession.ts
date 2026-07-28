@@ -7,6 +7,7 @@ import type {
   CamerasAutomationRequest,
   InspectAutomationRequest,
   InspectSceneInfo,
+  LayoutCheckAutomationRequest,
   RenderAutomationRequest,
   TimelineGridAutomationRequest
 } from './types'
@@ -26,6 +27,7 @@ import { inspectScene } from './sceneInspection'
 import { renderTimelineGrid, validateTimelineGridRequest } from './timelineGrid'
 import { renderCameraGrid, validateCameraGridRequest } from './cameraGrid'
 import { cameraSummary, listCameraSummaries, resolveInspectionCamera } from './inspectionCamera'
+import { runLayoutCheck } from './layoutCheck'
 
 /**
  * Owns the currently loaded automation scene for one renderer generation.
@@ -51,6 +53,7 @@ export class RenderSession {
       request.command !== 'still' &&
       request.command !== 'timeline-grid' &&
       request.command !== 'inspect' &&
+      request.command !== 'layout-check' &&
       request.command !== 'cameras' &&
       request.command !== 'camera-grid' &&
       request.command !== 'render'
@@ -76,6 +79,9 @@ export class RenderSession {
     }
     if (request.command === 'inspect') {
       this.validateInspectRequest(request)
+    }
+    if (request.command === 'layout-check') {
+      this.validateLayoutCheckRequest(request)
     }
     if (request.command === 'cameras') {
       this.validateCamerasRequest(request)
@@ -127,6 +133,9 @@ export class RenderSession {
     }
     if (request.command === 'inspect') {
       return await this.inspect(request, scene, definition.name, definition.isTest, startedAt)
+    }
+    if (request.command === 'layout-check') {
+      return await this.layoutCheck(request, scene, startedAt)
     }
     if (request.command === 'render') {
       return await this.renderVideo(request, scene, startedAt)
@@ -219,6 +228,48 @@ export class RenderSession {
         'INVALID_FRAME',
         'The cameras command requires a non-negative integer frame'
       )
+    }
+  }
+
+  private validateLayoutCheckRequest(request: LayoutCheckAutomationRequest): void {
+    if (typeof request.outputDirectory !== 'string' || request.outputDirectory === '') {
+      throw new AutomationCommandError(
+        'MISSING_OUTPUT',
+        'The layout-check command requires an output directory'
+      )
+    }
+    if (!Number.isInteger(request.mergeGapFrames) || request.mergeGapFrames < 0) {
+      throw new AutomationCommandError(
+        'INVALID_ARGUMENTS',
+        'The layout-check merge gap must be a non-negative integer'
+      )
+    }
+  }
+
+  private async layoutCheck(
+    request: LayoutCheckAutomationRequest,
+    scene: AnimatedScene,
+    startedAt: number
+  ): Promise<AutomationResult> {
+    const check = await runLayoutCheck(request, scene)
+    return {
+      success: true,
+      command: 'layout-check',
+      scene: request.scene,
+      checkedFrames: check.checkedFrames,
+      watchedObjectCount: check.watchedObjectCount,
+      incidentCount: check.incidents.length,
+      clean: check.watchedObjectCount > 0 && check.incidents.length === 0,
+      mergeGapFrames: request.mergeGapFrames,
+      incidents: check.incidents,
+      warnings: check.warnings,
+      durationInFrames: scene.totalSceneTicks,
+      fps: timelineFPS,
+      seed: project.seed,
+      width: scene.width,
+      height: scene.height,
+      outputDirectory: request.outputDirectory,
+      renderTimeMs: Math.round(performance.now() - startedAt)
     }
   }
 

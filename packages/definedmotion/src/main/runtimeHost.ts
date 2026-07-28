@@ -379,6 +379,8 @@ export class PersistentRuntimeHost {
     }
 
     const id = randomUUID()
+    const timeoutMs =
+      request.command === 'layout-check' ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000
     return new Promise((resolvePromise, rejectPromise) => {
       const timeout = setTimeout(
         () => {
@@ -386,11 +388,13 @@ export class PersistentRuntimeHost {
           rejectPromise(
             new RuntimeHostError(
               'AUTOMATION_TIMEOUT',
-              'Persistent renderer did not finish the request within 5 minutes'
+              request.command === 'layout-check'
+                ? 'Persistent renderer did not finish the layout check within 24 hours'
+                : 'Persistent renderer did not finish the request within 5 minutes'
             )
           )
         },
-        5 * 60 * 1000
+        timeoutMs
       )
 
       this.rendererResults.set(id, {

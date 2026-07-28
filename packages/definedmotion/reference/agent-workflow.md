@@ -26,6 +26,7 @@ Electron + Three.js runtime
     ├─ still          → one full-resolution PNG
     ├─ timeline-grid  → several frames in one labeled PNG
     ├─ inspect        → scene, camera, object, and geometry JSON
+    ├─ layout-check   → full-timeline collision incidents and representative PNGs
     └─ camera-grid    → one frame from several viewpoints
 ```
 
@@ -52,16 +53,19 @@ npm run dm -- timeline-grid my-scene --count 12 --json
 npm run dm -- still my-scene --frame 240 --json
 npm run dm -- inspect my-scene --frame 240 --json
 
-# 5. Compare the audience camera with inspection views when useful.
+# 5. Check registered objects for screen-space collisions across every frame.
+npm run dm -- layout-check my-scene --json
+
+# 6. Compare the audience camera with inspection views when useful.
 npm run dm -- cameras my-scene --frame 240 --json
 npm run dm -- camera-grid my-scene --frame 240 --json
 
-# 6. Edit source and repeat against the same session.
+# 7. Edit source and repeat against the same session.
 
-# 7. Render the approved scene to a complete video.
+# 8. Render the approved scene to a complete video.
 npm run dm -- render my-scene --json
 
-# 8. Stop the environment when finished.
+# 9. Stop the environment when finished.
 npm run dm -- session stop --json
 ```
 
@@ -78,6 +82,7 @@ Start broad with a timeline grid. Narrow the investigation with stills, inspecti
 | See the complete progression                 | `timeline-grid`             | Places representative exact frames in one image.                            |
 | Check a visual detail                        | `still`                     | Produces one lossless, full-resolution frame.                               |
 | Confirm position, size, visibility, or state | `inspect`                   | Returns semantic objects, transforms, bounds, text, and in-frame data.      |
+| Find object collisions across the timeline   | `layout-check`              | Checks registered objects against visible renderable geometry every frame. |
 | Discover alternative viewpoints              | `cameras`                   | Lists the authored camera and exposed inspection cameras at a frame.        |
 | Compare viewpoints                           | `camera-grid`               | Renders the same scene state through several cameras.                       |
 | Check geometry through one debug view        | `inspect --camera <id>`     | Projects exposed bounds through the selected camera.                        |
@@ -216,6 +221,42 @@ Important response fields:
 | `renderTimeMs`                    | Time spent building, seeking, rendering, and writing. |
 
 Use a still for high-resolution visual judgment after a timeline grid identifies a frame worth investigating.
+
+### `layout-check`
+
+```bash
+npm run dm -- layout-check <scene> \
+  [--output-dir <directory>] \
+  [--merge-gap-frames <integer>] \
+  [--json] [execution flags]
+```
+
+`layout-check` is general screen-space collision detection for authored Three.js objects. Text,
+labels, and equations are important uses, but any renderable object or group can be registered.
+The command evaluates every authored timeline frame as quickly as possible; it does not play in
+real time or render an image for each frame.
+
+- `--output-dir` defaults to `.definedmotion/layout-checks/<scene>`.
+- `--merge-gap-frames` defaults to 120. Collisions between the same pair separated by fewer than
+  120 completely clear frames remain one incident.
+- Bounds are checked through the exact-frame main camera.
+- Consecutive collision frames are grouped and the greatest-overlap frame becomes the
+  representative frame.
+- One ordinary, unannotated PNG is saved per distinct representative frame. Incidents represented
+  by the same frame share that screenshot path.
+- Successful reruns remove stale layout-check-owned PNGs from the output directory while preserving
+  unrelated files.
+- A scene with no registered collision watches returns `NO_COLLISION_WATCHES` in `warnings` and
+  does not claim to be clean.
+
+The JSON result includes `checkedFrames`, `watchedObjectCount`, `incidentCount`, `clean`,
+`mergeGapFrames`, `outputDirectory`, and `incidents`. Each incident identifies the watched subject
+and obstacle, its first and last collision frames, collision-frame count, representative frame,
+screen bounds, overlap pixels, padding, and absolute screenshot path.
+
+This is a warning-oriented bounds check, not pixel-perfect occlusion analysis. Intentional
+overlaps should be declared with `ignore`, and remaining incidents should be judged from their
+representative stills.
 
 ### `timeline-grid`
 
@@ -448,6 +489,33 @@ Metadata is copied when the object is exposed and should describe stable purpose
 
 `THREE.Box3.setFromObject()` underlies world bounds. For a dynamic `InstancedMesh`, call `computeBoundingBox()` and `computeBoundingSphere()` after changing instance matrices when accurate inspection bounds matter.
 
+### Registering collision watches
+
+Register an object or group during the scene build:
+
+```ts
+const operationCue = scene.watchCollisions('operation-cue', cueGroup, {
+  paddingPx: 8,
+  ignore: [cueBackground, intentionalUnderline]
+})
+scene.add(operationCue)
+```
+
+`paddingPx` adds screen-space clearance around the watched subject. `ignore` accepts existing
+Three.js objects and excludes their complete subtrees. The checker also automatically excludes the
+watched object's ancestors and descendants, invisible or effectively transparent renderables,
+detached objects, cameras, lights, and non-rendered groups.
+
+Registration does not add the object to the scene and does no work during normal Studio playback
+or video rendering. It is build-scoped and is used only when `layout-check` runs. Collision-watch
+IDs are independent from `scene.expose()` IDs, so an important object may use both APIs. Exposing
+composite obstacles such as an equation group gives their child geometry one useful semantic ID in
+collision reports.
+
+Watch objects whose accidental overlap would be a real problem. Text is a common choice, but
+charts, icons, diagrams, product geometry, and other visual elements are equally valid. Background
+panels and other intentional overlaps should usually be ignored explicitly.
+
 ### Exposing inspection cameras
 
 `scene.exposeCamera()` registers a perspective or orthographic camera and returns it:
@@ -553,10 +621,11 @@ If source changes repeatedly during a request, the CLI retries revision races up
 | `BUILD_FAILED`, `BUILD_NOT_FOUND`, `ELECTRON_NOT_INSTALLED` | Standalone prerequisites are missing or invalid                        | Run `npm install` and `npm run build`; do not use `--no-build` after source changes.                              |
 | Asset errors                                                | Asset path, existence, or loading failure                              | Correct the `src/assets`-relative path or loader usage.                                                           |
 | Exposure/camera registration errors                         | Invalid, duplicate, reserved, excessive, or out-of-build registration  | Correct the scene’s semantic registration according to the rules above.                                           |
+| Collision-watch registration errors                         | Invalid ID, object, options, duplicate, or out-of-build registration   | Correct `scene.watchCollisions()` according to the rules above.                                                    |
 
 Unexpected scene exceptions return `AUTOMATION_FAILED` with a stack when available. Ordinary
 renderer requests have a five-minute host timeout and a 17-second local socket timeout. Full video
-renders have a 24-hour timeout and continue reporting progress while they run.
+renders and full-timeline layout checks have a 24-hour timeout.
 
 ## Effective workflows
 
@@ -568,9 +637,10 @@ renders have a 24-hour timeout and continue reporting progress while they run.
 4. Render a new timeline grid using the same frames for comparison.
 5. Render full stills at visually important frames.
 6. Inspect semantic objects for containment, transforms, and state.
-7. Use camera grids for 3D structure or ambiguous composition.
-8. Run dense frame samples around motion that still feels wrong.
-9. Export the approved full animation with `render`.
+7. Run `layout-check` when collision watches are registered; fix or explicitly ignore incidents.
+8. Use camera grids for 3D structure or ambiguous composition.
+9. Run dense frame samples around motion that still feels wrong.
+10. Export the approved full animation with `render`.
 
 ### Checking motion
 
@@ -603,5 +673,7 @@ Current limitations:
 
 - A final MP4 proves that the complete timeline can render, but visual judgment still requires
   reviewing the video or representative frames.
+- Layout checks compare projected axis-aligned bounds. They do not understand per-pixel
+  transparency, exact curved silhouettes, or visual occlusion.
 - Scene modules are discovered through eager code imports. `scene.asset()` prevents their media from being eagerly read or bundled, but module-scope computation should still stay lightweight.
 - Bounds describe geometry and camera projection, not visual occlusion or aesthetic quality.

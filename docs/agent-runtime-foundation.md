@@ -27,6 +27,9 @@ renderer. Automation must not reimplement scene execution.
 - `AnimatedScene.exposeCamera()` gives authored debug viewpoints stable IDs.
   Inspection cameras follow the same scene lifecycle and incur no extra render
   work until explicitly requested.
+- `AnimatedScene.watchCollisions()` registers general Three.js objects or groups for an
+  opt-in, full-timeline screen-space collision check. Normal playback and rendering do no
+  collision work.
 - The `definedmotion` CLI uses a compatible project runtime automatically,
   or builds and invokes an isolated hidden renderer as a fallback. JSON mode
   reserves stdout for the final machine-readable result.
@@ -51,6 +54,8 @@ npm run dm -- timeline-grid tutorial-easy-1 \
   --json
 
 npm run dm -- inspect tutorial-easy-1 --frame 30 --json
+
+npm run dm -- layout-check tutorial-easy-1 --json
 
 npm run dm -- cameras vector-field --frame 600 --json
 
