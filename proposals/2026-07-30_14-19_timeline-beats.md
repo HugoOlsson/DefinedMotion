@@ -9,32 +9,32 @@ Give named sections of a long scene local runtime coordinates without introducin
 All beats are declared together as ranges on the global timeline:
 
 ```ts
-timeline.defineBeats({
+scene.timeline.defineBeats({
   intro: {
-    start: seconds(0),
-    end: seconds(6),
+    start: 0,
+    end: scene.secondsToFrames(6),
   },
   "cold-spots": {
-    start: seconds(6),
-    end: seconds(18),
+    start: scene.secondsToFrames(6),
+    end: scene.secondsToFrames(18),
   },
   turntable: {
-    start: seconds(18),
-    end: seconds(30),
+    start: scene.secondsToFrames(18),
+    end: scene.secondsToFrames(30),
   },
 })
 ```
 
-Integer frames remain the internal source of truth. Time values are converted to frames when the timeline is built. Beat ranges are end-exclusive, may contain gaps, and may overlap.
+Integer frames are the source of truth. Beat ranges are end-exclusive, may contain gaps, and may not overlap. Declared beat ends contribute to the scene duration even when no animation reaches the final beat frame.
 
 DefinedMotion has no narration-cue protocol. VideoFactory may derive these ranges automatically from its script timings and pass the resulting beat-definition object to `defineBeats()`.
 
 ## Authoring inside a beat
 
-`timeline.beat()` temporarily places the global builder pointer at the beat's start:
+`scene.timeline.beat()` temporarily places the global builder pointer at the beat's start:
 
 ```ts
-timeline.beat("cold-spots", beat => {
+scene.timeline.beat("cold-spots", beat => {
   scene.addAnims(fadeIn(title))
   scene.addAnims(scaleIn(diagram))
 })
@@ -44,10 +44,12 @@ It performs the following steps:
 
 1. Save the global builder pointer.
 2. Set it to the beat's global start frame.
-3. Run the callback using the normal scene scheduling API.
-4. Restore the saved global pointer.
+3. Run the synchronous callback using the normal scene scheduling API.
+4. Restore the saved global pointer, including when the callback throws.
 
-The order in which beat callbacks are authored therefore does not affect their global positions. Scheduled animations remain part of the single global timeline, and scene duration remains the latest scheduled animation end.
+The order in which beat callbacks are authored therefore does not affect their global positions. Scheduled animations remain part of the single global timeline, and scene duration is the latest scheduled work or declared beat end.
+
+Nested `beat()` callbacks and Promise-returning callbacks are rejected. Assets and visuals that require asynchronous construction must be prepared before entering the beat callback.
 
 There is only one writable pointer:
 
@@ -98,11 +100,11 @@ interface BeatTick {
 }
 ```
 
-`localFrame` begins at `0`. `beatProgress` is normalized from `0` on the first active frame to `1` on the last active frame. Time is derived from frames and is not a second timeline source.
+`localFrame` begins at `0`. `beatProgress` is normalized from `0` on the first active frame to `1` on the last active frame. A one-frame beat has `beatProgress = 1`. Time is derived from frames and is not a second timeline source.
 
 ## Inspection and verification
 
-DefinedMotion can associate every global frame with its active beats. Inspection and scene-defined verification can therefore report failures using meaningful local coordinates:
+DefinedMotion can associate every global frame with its active beat. Inspection and scene-defined verification can therefore report failures using meaningful local coordinates:
 
 ```text
 Verification failed: panel-margin

@@ -2,42 +2,45 @@
 
 ## Goal
 
-Make small, task-focused files under `documentation/` the source of truth for the shipped library. README and `AGENTS.md` provide overview and routing rather than duplicate API explanations.
+Make small, task-focused files under `packages/definedmotion/documentation/` the source of truth for the shipped library. README and `AGENTS.md` provide overview and routing rather than duplicate API explanations.
 
 ## Structure
 
 ```text
 DefinedMotion/
   README.md
-  AGENTS.md
-  documentation/
-    index.md
-    getting-started.md
-    scenes-and-timeline.md
-    animation-effects.md
-    beats.md
-    text-and-latex.md
-    layout.md
-    verification.md
-    camera-and-3d.md
-    assets-and-audio.md
-    cli.md
-    advanced/
-      custom-animations.md
-      latex-effects.md
   proposals/
-  reference/
-    examples/
-    tests/
+  packages/
+    definedmotion/
+      README.md
+      AGENTS.md
+      documentation/
+        index.md
+        getting-started.md
+        scenes-and-timeline.md
+        animation-effects.md
+        beats.md
+        text-and-latex.md
+        latex-effects.md
+        layout.md
+        verification.md
+        camera-and-3d.md
+        assets-and-audio.md
+        cli.md
+        advanced/
+          custom-animations.md
+      reference/
+        examples/
+        tests/
 ```
 
 The exact file list may change, but each core concept has one canonical owner.
 
 ## Roles
 
-### README
+### README files
 
-The root README contains:
+The package README contains:
 
 - a short description of DefinedMotion;
 - installation;
@@ -47,9 +50,11 @@ The root README contains:
 
 It does not repeat complete feature semantics or command references.
 
+The repository root README remains a short repository and development overview that links to the package documentation.
+
 ### Documentation
 
-`documentation/` describes only currently shipped behavior. Each feature file follows a compact structure:
+`packages/definedmotion/documentation/` describes only currently shipped behavior. Each feature file follows a compact structure:
 
 ```text
 What it solves
@@ -69,7 +74,7 @@ First scene:
   getting started → scenes and timeline → animation effects
 
 UI-heavy explainer:
-  text and LaTeX → layout → beats → verification
+  text and LaTeX → LaTeX effects → layout → beats → verification
 
 Procedural or 3D scene:
   camera and 3D → custom animations → verification
@@ -77,7 +82,7 @@ Procedural or 3D scene:
 
 ### AGENTS.md
 
-`AGENTS.md` remains short and contains:
+The package `AGENTS.md` remains short and contains:
 
 - required repository commands;
 - deterministic-seeking and authoring rules;
@@ -88,7 +93,7 @@ It links to canonical documentation instead of restating it. It explicitly tells
 
 ### Proposals
 
-`proposals/` describes possible future behavior and is never presented as current API documentation.
+The repository-level `proposals/` directory describes possible future behavior and is never presented as current API documentation or shipped as part of the authoring guide.
 
 When a proposal is implemented:
 
@@ -109,9 +114,11 @@ Each concept is fully explained in one place:
 
 ```text
 Timeline and AnimationPlan → scenes-and-timeline.md
+Viewer preview             → scenes-and-timeline.md
 Core animation helpers    → animation-effects.md
 Beat windows              → beats.md
 Text and LaTeX            → text-and-latex.md
+LaTeX animation effects   → latex-effects.md
 Flex and grid             → layout.md
 Scene verification        → verification.md
 ```
@@ -120,13 +127,13 @@ README, `AGENTS.md`, and other feature files may summarize and link but do not r
 
 ## Advanced material
 
-Specialized capabilities live under `documentation/advanced/`. A normal scene should not require reading raw animation binding, particle transitions, SVG internals, or other specialized implementation details.
+Low-level capabilities live under `documentation/advanced/`. A normal scene should not require reading raw animation binding, renderer internals, SVG internals, or other implementation details. Pedagogical LaTeX effects remain part of the primary documentation.
 
 Advanced features remain documented and supported without enlarging the primary reading path.
 
 ## Validation
 
-Documentation ships with the matching package version. Canonical examples are typechecked and exercised in CI. Documentation link validation prevents stale paths.
+Documentation is included in the package allowlist and ships with the matching package version. Canonical examples are typechecked and exercised in CI. Documentation link validation prevents stale paths.
 
 Generated or exhaustive API reference may exist separately, but it does not replace the task-focused canonical documents.
 

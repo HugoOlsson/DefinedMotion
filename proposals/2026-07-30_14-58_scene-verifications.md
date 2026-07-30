@@ -78,6 +78,19 @@ Changing the animation duration automatically changes the verification range on 
 
 ## Verification context
 
+All screen measurements use one representation:
+
+```ts
+interface ScreenBounds {
+  left: number
+  right: number
+  top: number
+  bottom: number
+  width: number
+  height: number
+}
+```
+
 The first version exposes only:
 
 ```ts
@@ -103,6 +116,19 @@ interface VerificationContext {
 ```
 
 Screen bounds use logical video pixels. Verification callbacks must be side-effect-free and run only in verification mode.
+
+## Shared measurement
+
+DefinedMotion uses one internal world-bounds implementation and one internal screen-projection implementation for:
+
+- scene verification;
+- `watchCollisions` and `layout-check`;
+- agent inspection;
+- positioning where the same measurement applies.
+
+This keeps measurement results consistent without adding a public measurement namespace. Intrinsic flex and grid layout continues to use each visual's local `getLocalBounds()`.
+
+`watchCollisions` remains the generic screen-overlap safety net. Scene verification complements it with authored requirements such as containment, margins, and visibility.
 
 ## Execution
 

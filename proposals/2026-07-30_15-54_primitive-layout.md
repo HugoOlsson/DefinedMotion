@@ -32,7 +32,7 @@ interface FlexOptions {
   padding?: number
   width?: number
   height?: number
-  alignItems?: "flex-start" | "center" | "flex-end" | "baseline"
+  alignItems?: "flex-start" | "center" | "flex-end"
   justifyContent?:
     | "flex-start"
     | "center"
@@ -72,6 +72,8 @@ Columns use the widest intrinsic item in that column. Rows use the tallest intri
 Layout operates in the container's local XY plane using local units. It changes X and Y slot positions and preserves child Z values. The completed group can be transformed, added to the scene, or attached to a camera like any other Three.js group.
 
 Children must implement the shared `MeasurableVisual` contract. Flex and grid containers implement the same contract, allowing layouts to be nested.
+
+A visual passed to a layout must not already have a parent. Layout construction fails clearly rather than silently reparenting an existing scene object or attempting to preserve its world transform.
 
 ## Slots and animation
 
@@ -116,9 +118,11 @@ scene.addAnims(fadeIn(bullet))
 
 Items should be constructed and measured during scene build, then appended later. Asynchronous construction inside `scene.do()` is not supported.
 
+An appended visual must also be unparented.
+
 ## Reset and seeking
 
-A layout records its initial membership after construction. Scene reset restores that membership and removes runtime-appended slots. Exact seeking then replays scheduled append actions and produces the same list contents as sequential playback.
+A layout records its initial membership after construction. Scene reset restores that membership, removes runtime-appended slots, and detaches their visuals. Exact seeking then replays scheduled append actions and produces the same list contents as sequential playback.
 
 Appending an item already present in the layout is an error. Reflow updates the container's bounds before frame verification runs.
 

@@ -23,10 +23,10 @@ rotateTo(object, rotation, options?)
 matchTransform(object, reference, options?)
 
 // Timeline
-wait(duration)
+wait(durationFrames)
 
 // Custom escape hatch
-createAnimation({ duration, bind })
+createAnimation({ durationFrames, bind })
 ```
 
 Helpers control one concept and compose through `addAnims`:
@@ -50,20 +50,20 @@ All helpers use named options:
 
 ```ts
 interface AnimationOptions {
-  duration?: TimelineDuration
+  durationFrames?: number
   easing?: Easing
 }
 ```
 
 ```ts
 moveTo(card, target, {
-  duration: seconds(0.6),
+  durationFrames: scene.secondsToFrames(0.6),
   easing: "ease-out",
   space: "local",
 })
 ```
 
-Transform helpers accept explicit `"local"` or `"world"` space where applicable. Local space is the default. Targets supplied as values are copied when the plan is created; targets derived from another object are captured when the plan binds.
+Transform helpers accept explicit `"local"` or `"world"` space where applicable. Local space is the default. Mutable target values and targets derived from another object are snapshotted when the plan binds, so changes before the animation starts are reflected automatically.
 
 ## Runtime semantics
 
@@ -71,22 +71,22 @@ Duration is known while the timeline is built. `bind()` captures current scene v
 
 Explicit starting values may be supplied when runtime capture is not wanted. Reset discards bound state, and exact seeking reproduces the same binding and result.
 
-Animations starting on the same frame bind before any of them update. Plans declare which object properties they control so conflicting concurrent animations can be reported.
+Animations starting on the same frame bind before any of them update.
 
 ## Entrance and exit behavior
 
-`fadeIn` and `scaleIn` establish their pre-start state so an object does not appear in its final state before its entrance.
+Effects never modify frames before their scheduled start. On their first active frame they apply the value for `progress = 0`, except for a one-frame effect, which applies its final value.
 
 ```text
-fadeIn: 0 → authored opacity
-scaleIn: authored scale × starting factor → authored scale
+fadeIn:   entrance opacity → target opacity
+fadeOut:  runtime opacity → exit opacity
+scaleIn:  entrance scale → target scale
+scaleOut: runtime scale → exit scale
 ```
 
-They preserve authored opacity, scale, visibility, material settings, and pivot behavior. `scaleIn` and `scaleOut` operate around the object's origin, making text, LaTeX, and layout anchors their predictable animation origin.
+Entrance and exit effects capture their relevant runtime values when they bind. If an object is visible before a later entrance effect, it remains visible until that effect starts.
 
-`fadeOut` and `scaleOut` capture current state when they bind. `fadeOut` hides the object at completion without losing the authored opacity needed by a later entrance.
-
-Ambiguous use of a later entrance effect on an object intended to be visible earlier must produce a clear validation error rather than silently changing its pre-start state.
+Fade effects control opacity only; they do not add, remove, show, or hide objects. Scale effects control scale only. Opacity effects must not modify objects outside the target subtree, including objects that happened to share a material before the effect. `scaleIn` and `scaleOut` operate around the object's origin, making text, LaTeX, and layout anchors their predictable animation origin.
 
 ## Specialized namespaces
 
@@ -120,11 +120,10 @@ Every shipped helper must:
 - expose a known duration during planning;
 - bind runtime-dependent state only when it starts;
 - reach an exact final value;
-- preserve authored transform, visibility, opacity, and material state;
+- preserve target properties not controlled by the helper;
 - avoid corrupting shared materials;
 - define coordinate-space behavior;
 - handle one-frame durations without invalid values;
-- declare the properties it controls;
 - avoid unnecessary per-frame allocation.
 
 Helpers that cannot meet this contract remain advanced utilities or examples.
@@ -137,6 +136,8 @@ The primary API replaces or demotes:
 - public `setOpacity` and `setScale` to internal implementation details;
 - duplicate camera helper generations in favor of `camera.*`;
 - `fadeInTowardsEnd` to a recipe;
-- raw interpolation-array helpers to the advanced API.
+- raw interpolation-array helpers from the public API.
+
+Generic reversal, interpolation-array manipulation, and rescaling of already-created animation objects are not required parts of the new API.
 
 The primary animation documentation presents the complete core set on one short page. Camera, LaTeX, and custom animation are separate sections. A new helper enters the core set only when it is broadly reusable, cannot be expressed clearly through composition, and satisfies the same quality contract.

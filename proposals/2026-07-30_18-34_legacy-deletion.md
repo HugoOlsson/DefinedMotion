@@ -38,7 +38,16 @@ scene.do(action)
 scene.onEachTick(updater)
 ```
 
-`wait(duration)` is an ordinary animation plan. Saving and restoring the pointer replaces background and explicitly positioned scheduling. `do()` remains the single discrete, replay-safe action primitive.
+`wait(durationFrames)` is an ordinary animation plan. Saving and restoring the pointer replaces background and explicitly positioned scheduling. `do()` remains the single discrete, replay-safe action primitive.
+
+Remove global authoring-time conversion helpers such as `millisToTicks` after they are replaced by the scene-dependent:
+
+```ts
+scene.secondsToFrames(value)
+scene.millisecondsToFrames(value)
+```
+
+Internal time conversion needed by rendering may remain private.
 
 ## Animation representation
 
@@ -110,9 +119,9 @@ Bounds measurement, exposed objects, inspection cameras, exact frame visiting, a
 
 The existing 2D/3D positioning system is not removed by this proposal. Flex and grid do not replace general world-space positioning constraints. Positioning may be reviewed separately after the new layout system has real usage.
 
-## Hot reload
+## Viewer preview
 
-After `scene.hotReloadTraceFromHere()` and the viewer badge ship, remove:
+After `scene.previewFromHere()` and the viewer boundary UI ship, remove:
 
 - the `HotReloadSetting` enum;
 - the hot-reload argument from `AnimatedScene`;
@@ -121,7 +130,7 @@ After `scene.hotReloadTraceFromHere()` and the viewer badge ship, remove:
 - scene-level `BeginFreshOnSave` handling;
 - all imports, examples, templates, and documentation for the three old modes.
 
-Exact tracing remains the default. The marker is used only by viewer hot-reload restoration, and the keep-frame/go-to-start choice belongs to the viewer.
+Without a marker, the viewer traces exactly from frame `0`. The preview marker applies to viewer restoration, scrubbing, and playback, while rendering and automation ignore it.
 
 ## Public exports
 
@@ -131,10 +140,11 @@ Internal code may keep private utilities when they still serve the canonical imp
 
 ## Documentation and examples
 
-Once `documentation/` is canonical:
+Once `packages/definedmotion/documentation/` is canonical and included in the package allowlist:
 
-- shorten README to overview, installation, one minimal example, and links;
-- shorten `AGENTS.md` to repository rules and document routing;
+- shorten the package README to overview, installation, one minimal example, and links;
+- shorten the package `AGENTS.md` to repository rules and document routing;
+- shorten the repository README to a repository and development overview;
 - remove migrated duplicate material from the existing long README, agent workflow, and runtime-foundation documents;
 - update the create-project template to the final API;
 - migrate a small set of representative examples;
@@ -143,12 +153,23 @@ Once `documentation/` is canonical:
 
 Regression tests for retained behavior should be migrated, not deleted merely because their authoring syntax is old. Tests whose only purpose is a removed API may be deleted after replacement coverage exists.
 
+Maintain a migration checklist covering:
+
+- DefinedMotion internals and public entry points;
+- the create-project template;
+- curated examples and regression scenes;
+- playground projects;
+- VideoFactory and generated projects.
+
+Before deleting the legacy scheduler, make binding, reset, exact-seek, one-frame, sequential, parallel, and overlapping-animation coverage part of the default test gate.
+
 ## Explicitly retained
 
 This cleanup does not remove:
 
 - `addAnims`, `do`, or `onEachTick`;
 - global frame-based timing;
+- scene-dependent seconds/milliseconds-to-frame helpers;
 - exact seek, render, verification, and capture paths;
 - `fadeIn`, `fadeOut`, core easing, or custom animations in their new forms;
 - specialized LaTeX effects;
