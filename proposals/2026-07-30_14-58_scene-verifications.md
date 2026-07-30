@@ -22,6 +22,11 @@ scene.verify(
     const content = context.screenBounds(explanationColumn)
     const panel = context.screenBounds(backgroundPanel)
 
+    if (content === null || panel === null) {
+      context.assert(false, "Content and panel must have projectable geometry")
+      return
+    }
+
     context.assert(
       content.left >= panel.left + 10 &&
         content.right <= panel.right - 10 &&
@@ -97,15 +102,23 @@ The first version exposes only:
 interface VerificationContext {
   globalFrame: number
 
+  viewport: {
+    width: number
+    height: number
+  }
+
   beat?: {
     name: string
     localFrame: number
     beatProgress: number
   }
 
-  screenBounds(object: THREE.Object3D, camera?: THREE.Camera): ScreenBounds
+  screenBounds(
+    object: THREE.Object3D,
+    camera?: THREE.Camera,
+  ): ScreenBounds | null
   worldBounds(object: THREE.Object3D): THREE.Box3
-  isVisible(object: THREE.Object3D): boolean
+  isVisibleInHierarchy(object: THREE.Object3D): boolean
 
   assert(
     condition: boolean,
@@ -115,7 +128,15 @@ interface VerificationContext {
 }
 ```
 
-Screen bounds use logical video pixels. Verification callbacks must be side-effect-free and run only in verification mode.
+`viewport` is the logical video size. Screen coordinates begin at `(0, 0)` in its top-left corner and increase toward the right and bottom.
+
+Both bounds operations include the object's descendants and measure geometry independently of visibility. `worldBounds()` uses current world transforms and returns an empty Three.js `Box3` when the subtree has no geometry.
+
+`screenBounds()` uses the active render camera when none is supplied. Its bounds are unclipped, so objects outside the viewport may produce negative coordinates or coordinates beyond the video dimensions. It returns `null` only when the subtree has no projectable geometry in front of the camera.
+
+`isVisibleInHierarchy()` means that the object's Three.js `visible` flag and those of its ancestors are enabled. It does not claim viewport intersection, frustum visibility, material opacity, occlusion, or actual pixel visibility.
+
+Verification callbacks must be side-effect-free and run only in verification mode.
 
 ## Shared measurement
 

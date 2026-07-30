@@ -77,7 +77,7 @@ scene.secondsToFrames(0.6)
 scene.millisecondsToFrames(500)
 ```
 
-Both helpers round to the nearest integer frame. Once converted, scheduling and animation plans contain frames only.
+Both helpers round to the nearest integer frame and may return `0`. Animation construction rejects a `durationFrames` value below `1`; instantaneous changes use `scene.do()`. Once converted, scheduling and animation plans contain frames only.
 
 ## Why this replaces `addDeferredAnims`
 
@@ -131,11 +131,13 @@ Each frame runs in this order:
 
 1. `scene.do()` actions.
 2. Bind all animations starting on the frame.
-3. Update active animations.
+3. Update active animations in registration order.
 4. Run `onEachTick`.
 5. Resolve layout and derived updates.
 
 This order allows an object added by `do()` to be animated on the same frame while ensuring parallel animations bind against the same pre-animation state.
+
+Registration order is scheduling order. If several animations write the same state, the later registered update naturally wins for that frame. DefinedMotion does not require animations to declare property ownership or reject competing writers.
 
 ## Pointer behavior
 

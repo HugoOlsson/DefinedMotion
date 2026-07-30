@@ -130,7 +130,7 @@ After `scene.previewFromHere()` and the viewer boundary UI ship, remove:
 - scene-level `BeginFreshOnSave` handling;
 - all imports, examples, templates, and documentation for the three old modes.
 
-Without a marker, the viewer traces exactly from frame `0`. The preview marker applies to viewer restoration, scrubbing, and playback, while rendering and automation ignore it.
+Without a marker, the viewer traces exactly from frame `0`. A valid preview marker applies to viewer restoration, scrubbing, and playback. Rendering and automation do not use the shortcut, but all scene builds reject a marker crossed by an animation so viewers and CLI agents receive the same authoring error.
 
 ## Public exports
 

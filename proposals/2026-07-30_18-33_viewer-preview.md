@@ -57,7 +57,14 @@ The marker must be a clean animation boundary. An animation crosses the marker w
 animation.startFrame < markerFrame < animation.endFrame
 ```
 
-where `endFrame` is exclusive. If an animation crosses the marker, the viewer reports the invalid marker and falls back to an exact full trace. The author can move the marker to a clean boundary. Exact output operations ignore marker validity because they never use the shortcut.
+where `endFrame` is exclusive. A crossing animation makes the scene build invalid. The viewer does not render or enable playback and instead displays an error containing the marker frame and the crossing animation range:
+
+```text
+Invalid preview marker at frame 100:
+animation [80, 140) crosses the marker.
+```
+
+Any CLI command that builds the scene reports the same error and exits nonzero before rendering, verification, or other automation begins. This makes invalid marker placement visible to agents instead of silently falling back to a slower trace.
 
 ## Viewer state
 
@@ -79,7 +86,7 @@ Without a marker, the viewer traces from frame `0` and the complete timeline is 
 
 ## Exact operations
 
-The preview marker is ignored by:
+A valid preview marker does not alter evaluation by:
 
 - rendering and export;
 - scene verification;
@@ -88,7 +95,7 @@ The preview marker is ignored by:
 - automated capture;
 - `seekExact()` and `visitExactFrames()`.
 
-These paths always evaluate the complete preceding timeline in chronological order.
+These paths still validate marker placement when the scene is built, then evaluate the complete preceding timeline in chronological order without using the preview shortcut.
 
 ## Replaced API
 

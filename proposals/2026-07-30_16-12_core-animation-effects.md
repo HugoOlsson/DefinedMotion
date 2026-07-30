@@ -86,7 +86,9 @@ scaleOut: runtime scale → exit scale
 
 Entrance and exit effects capture their relevant runtime values when they bind. If an object is visible before a later entrance effect, it remains visible until that effect starts.
 
-Fade effects control opacity only; they do not add, remove, show, or hide objects. Scale effects control scale only. Opacity effects must not modify objects outside the target subtree, including objects that happened to share a material before the effect. `scaleIn` and `scaleOut` operate around the object's origin, making text, LaTeX, and layout anchors their predictable animation origin.
+Fade effects control opacity only; they do not add, remove, show, or hide objects. They mutate the existing materials in the target subtree without cloning or replacing them. If another object shares one of those materials, its opacity changes too. Documentation must warn about this normal Three.js reference behavior; authors who need independent fading must provide independent materials.
+
+Scale effects control scale only. `scaleIn` and `scaleOut` operate around the object's origin, making text, LaTeX, and layout anchors their predictable animation origin.
 
 ## Specialized namespaces
 
@@ -121,7 +123,7 @@ Every shipped helper must:
 - bind runtime-dependent state only when it starts;
 - reach an exact final value;
 - preserve target properties not controlled by the helper;
-- avoid corrupting shared materials;
+- preserve existing material references;
 - define coordinate-space behavior;
 - handle one-frame durations without invalid values;
 - avoid unnecessary per-frame allocation.
