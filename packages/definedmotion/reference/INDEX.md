@@ -23,6 +23,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-asset-references | test | Asset References | `tests/assets/test_asset_references.scene.ts` |
 | test-basic-latex-query | test | Basic LaTeX Query | `tests/svg/test_basic_latex_query.scene.ts` |
 | test-basic-svg | test | Basic SVG | `tests/svg/test_basic_svg.scene.ts` |
+| test-camera-attached-overlay-rebuild | test | Camera-attached Overlay Rebuild | `tests/camera/test_camera_attached_overlay_rebuild.scene.ts` |
 | test-camera-rotate-quaternion | test | Camera Rotate Quaternion | `tests/camera/test_camera_rotate_quaternion.scene.ts` |
 | test-camera-waypoints-sequential | test | Camera Waypoints Sequential | `tests/camera/test_camera_waypoints_sequential.scene.ts` |
 | test-chart-layout-positioning | test | Positioning: Responsive Chart Layout | `tests/positioning/test_chart_layout_positioning.scene.ts` |

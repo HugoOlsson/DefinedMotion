@@ -165,6 +165,7 @@ export class AnimatedScene {
   isPlaying = false
 
   private initialSceneChildren: THREE.Object3D[] = []
+  private initialCameraChildren: THREE.Object3D[] = []
   private initialCameraState: {
     position: THREE.Vector3
     rotation: THREE.Euler
@@ -247,6 +248,7 @@ export class AnimatedScene {
 
     // Store initial state
     this.initialSceneChildren = [...scene.children]
+    this.initialCameraChildren = [...camera.children]
     this.initialCameraState = this.captureCameraState(camera)
     this.initialRendererState = {
       clearColor: renderer.getClearColor(new THREE.Color()),
@@ -1277,6 +1279,9 @@ export class AnimatedScene {
 
   private resetCamera() {
     const cam = this.camera
+    for (const child of [...cam.children]) {
+      if (!this.initialCameraChildren.includes(child)) cam.remove(child)
+    }
     cam.position.copy(this.initialCameraState.position)
     cam.rotation.copy(this.initialCameraState.rotation)
 

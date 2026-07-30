@@ -104,6 +104,12 @@
       "source": "tests/svg/test_basic_svg.scene.ts"
     },
     {
+      "id": "test-camera-attached-overlay-rebuild",
+      "name": "Camera-attached Overlay Rebuild",
+      "kind": "test",
+      "source": "tests/camera/test_camera_attached_overlay_rebuild.scene.ts"
+    },
+    {
       "id": "test-camera-rotate-quaternion",
       "name": "Camera Rotate Quaternion",
       "kind": "test",

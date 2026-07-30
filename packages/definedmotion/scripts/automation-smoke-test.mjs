@@ -53,8 +53,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 64) {
-    throw new Error(`Expected 64 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 65) {
+    throw new Error(`Expected 65 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -194,6 +194,27 @@ try {
   }
   if (sha256(firstOutput) !== sha256(secondOutput)) {
     throw new Error('Repeated still renders were not byte-identical')
+  }
+
+  const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')
+  const cameraOverlayResult = run([
+    'timeline-grid',
+    'test-camera-attached-overlay-rebuild',
+    '--frames',
+    '0,1',
+    '--columns',
+    '2',
+    '--cell-width',
+    '160',
+    '--output',
+    cameraOverlayGrid,
+    '--no-build'
+  ])
+  if (
+    !existsSync(cameraOverlayGrid) ||
+    JSON.stringify(cameraOverlayResult.frames) !== JSON.stringify([0, 1])
+  ) {
+    throw new Error('Camera-attached overlay rebuild regression did not render both seeks')
   }
 
   const inspection = run(['inspect', 'test-scene-inspection', '--frame', '30', '--no-build'])
