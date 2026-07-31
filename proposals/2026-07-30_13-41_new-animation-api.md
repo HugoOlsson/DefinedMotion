@@ -37,7 +37,20 @@ interface BoundAnimation {
 }
 ```
 
+```ts
+type EasingName =
+  | "linear"
+  | "ease-in"
+  | "ease-out"
+  | "ease-in-out"
+  | "rubberband"
+
+type Easing = EasingName | ((linearProgress: number) => number)
+```
+
 `duration` is the user-facing duration in seconds. The plan contains this schedule-time information immediately, while `bind()` runs once at the animation's start frame and creates its updater using the scene state at that moment.
+
+A raw custom plan defaults to `"linear"`. Core visual helpers may provide their own documented default. Unknown names, non-finite custom easing results, and asynchronous `bind()` or `update()` callbacks are authoring errors.
 
 For example, `moveTo()` knows its duration immediately but snapshots both mutable endpoints when it starts:
 
@@ -231,3 +244,25 @@ scene.setTimelinePointer(resumeAt)
 - `insertAnimsAt` is replaced by temporarily setting the pointer to an explicit frame.
 
 `scene.do()` remains the discrete action primitive, and `onEachTick` remains the escape hatch for continuous procedural behavior. Beats use the normal scene scheduling operations and expose only read-only local coordinates.
+
+## Acceptance suite
+
+```text
+ANIM-01  Sequential movement captures its source when it starts.
+ANIM-02  A mutable destination is captured when the animation starts.
+ANIM-03  Same-frame animations all bind before any update.
+ANIM-04  Competing writers update in registration order.
+ANIM-05  A one-frame animation receives both progress values as 1 and both endpoint flags.
+ANIM-06  Exact rebuilding and repeated exact seeking produce equivalent state.
+ANIM-07  Reset discards bound state and binds each scheduled occurrence again.
+ANIM-08  Durations compile to end-exclusive frame ranges and pointer restoration preserves prior work.
+ANIM-09  Easing and invalid duration, pointer, callback, and easing inputs follow the documented contract.
+```
+
+Targeted command:
+
+```bash
+npm run test:animation-plan --workspace definedmotion
+```
+
+The `test-animation-plan` reference scene and automation suite provide the real scene, rebuild, and exact-seek coverage for `ANIM-01`, `ANIM-02`, and `ANIM-06`.

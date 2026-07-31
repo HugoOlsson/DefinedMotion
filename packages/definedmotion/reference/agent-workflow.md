@@ -458,6 +458,57 @@ Project-wide `timelineFps`, `renderEveryNthFrame`, `seed`, and `defaultScene` li
 
 Automation seeks deterministically from the beginning through the requested frame. Use frame-derived state, `scene.random()`, or `scene.randomBetween()` rather than unseeded randomness or wall-clock state.
 
+### Scheduling runtime-bound animation plans
+
+`scene.addAnims()` accepts plans whose durations are authored in seconds and whose mutable values are captured when their scheduled occurrence starts:
+
+```ts
+import * as THREE from 'three'
+import type { AnimationPlan } from 'definedmotion/animation'
+
+const moveTo = (
+  object: THREE.Object3D,
+  target: THREE.Vector3,
+  duration: number
+): AnimationPlan => ({
+  duration,
+  easing: 'ease-in-out',
+  bind() {
+    const from = object.position.clone()
+    const to = target.clone()
+    return {
+      update({ easedProgress }) {
+        object.position.lerpVectors(from, to, easedProgress)
+      }
+    }
+  }
+})
+
+scene.addAnims(moveTo(card, firstTarget, 0.6))
+scene.addAnims(moveTo(card, secondTarget, 0.6))
+```
+
+`bind()` is synchronous, runs once when that occurrence starts, and must only capture state. All scene mutation belongs in the synchronous `update()` callback. Animations starting on the same frame all bind before any of them update.
+
+`update()` receives:
+
+- `easedProgress`, normally used for visual interpolation;
+- raw frame-derived `linearProgress`;
+- `isFirstFrame` and `isLastFrame`, which are both true for a one-frame animation.
+
+Raw plans default to linear easing. Named easing values are `linear`, `ease-in`, `ease-out`, `ease-in-out`, and `rubberband`; a synchronous custom easing function may also be supplied.
+
+Each `addAnims()` call advances the builder pointer by its longest argument. Save and restore the pointer to schedule independent work:
+
+```ts
+const resumeAt = scene.getTimelinePointer()
+scene.addAnims(backgroundEnter)
+scene.setTimelinePointer(resumeAt)
+scene.addAnims(foregroundEnter)
+```
+
+`setTimelinePointer()` affects only subsequently scheduled work. Use `scene.secondsToFrames()` or `scene.millisecondsToFrames()` only when an API explicitly requires a frame position; ordinary animation durations remain seconds.
+
 ### Exposing meaningful objects
 
 `scene.expose()` registers an existing `THREE.Object3D` for semantic inspection and returns the same object:

@@ -20,6 +20,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | surface | example | Surface | `examples/surfaceScene.scene.ts` |
 | test-2d-camera-centers-labels | test | 2D Camera Centers Labels | `tests/camera/test_2d_camera_centers_labels.scene.ts` |
 | test-2d-camera-hits-markers | test | 2D Camera Hits Markers | `tests/camera/test_2d_camera_hits_markers.scene.ts` |
+| test-animation-plan | test | Animation Plan Contract | `tests/animation/test_animation_plan.scene.ts` |
 | test-asset-references | test | Asset References | `tests/assets/test_asset_references.scene.ts` |
 | test-basic-latex-query | test | Basic LaTeX Query | `tests/svg/test_basic_latex_query.scene.ts` |
 | test-basic-svg | test | Basic SVG | `tests/svg/test_basic_svg.scene.ts` |

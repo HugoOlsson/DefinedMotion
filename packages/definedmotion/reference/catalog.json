@@ -86,6 +86,12 @@
       "source": "tests/camera/test_2d_camera_hits_markers.scene.ts"
     },
     {
+      "id": "test-animation-plan",
+      "name": "Animation Plan Contract",
+      "kind": "test",
+      "source": "tests/animation/test_animation_plan.scene.ts"
+    },
+    {
       "id": "test-asset-references",
       "name": "Asset References",
       "kind": "test",

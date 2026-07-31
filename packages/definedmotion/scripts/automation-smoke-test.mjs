@@ -53,8 +53,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 65) {
-    throw new Error(`Expected 65 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 66) {
+    throw new Error(`Expected 66 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -194,6 +194,47 @@ try {
   }
   if (sha256(firstOutput) !== sha256(secondOutput)) {
     throw new Error('Repeated still renders were not byte-identical')
+  }
+
+  const animationPlanStart = run([
+    'inspect',
+    'test-animation-plan',
+    '--frame',
+    '0',
+    '--no-build'
+  ])
+  const animationPlanSecondStart = run([
+    'inspect',
+    'test-animation-plan',
+    '--frame',
+    '30',
+    '--no-build'
+  ])
+  const animationPlanEnd = run([
+    'inspect',
+    'test-animation-plan',
+    '--frame',
+    '59',
+    '--no-build'
+  ])
+  const animationPlanEndRepeat = run([
+    'inspect',
+    'test-animation-plan',
+    '--frame',
+    '59',
+    '--no-build'
+  ])
+  const planObject = (result) =>
+    result.objects.find((object) => object.id === 'animation-plan-box')
+  if (
+    animationPlanEnd.sceneInfo.durationInFrames !== 60 ||
+    planObject(animationPlanStart)?.text !== 'x=-6.000' ||
+    planObject(animationPlanSecondStart)?.text !== 'x=0.000' ||
+    planObject(animationPlanEnd)?.text !== 'x=6.000' ||
+    JSON.stringify(planObject(animationPlanEnd)?.localTransform) !==
+      JSON.stringify(planObject(animationPlanEndRepeat)?.localTransform)
+  ) {
+    throw new Error('AnimationPlan exact seeking or runtime endpoint capture was incorrect')
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')

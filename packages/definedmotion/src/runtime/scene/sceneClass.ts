@@ -2,9 +2,14 @@ import { captureCanvasFrame, triggerEncoder } from '../animation/captureCanvas'
 import {
   createAnim,
   type DependencyUpdater,
-  type InternalAnimation,
   type UserAnimation
 } from '../animation/protocols'
+import { AnimationTimeline } from '../animation/timeline'
+import {
+  millisecondsToFrames as convertMillisecondsToFrames,
+  secondsToFrames as convertSecondsToFrames,
+  type AnimationPlan
+} from '../animation/plan'
 import { generateID } from '../id'
 import { sleep } from '../rendering/helpers'
 import { InteractiveViewportScheduler } from '../rendering/interactiveViewportScheduler'
@@ -143,9 +148,8 @@ export class AnimatedScene {
   private container: HTMLElement
 
   sceneRenderTick: number = 0
-  private sceneCalculationTick: number = 0
   totalSceneTicks: number = 0
-  private sceneAnimations: InternalAnimation[] = []
+  private readonly animationTimeline = new AnimationTimeline(timelineFPS)
   private sceneDependencies: DependencyUpdater[] = []
   private sceneInstructions: Map<number, SceneInstruction[]> = new Map()
   private planedSounds: Map<number, AudioInScene[]> = new Map()
@@ -302,7 +306,7 @@ export class AnimatedScene {
   }
 
   do(instruction: SceneInstruction) {
-    this.appendInstruction(instruction, this.sceneCalculationTick)
+    this.appendInstruction(instruction, this.animationTimeline.getPointer())
   }
 
   doAt(tick: number, instruction: SceneInstruction) {
@@ -312,6 +316,26 @@ export class AnimatedScene {
 
   getCurrentTimeMs() {
     return ticksToMillis(this.sceneRenderTick)
+  }
+
+  getTimelinePointer(): number {
+    return this.animationTimeline.getPointer()
+  }
+
+  setTimelinePointer(frame: number): void {
+    this.animationTimeline.setPointer(frame)
+  }
+
+  secondsToFrames(seconds: number): number {
+    return convertSecondsToFrames(seconds, timelineFPS)
+  }
+
+  millisecondsToFrames(milliseconds: number): number {
+    return convertMillisecondsToFrames(milliseconds, timelineFPS)
+  }
+
+  get fps(): number {
+    return timelineFPS
   }
 
   get width(): number {
@@ -420,25 +444,12 @@ export class AnimatedScene {
     return this.cameraRegistry.size
   }
 
-  addAnims(...animations: UserAnimation[]) {
-    const longest = Math.max(...animations.map((a) => a.interpolation.length))
-    for (const animation of animations) {
-      this.appendAnimation(animation)
-    }
-    this.sceneCalculationTick += longest
+  addAnims(...animations: (AnimationPlan | UserAnimation)[]) {
+    this.animationTimeline.add(...animations)
   }
 
   insertAnimsAt(tick: number, ...animations: UserAnimation[]) {
-    for (const animation of animations) {
-      const internalAnimation: InternalAnimation = {
-        startTick: tick,
-        endTick: tick + animation.interpolation.length - 1,
-        updater: animation.updater,
-        interpolation: animation.interpolation
-      }
-
-      this.sceneAnimations.push(internalAnimation)
-    }
+    this.animationTimeline.insertLegacyAt(tick, ...animations)
   }
 
   addDeferredAnims(...futureAnimations: (() => UserAnimation)[]) {
@@ -453,15 +464,11 @@ export class AnimatedScene {
       }
       this.insertAnimsAt(tick, ...calculatedAnimations)
     })
-    this.sceneCalculationTick += longest
+    this.animationTimeline.reservePointerAdvance(longest)
   }
 
   addSequentialBackgroundAnims(...sequentialAnimations: UserAnimation[]) {
-    let padding = 0
-    for (const animation of sequentialAnimations) {
-      this.appendAnimation(animation, padding)
-      padding += animation.interpolation.length
-    }
+    this.animationTimeline.addSequentialLegacy(...sequentialAnimations)
   }
 
   onEachTick(updater: DependencyUpdater) {
@@ -496,19 +503,11 @@ export class AnimatedScene {
 
   end() {
     this.positioningSystem.compile()
-    const lastAnimationTick = this.sceneAnimations.reduce(
-      (latest, animation) => Math.max(latest, animation.endTick + 1),
-      0
-    )
     const lastInstructionTick = Array.from(this.sceneInstructions.keys()).reduce(
       (latest, tick) => Math.max(latest, tick + 1),
       0
     )
-    this.totalSceneTicks = Math.max(
-      this.sceneCalculationTick,
-      lastAnimationTick,
-      lastInstructionTick
-    )
+    this.totalSceneTicks = Math.max(this.animationTimeline.getEndFrame(), lastInstructionTick)
   }
 
   registerAudio(audio: AssetSource) {
@@ -518,20 +517,21 @@ export class AnimatedScene {
   playAudio(audio: AssetSource, volume: number = 1) {
     const audioPath = assetUrl(audio)
     if (this.isBuilding) {
-      const listForFrame = this.planedSounds.get(this.sceneCalculationTick)
+      const timelinePointer = this.animationTimeline.getPointer()
+      const listForFrame = this.planedSounds.get(timelinePointer)
 
       if (!listForFrame) {
-        this.planedSounds.set(this.sceneCalculationTick, [
+        this.planedSounds.set(timelinePointer, [
           {
             audioPath,
-            atFrame: this.sceneCalculationTick,
+            atFrame: timelinePointer,
             volume
           }
         ])
       } else {
         listForFrame.push({
           audioPath,
-          atFrame: this.sceneCalculationTick,
+          atFrame: timelinePointer,
           volume
         })
       }
@@ -1139,15 +1139,7 @@ export class AnimatedScene {
           await frameInstructions[i](index)
         }
       }
-      const animationsForFrame = this.getActiveAnimationsForTick(index)
-      for (let a = 0; a < animationsForFrame.length; a++) {
-        const localInterpolationIndex = index - animationsForFrame[a].startTick
-        await animationsForFrame[a].updater(
-          animationsForFrame[a].interpolation[localInterpolationIndex],
-          index,
-          localInterpolationIndex === animationsForFrame[a].interpolation.length - 1
-        )
-      }
+      await this.animationTimeline.runFrame(index)
 
       for (let d = 0; d < this.sceneDependencies.length; d++) {
         await this.sceneDependencies[d](index, ticksToMillis(index))
@@ -1155,23 +1147,6 @@ export class AnimatedScene {
 
       this.positioningSystem.solve(this.scene)
     })
-  }
-
-  private getActiveAnimationsForTick(sceneTick: number): InternalAnimation[] {
-    return this.sceneAnimations.filter(
-      (anim) => anim.startTick <= sceneTick && anim.endTick >= sceneTick
-    )
-  }
-
-  private appendAnimation(userAnimation: UserAnimation, paddedTick: number = 0) {
-    const internalAnimation: InternalAnimation = {
-      startTick: paddedTick + this.sceneCalculationTick,
-      endTick: paddedTick + this.sceneCalculationTick + userAnimation.interpolation.length - 1,
-      updater: userAnimation.updater,
-      interpolation: userAnimation.interpolation
-    }
-
-    this.sceneAnimations.push(internalAnimation)
   }
 
   private appendInstruction(instruction: SceneInstruction, atTick: number) {
@@ -1199,9 +1174,8 @@ export class AnimatedScene {
     this.clearExposedCameras()
     this.clearCollisionWatches()
     this.sceneRenderTick = 0
-    this.sceneCalculationTick = 0
     this.totalSceneTicks = 0
-    this.sceneAnimations = []
+    this.animationTimeline.reset()
     this.sceneDependencies = []
     this.positioningSystem.reset()
     this.sceneInstructions = new Map()
