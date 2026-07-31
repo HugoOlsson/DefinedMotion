@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 71) {
-    throw new Error(`Expected 71 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 72) {
+    throw new Error(`Expected 72 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -291,6 +291,15 @@ try {
     layoutObject(layoutEnd, 'layout-second-appended')?.visible !== true
   ) {
     throw new Error('Primitive layout bounds, append replay, or slot animation was incorrect')
+  }
+
+  const previewExact = run(['inspect', 'test-viewer-preview', '--frame', '4', '--no-build'])
+  const previewCard = previewExact.objects.find((object) => object.id === 'preview-card')
+  if (
+    previewExact.sceneInfo.durationInFrames !== 5 ||
+    previewCard?.worldTransform.position[0] !== 10
+  ) {
+    throw new Error('Exact automation did not trace complete state across a viewer preview marker')
   }
 
   const verificationList = run([

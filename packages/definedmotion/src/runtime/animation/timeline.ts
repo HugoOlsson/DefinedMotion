@@ -16,6 +16,11 @@ interface ScheduledLegacyAnimation {
   readonly animation: UserAnimation
 }
 
+export interface ScheduledAnimationRange {
+  readonly startFrame: number
+  readonly endFrame: number
+}
+
 type ScheduledAnimation = ScheduledAnimationPlan | ScheduledLegacyAnimation
 export type AnimationInput = AnimationPlan | UserAnimation
 
@@ -178,6 +183,15 @@ export class AnimationTimeline {
       (latest, animation) => Math.max(latest, animation.endFrame),
       this.reservedEndFrame
     )
+  }
+
+  getAnimationCrossingFrame(frame: number): ScheduledAnimationRange | undefined {
+    const crossing = this.animations.find(
+      (animation) => animation.startFrame < frame && frame < animation.endFrame
+    )
+    return crossing
+      ? { startFrame: crossing.startFrame, endFrame: crossing.endFrame }
+      : undefined
   }
 
   async runFrame(frame: number): Promise<void> {

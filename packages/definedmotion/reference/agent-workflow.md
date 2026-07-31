@@ -652,6 +652,24 @@ scene.timeline.beat('diagram', (beat) => {
 
 The authoring callback is synchronous, its scheduled work must stay inside the beat, and the prior global pointer is restored even if authoring throws. `beatProgress` is `0` on the first frame and `1` on the last; a one-frame beat reports `1`.
 
+### Shortening interactive preview traces
+
+For a long scene, place one viewer-only preview boundary at a clean animation boundary:
+
+```ts
+scene.timeline.beat('cold-spots', () => {
+  scene.previewFromHere()
+  scene.do(() => {
+    panel.visible = true
+  })
+  scene.addAnims(fadeIn(title))
+})
+```
+
+With **Use scene preview marker** enabled, the viewer rebuilds and traces from that global frame, and visibly disables earlier timeline history. The resulting state is intentionally approximate because earlier instructions, animations, and callbacks are skipped. Disable the preference to inspect the same frame exactly from frame `0`.
+
+The marker must identify a real frame and cannot sit strictly inside an animation range. Invalid markers stop the viewer and every CLI command with an actionable build error. Rendering, exact inspection, verification, layout checks, grids, and automated capture always trace the full history and never use the preview shortcut.
+
 ### Exposing meaningful objects
 
 `scene.expose()` registers an existing `THREE.Object3D` for semantic inspection and returns the same object:

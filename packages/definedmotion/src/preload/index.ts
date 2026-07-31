@@ -8,6 +8,7 @@ import type {
   RuntimeSourceDiagnostic
 } from '../automation/types'
 import type { RenderProgress } from '../renderProgress'
+import type { ViewerPreferences } from '../viewer/preferences'
 
 // ---- NEW helpers for event subscription
 function onDisplayHzChanged(cb: (hz: number) => void): () => void {
@@ -66,6 +67,12 @@ const customAPI = {
 
   getAutomationRequest: (): Promise<AutomationRequest> =>
     ipcRenderer.invoke('definedmotion:get-automation-request'),
+
+  getViewerPreferences: (): Promise<ViewerPreferences> =>
+    ipcRenderer.invoke('definedmotion:get-viewer-preferences'),
+
+  setViewerPreferences: (preferences: ViewerPreferences): Promise<void> =>
+    ipcRenderer.invoke('definedmotion:set-viewer-preferences', preferences),
 
   writeAutomationFile: (outputPath: string, bytes: Uint8Array): Promise<string> =>
     ipcRenderer.invoke('definedmotion:write-automation-file', outputPath, bytes),

@@ -2,13 +2,14 @@
   import './app.css'
   import { setStateInScene, updateStateInUrl } from './sceneState'
   import { onDestroy, onMount } from 'svelte'
-  import { hotreloadNameLookup, renderOutputFps, SceneRuntimeError, screenFPS, setGlobalContainerRef, timelineFPS, type AnimatedScene } from '../runtime/scene/sceneClass'
+  import { renderOutputFps, SceneRuntimeError, screenFPS, setGlobalContainerRef, timelineFPS, type AnimatedScene, type ScenePreviewMarker } from '../runtime/scene/sceneClass'
   import { loadFonts } from '../runtime/rendering/objects2d'
   import { generateID } from '../runtime/id'
   import { entryScene, renderSkip } from 'virtual:definedmotion-project'
   import { callAllDestroyFunctions } from '../runtime/lifecycle'
   import rotateIcon from './assets/360.svg'
   import moveIcon from './assets/move.svg'
+  import { defaultViewerPreferences, type ViewerPreferences } from '../viewer/preferences'
   
 
   let frameValueElement: HTMLParagraphElement
@@ -23,6 +24,9 @@
 
   let screenRefreshRate = $state(0) 
   let isRendering = $state(false) 
+  let sceneError = $state<string>()
+  let previewMarker = $state<ScenePreviewMarker>()
+  let viewerPreferences = $state<ViewerPreferences>(defaultViewerPreferences())
 
   let isScrubbing = false
   let wasPlayingBeforeScrub = false
@@ -95,7 +99,10 @@
       const sliderValue = pendingSliderValue
       pendingSliderValue = undefined
       if (!scene) continue
-      const frame = Math.round((sliderValue / maxSliderValue) * (scene.totalSceneTicks - 1))
+      const requestedFrame = Math.round(
+        (sliderValue / maxSliderValue) * (scene.totalSceneTicks - 1)
+      )
+      const frame = Math.max(requestedFrame, scene.getViewerMinimumFrame())
       if (frame === scene.sceneRenderTick) continue
       try {
         await scene.jumpToFrameAtIndex(frame)
@@ -108,6 +115,38 @@
         continue
       }
       updateUIImmediate()
+    }
+  }
+
+  function minimumSliderValue(): number {
+    if (!scene || scene.totalSceneTicks <= 1) return 0
+    return (scene.getViewerMinimumFrame() / (scene.totalSceneTicks - 1)) * maxSliderValue
+  }
+
+  function clampSliderValue(value: number): number {
+    return Math.max(minimumSliderValue(), value)
+  }
+
+  function previewMarkerPercent(): number {
+    if (!scene || !previewMarker || scene.totalSceneTicks <= 1) return 0
+    return (previewMarker.frame / (scene.totalSceneTicks - 1)) * 100
+  }
+
+  async function updatePreviewPreference(enabled: boolean): Promise<void> {
+    if (!scene || scene.isPlaying || isRendering) return
+    viewerPreferences = { ...viewerPreferences, usePreviewMarker: enabled }
+    await window.api.setViewerPreferences(viewerPreferences)
+    scene.setViewerPreviewEnabled(enabled)
+    hasInitScene = false
+    sceneError = undefined
+    try {
+      await scene.jumpToFrameAtIndex(scene.sceneRenderTick)
+      previewMarker = scene.getPreviewMarker()
+      hasInitScene = true
+      updateUIImmediate()
+    } catch (error) {
+      sceneError = error instanceof Error ? error.message : String(error)
+      previewMarker = scene.getPreviewMarker()
     }
   }
 
@@ -154,7 +193,14 @@ function updateUIImmediate() {
 
     setGlobalContainerRef(animationWindow)
 
+    try {
+      viewerPreferences = await window.api.getViewerPreferences()
+    } catch (error) {
+      console.warn('Could not load viewer preferences:', error)
+    }
+
     scene = entryScene()
+    scene.setViewerPreviewEnabled(viewerPreferences.usePreviewMarker)
 
     scene.playEffectFunction = () => {
       isPlayingStateVar = scene.isPlaying
@@ -169,9 +215,16 @@ function updateUIImmediate() {
       }
     }
 
-    await loadFonts()
-    await setStateInScene(scene)
-    hasInitScene = true
+    try {
+      await loadFonts()
+      await setStateInScene(scene)
+      previewMarker = scene.getPreviewMarker()
+      hasInitScene = true
+    } catch (error) {
+      sceneError = error instanceof Error ? error.message : String(error)
+      previewMarker = scene.getPreviewMarker()
+      console.error('Could not build the scene:', error)
+    }
     urlUpdaterInterval = setInterval(() => {
       updateStateInUrl(scene.sceneRenderTick)
     }, 500)
@@ -219,7 +272,14 @@ export async function copyToClipboard(text: string): Promise<void> {
 <div class=" flex flex-col p-2">
   <div class="relative w-full rounded-sm overflow-clip bg-neutral-100">
     <div id={animationWindowID} class="w-full" class:invisible={!hasInitScene}></div>
-    {#if !hasInitScene}
+    {#if sceneError}
+      <div class="absolute inset-0 flex items-center justify-center bg-red-50 px-8 text-center text-xs text-red-800">
+        <div>
+          <p class="font-bold">Scene could not be built</p>
+          <p class="mt-2 whitespace-pre-wrap">{sceneError}</p>
+        </div>
+      </div>
+    {:else if !hasInitScene}
       <div class="absolute inset-0 flex items-center justify-center text-xs text-black/35">
         Building scene…
       </div>
@@ -274,7 +334,45 @@ export async function copyToClipboard(text: string): Promise<void> {
       >
     </div>
   </div>
-  <div class="w-full px-0 mx-0">
+  {#if previewMarker}
+    <div class="mt-2 flex items-center justify-between gap-3 text-[0.68rem]">
+      <p class={viewerPreferences.usePreviewMarker ? 'font-medium text-amber-700' : 'text-black/40'}>
+        {viewerPreferences.usePreviewMarker
+          ? `Approximate preview · starts ${previewMarker.beat ? `at beat “${previewMarker.beat}” · ` : ''}at frame ${previewMarker.frame}`
+          : `Preview marker disabled · frame ${previewMarker.frame}`}
+      </p>
+      <label class="flex shrink-0 items-center gap-1.5">
+        <input
+          type="checkbox"
+          checked={viewerPreferences.usePreviewMarker}
+          disabled={!hasInitScene || isRendering || isPlayingStateVar}
+          onchange={(event) => {
+            void updatePreviewPreference((event.currentTarget as HTMLInputElement).checked).catch(
+              (error) => console.error('Could not update the preview preference:', error)
+            )
+          }}
+        />
+        Use scene preview marker
+      </label>
+    </div>
+  {/if}
+  <div class="relative w-full px-0 mx-0" class:has-preview-boundary={previewMarker !== undefined && viewerPreferences.usePreviewMarker} style={`--preview-boundary: ${previewMarkerPercent()}%`}>
+    {#if previewMarker}
+      {#if viewerPreferences.usePreviewMarker && previewMarkerPercent() >= 9}
+        <div
+          class="pointer-events-none absolute -top-1 z-20 overflow-hidden whitespace-nowrap text-center text-[0.58rem] text-black/45"
+          style={`width: ${previewMarkerPercent()}%`}
+        >
+          Not evaluated in preview
+        </div>
+      {/if}
+      <div
+        class="pointer-events-none absolute bottom-0 top-0 z-20 w-px bg-amber-600"
+        class:opacity-35={!viewerPreferences.usePreviewMarker}
+        style={`left: ${previewMarkerPercent()}%`}
+        title={viewerPreferences.usePreviewMarker ? 'Preview starts here' : 'Preview marker disabled'}
+      ></div>
+    {/if}
     <input
       bind:this={sliderElement}
       type="range"
@@ -294,7 +392,8 @@ export async function copyToClipboard(text: string): Promise<void> {
       }}
       oninput={(e: any) => {
         // while scrubbing: jump visuals quietly; when not scrubbing, behaves like before
-        const v = Number(e.target.value)
+        const v = clampSliderValue(Number(e.target.value))
+        e.target.value = String(v)
         void handleSliderChange(v).catch((error) =>
           console.error('Could not scrub the scene:', error)
         )
@@ -302,7 +401,8 @@ export async function copyToClipboard(text: string): Promise<void> {
       onpointerup={async (e: any) => {
         if (!scene) return
         isScrubbing = false
-        const v = Number((e.target as HTMLInputElement).value)
+        const v = clampSliderValue(Number((e.target as HTMLInputElement).value))
+        ;(e.target as HTMLInputElement).value = String(v)
         // ensure we’re at the dropped frame
         try {
           await handleSliderChange(v)
@@ -343,7 +443,9 @@ export async function copyToClipboard(text: string): Promise<void> {
   <div class="h-2"></div>
   <p class="text-xs">Animation timeline FPS: <strong>{timelineFPS.toFixed(2)}</strong> Hz, rendered video FPS: <strong>{renderOutputFps().toFixed(2)}</strong> Hz</p>
 <div class="h-2"></div>
- <p class="text-[0.7rem] opacity-50">Hot reload mode: <strong>{hotreloadNameLookup(scene.hotReloadSetting)}</strong></p>
+  {#if !previewMarker}
+    <p class="text-[0.7rem] opacity-50">Scene preview marker: <strong>Not set</strong></p>
+  {/if}
   <p class="text-[0.7rem] opacity-50">Screen refresh rate: <strong>{screenRefreshRate.toFixed(2)}</strong> Hz</p>
   <p class="text-[0.7rem] opacity-50">Render skip constant <strong>{renderSkip}</strong></p>
   {/if}
@@ -367,6 +469,16 @@ export async function copyToClipboard(text: string): Promise<void> {
     height: 4px;
     background: #e5e7eb;
     border-radius: 2px;
+  }
+
+  .has-preview-boundary input[type='range']::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      to right,
+      #9ca3af 0,
+      #9ca3af var(--preview-boundary),
+      #e5e7eb var(--preview-boundary),
+      #e5e7eb 100%
+    );
   }
 
   /* Thumb style for Chrome */

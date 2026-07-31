@@ -37,6 +37,7 @@ export type {
   ExposedObjectMetadata,
   ExposedSceneObject,
   InspectionCamera,
+  ScenePreviewMarker,
   SceneVerification,
   VerificationCheck,
   VerificationContext,

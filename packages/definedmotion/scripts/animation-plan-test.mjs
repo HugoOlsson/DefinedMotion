@@ -169,6 +169,18 @@ try {
     assert.equal(timeline.getEndFrame(), 20)
   }
 
+  // PREVIEW-01: crossing checks are strictly inside end-exclusive animation ranges.
+  {
+    const timeline = new AnimationTimeline(10)
+    timeline.add({ duration: 1, bind: () => ({ update() {} }) })
+    assert.equal(timeline.getAnimationCrossingFrame(0), undefined)
+    assert.deepEqual(timeline.getAnimationCrossingFrame(5), {
+      startFrame: 0,
+      endFrame: 10
+    })
+    assert.equal(timeline.getAnimationCrossingFrame(10), undefined)
+  }
+
   // ANIM-09: eased and linear progress remain distinct and endpoints stay exact.
   {
     const timeline = new AnimationTimeline(3)

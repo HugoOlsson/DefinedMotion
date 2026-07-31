@@ -16,8 +16,15 @@ import { registerAssetProtocol } from './assets'
 import { getPersistentRuntimeConfig, PersistentRuntimeHost } from './runtimeHost'
 import { emitRenderProgress } from './renderProgress'
 import type { RenderProgress } from '../renderProgress'
+import {
+  normalizeViewerPreferences,
+  type ViewerPreferences
+} from '../viewer/preferences'
 
 const store = new ElectronStore()
+const viewerProjectKey = resolve(
+  process.env['DEFINEDMOTION_PROJECT_ROOT'] ?? process.cwd()
+)
 const automationRequestRaw = process.env['DEFINEDMOTION_AUTOMATION_REQUEST']
 const automationResultPath = process.env['DEFINEDMOTION_AUTOMATION_RESULT']
 const isAutomation = Boolean(automationRequestRaw && automationResultPath)
@@ -205,6 +212,28 @@ app.whenReady().then(() => {
     }
     return automationRequest
   })
+
+  ipcMain.handle('definedmotion:get-viewer-preferences', (event) => {
+    if (isRuntimeMode || event.sender !== mainWindow?.webContents) {
+      throw new Error('Viewer preferences are only available in the interactive viewer')
+    }
+    const preferencesByProject = store.get('viewerPreferences', {}) as Record<string, unknown>
+    return normalizeViewerPreferences(preferencesByProject[viewerProjectKey])
+  })
+
+  ipcMain.handle(
+    'definedmotion:set-viewer-preferences',
+    (event, preferences: ViewerPreferences) => {
+      if (isRuntimeMode || event.sender !== mainWindow?.webContents) {
+        throw new Error('Viewer preferences are only available in the interactive viewer')
+      }
+      const preferencesByProject = store.get('viewerPreferences', {}) as Record<string, unknown>
+      store.set('viewerPreferences', {
+        ...preferencesByProject,
+        [viewerProjectKey]: normalizeViewerPreferences(preferences)
+      })
+    }
+  )
 
   ipcMain.handle(
     'definedmotion:write-automation-file',

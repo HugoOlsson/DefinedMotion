@@ -332,6 +332,12 @@
       "source": "tests/animation/test_updater.scene.ts"
     },
     {
+      "id": "test-viewer-preview",
+      "name": "Viewer Preview Boundary",
+      "kind": "test",
+      "source": "tests/animation/test_viewer_preview.scene.ts"
+    },
+    {
       "id": "test-visual-primitives",
       "name": "Text and LaTeX Primitive Contract",
       "kind": "test",

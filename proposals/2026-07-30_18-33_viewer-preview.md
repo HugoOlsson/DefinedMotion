@@ -117,3 +117,13 @@ Remove `HotReloadSetting` from the public API:
 - `BeginFreshOnSave` is removed; source reload follows the persisted viewer preference.
 
 The scene constructor no longer receives a hot-reload mode.
+
+## Acceptance suite
+
+- `PREVIEW-01`: a marker identifies a real scene frame, rejects duplicate registration, and is not strictly inside any end-exclusive animation range.
+- `PREVIEW-02`: enabled interactive navigation clamps restoration, scrubbing, playback, and looping to the marker while disabled preview use exposes frame `0`.
+- `PREVIEW-03`: preview use defaults on and persists per project.
+- `PREVIEW-04`: exact seek, automation, verification, capture, and rendering always trace from frame `0` while still validating the marker.
+- `PREVIEW-05`: the viewer shows the marker, unavailable history, approximate-state badge, toggle state, and actionable build errors.
+
+Targeted command: `npm run test:viewer-preview --workspace definedmotion`. The `test-viewer-preview` scene and viewer integration gate cover build-time registration and interactive behavior.

@@ -71,6 +71,11 @@ import {
   type VerificationFrameRange,
   type VerificationOptions
 } from './sceneVerification'
+import {
+  effectiveViewerFrame,
+  validatePreviewMarker,
+  type ScenePreviewMarker
+} from './scenePreview'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -123,6 +128,7 @@ export type {
   VerificationFrameRange,
   VerificationOptions
 } from './sceneVerification'
+export type { ScenePreviewMarker } from './scenePreview'
 export type {
   BeatAuthoringContext,
   BeatDefinitions,
@@ -183,6 +189,8 @@ export class AnimatedScene {
   private cameraRegistry = new SceneCameraRegistry()
   private collisionRegistry = new SceneCollisionRegistry()
   private verificationRegistry = new SceneVerificationRegistry()
+  private previewMarkerFrame?: number
+  private useViewerPreviewMarker = true
   private readonly frameResources = new FrameResourceHost()
   private readonly positioningSystem = new PositioningSystem()
 
@@ -218,8 +226,8 @@ export class AnimatedScene {
 
   private buildFunction: (scene: this) => any
 
+  /** @deprecated Retained temporarily while workspace scenes migrate to previewFromHere(). */
   public hotReloadSetting: HotReloadSetting
-  private traceFromStart: boolean
 
   private interactiveViewport?: InteractiveViewportScheduler
   private animationFrameId: number | null = null
@@ -257,7 +265,6 @@ export class AnimatedScene {
     this.pixelsHeight = pixelsHeight
     this.pixelsWidth = pixelsWidth
     this.hotReloadSetting = hotReloadSetting
-    this.traceFromStart = hotReloadSetting !== HotReloadSetting.BeginFromCurrent
     this.interactive = globalInteractiveMode
     this.assetNamespace = globalAssetNamespace
 
@@ -373,6 +380,43 @@ export class AnimatedScene {
 
   get fps(): number {
     return timelineFPS
+  }
+
+  /** Marks the current global builder frame as the interactive viewer's preview boundary. */
+  previewFromHere(): void {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'PREVIEW_MARKER_OUTSIDE_BUILD',
+        'scene.previewFromHere() must be called while the scene build function is running'
+      )
+    }
+    if (this.previewMarkerFrame !== undefined) {
+      throw new SceneRuntimeError(
+        'DUPLICATE_PREVIEW_MARKER',
+        `scene.previewFromHere() is already registered at frame ${this.previewMarkerFrame}`
+      )
+    }
+    this.previewMarkerFrame = this.getTimelinePointer()
+  }
+
+  /** @internal Configures whether interactive seeks use a valid authored preview marker. */
+  setViewerPreviewEnabled(enabled: boolean): void {
+    this.useViewerPreviewMarker = enabled
+  }
+
+  /** @internal Returns the marker from the current completed build, if present. */
+  getPreviewMarker(): ScenePreviewMarker | undefined {
+    if (this.previewMarkerFrame === undefined) return undefined
+    const beat = this.timeline.getBeatAtFrame(this.previewMarkerFrame)?.name
+    return {
+      frame: this.previewMarkerFrame,
+      ...(beat ? { beat } : {})
+    }
+  }
+
+  /** @internal First frame reachable through interactive viewer operations. */
+  getViewerMinimumFrame(): number {
+    return this.useViewerPreviewMarker ? (this.previewMarkerFrame ?? 0) : 0
   }
 
   get width(): number {
@@ -627,7 +671,7 @@ export class AnimatedScene {
   private async presentInteractiveFrameAtIndex(index: number, notSize: boolean): Promise<void> {
     this.interactiveViewport?.suspend()
     try {
-      await this.presentFrameAtIndex(index, notSize, 'exact')
+      await this.presentFrameAtIndex(index, notSize, 'exact', 'viewer')
     } finally {
       if (!this.destroyed && !this.isPlaying && !this.isRendering) {
         this.interactiveViewport?.resume()
@@ -638,7 +682,8 @@ export class AnimatedScene {
   private async presentFrameAtIndex(
     index: number,
     notSize: boolean,
-    presentation: 'exact' | 'realtime'
+    presentation: 'exact' | 'realtime',
+    evaluation: 'viewer' | 'exact'
   ): Promise<void> {
     await this.prepareSceneForSeek(
       notSize,
@@ -646,19 +691,16 @@ export class AnimatedScene {
       presentation === 'exact' ? 'suspend' : 'preserve'
     )
 
-    if (index > this.totalSceneTicks - 1 || index < 0) {
-      index = 0
-    }
-
-    if (this.traceFromStart) {
-      await this.traceToFrameIndex(index, false)
-    } else {
-      const allInstructionUntilNow = this.getSceneInstructionsUpToIndex(index - 1)
-      for (let i = 0; i < allInstructionUntilNow.length; i++) {
-        await allInstructionUntilNow[i].instruction(allInstructionUntilNow[i].key)
-      }
-      await this.traceCurrentFrame(index, false, false)
-    }
+    const markerFrame = evaluation === 'viewer' ? this.previewMarkerFrame : undefined
+    index = effectiveViewerFrame(
+      index,
+      this.totalSceneTicks,
+      markerFrame,
+      evaluation === 'viewer' && this.useViewerPreviewMarker
+    )
+    const traceStart =
+      evaluation === 'viewer' && this.useViewerPreviewMarker ? (markerFrame ?? 0) : 0
+    await this.traceFrameRange(traceStart, index, false)
 
     this.sceneRenderTick = index
     if (presentation === 'exact') await this.prepareExactFrame()
@@ -813,6 +855,7 @@ export class AnimatedScene {
     let buildCompleted = false
     try {
       await this.withSeededRandom(() => this.buildFunction(this))
+      this.validatePreviewMarker()
       buildCompleted = true
     } finally {
       this.isBuilding = false
@@ -947,7 +990,7 @@ export class AnimatedScene {
         phase: 'preparing',
         message: 'Preparing scene'
       })
-      await this.presentFrameAtIndex(startFrame, true, 'exact')
+      await this.presentFrameAtIndex(startFrame, true, 'exact', 'exact')
       const totalOutputFrames = Math.ceil(this.totalSceneTicks / renderSkip)
       let renderedFrames = 0
       let lastProgressAt = -Infinity
@@ -1005,7 +1048,12 @@ export class AnimatedScene {
       this.clearRenderingAudioGather()
       this.isRendering = false
       this.isPlaying = false
-      await this.presentFrameAtIndex(0, false, 'exact')
+      await this.presentFrameAtIndex(
+        0,
+        false,
+        'exact',
+        this.interactive ? 'viewer' : 'exact'
+      )
       this.renderCurrentFrame()
       return outputFile
     } finally {
@@ -1039,7 +1087,7 @@ export class AnimatedScene {
     this.isPlaying = true
     this.interactiveViewport?.suspend()
     try {
-      await this.presentFrameAtIndex(fromFrame, false, 'exact')
+      await this.presentFrameAtIndex(fromFrame, false, 'exact', 'viewer')
     } catch (error) {
       this.pause()
       throw error
@@ -1053,6 +1101,7 @@ export class AnimatedScene {
     this.playbackTargetDistance =
     this.controls.target.distanceTo(this.camera.position)
 
+    fromFrame = this.sceneRenderTick
     let currentFrame = fromFrame
     let cycleStartFrame = fromFrame
     let firstFrameInCycle = true
@@ -1094,9 +1143,14 @@ export class AnimatedScene {
 
         scheduleNextFrame()
       } else {
-        await this.presentFrameAtIndex(0, false, 'realtime')
-        currentFrame = 0
-        cycleStartFrame = 0
+        await this.presentFrameAtIndex(
+          this.getViewerMinimumFrame(),
+          false,
+          'realtime',
+          'viewer'
+        )
+        currentFrame = this.sceneRenderTick
+        cycleStartFrame = currentFrame
         firstFrameInCycle = true
         cycleStartedAt = performance.now()
         scheduleNextFrame()
@@ -1174,8 +1228,11 @@ export class AnimatedScene {
   }
 
   private async traceToFrameIndex(index: number, withAudio: boolean) {
-    //Trace all actions
-    for (let traceTick = 0; traceTick <= index; traceTick++) {
+    await this.traceFrameRange(0, index, withAudio)
+  }
+
+  private async traceFrameRange(start: number, end: number, withAudio: boolean) {
+    for (let traceTick = start; traceTick <= end; traceTick++) {
       await this.traceCurrentFrame(traceTick, withAudio, false)
     }
   }
@@ -1234,6 +1291,7 @@ export class AnimatedScene {
     this.clearExposedCameras()
     this.clearCollisionWatches()
     this.clearVerifications()
+    this.previewMarkerFrame = undefined
     this.sceneRenderTick = 0
     this.totalSceneTicks = 0
     this.animationTimeline.reset()
@@ -1266,6 +1324,15 @@ export class AnimatedScene {
 
   private clearVerifications(): void {
     this.verificationRegistry.clear()
+  }
+
+  private validatePreviewMarker(): void {
+    if (this.previewMarkerFrame === undefined) return
+    validatePreviewMarker(
+      this.previewMarkerFrame,
+      this.totalSceneTicks,
+      this.animationTimeline.getAnimationCrossingFrame(this.previewMarkerFrame)
+    )
   }
 
   private async withSeededRandom<T>(operation: () => Promise<T> | T): Promise<T> {
@@ -1354,27 +1421,4 @@ export class AnimatedScene {
     this.renderer.shadowMap.enabled = this.initialRendererState.shadowMapEnabled
   }
 
-  private getSceneInstructionsUpToIndex(
-    index: number
-  ): Array<{ key: number; instruction: SceneInstruction }> {
-    // Filter keys that are less than or equal to the provided index and sort them in ascending order.
-    const sortedKeys = Array.from(this.sceneInstructions.keys())
-      .filter((key) => key <= index)
-      .sort((a, b) => a - b)
-
-    // Create a result array to hold objects that couple each key with its corresponding instruction.
-    const coupledInstructions: Array<{ key: number; instruction: SceneInstruction }> = []
-
-    // For each key, retrieve its instructions and push an object for each instruction.
-    sortedKeys.forEach((key) => {
-      const instructions = this.sceneInstructions.get(key)
-      if (instructions) {
-        instructions.forEach((instruction) => {
-          coupledInstructions.push({ key, instruction })
-        })
-      }
-    })
-
-    return coupledInstructions
-  }
 }
