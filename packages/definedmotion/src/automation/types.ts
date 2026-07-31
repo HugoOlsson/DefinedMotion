@@ -220,6 +220,14 @@ export interface InspectSceneInfo {
   seed: number | string
 }
 
+export interface InspectBeatCoordinates {
+  name: string
+  startFrame: number
+  endFrame: number
+  localFrame: number
+  beatProgress: number
+}
+
 export interface AutomationSuccessResult {
   success: true
   command: AutomationCommand
@@ -237,6 +245,7 @@ export interface AutomationSuccessResult {
   objects?: InspectObjectResult[]
   totalExposedObjects?: number
   objectsTruncated?: boolean
+  beat?: InspectBeatCoordinates
   checkedFrames?: number
   watchedObjectCount?: number
   incidentCount?: number

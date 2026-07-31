@@ -53,8 +53,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 66) {
-    throw new Error(`Expected 66 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 67) {
+    throw new Error(`Expected 67 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -235,6 +235,37 @@ try {
       JSON.stringify(planObject(animationPlanEndRepeat)?.localTransform)
   ) {
     throw new Error('AnimationPlan exact seeking or runtime endpoint capture was incorrect')
+  }
+
+  const beatStart = run(['inspect', 'test-timeline-beats', '--frame', '20', '--no-build'])
+  const beatGap = run(['inspect', 'test-timeline-beats', '--frame', '55', '--no-build'])
+  const beatEnd = run(['inspect', 'test-timeline-beats', '--frame', '74', '--no-build'])
+  const beatObject = (result) =>
+    result.objects.find((object) => object.id === 'timeline-beat-box')
+  const beatPointer = beatStart.objects.find(
+    (object) => object.id === 'timeline-beat-pointer'
+  )
+  if (
+    beatStart.sceneInfo.durationInFrames !== 75 ||
+    JSON.stringify(beatStart.beat) !==
+      JSON.stringify({
+        name: 'move',
+        startFrame: 20,
+        endFrame: 50,
+        localFrame: 0,
+        beatProgress: 0
+      }) ||
+    beatObject(beatStart)?.text !== 'move:0:0.00' ||
+    beatPointer?.text !== 'pointer=7' ||
+    beatGap.beat !== undefined ||
+    beatObject(beatGap)?.text !== 'move:29:1.00' ||
+    beatObject(beatGap)?.localTransform.position[0] !== 6 ||
+    beatEnd.beat?.name !== 'hold' ||
+    beatEnd.beat?.localFrame !== 14 ||
+    beatEnd.beat?.beatProgress !== 1 ||
+    beatObject(beatEnd)?.text !== 'hold:14:1.00'
+  ) {
+    throw new Error('Timeline beat placement, progress, duration, or inspection was incorrect')
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')

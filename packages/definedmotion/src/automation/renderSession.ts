@@ -283,6 +283,7 @@ export class RenderSession {
     await scene.seekExact(request.frame)
     const selectedCamera = resolveInspectionCamera(scene, request.camera)
     const inspection = inspectScene(scene, selectedCamera.camera)
+    const beat = scene.timeline.getBeatAtFrame(request.frame)
     return {
       success: true,
       command: 'inspect',
@@ -295,6 +296,7 @@ export class RenderSession {
       objects: inspection.objects,
       totalExposedObjects: inspection.totalExposedObjects,
       objectsTruncated: inspection.objectsTruncated,
+      ...(beat ? { beat } : {}),
       renderTimeMs: Math.round(performance.now() - startedAt)
     }
   }

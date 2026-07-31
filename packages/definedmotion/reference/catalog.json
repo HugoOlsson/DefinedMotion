@@ -284,6 +284,12 @@
       "source": "tests/svg/test_super_complex_latex_to_svg.scene.ts"
     },
     {
+      "id": "test-timeline-beats",
+      "name": "Timeline Beats Contract",
+      "kind": "test",
+      "source": "tests/animation/test_timeline_beats.scene.ts"
+    },
+    {
       "id": "test-transformed-dependency-chain-positioning",
       "name": "Positioning: Transformed 3D Dependency Chain",
       "kind": "test",

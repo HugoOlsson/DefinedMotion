@@ -5,6 +5,7 @@ import {
   type UserAnimation
 } from '../animation/protocols'
 import { AnimationTimeline } from '../animation/timeline'
+import { SceneTimeline } from '../animation/beats'
 import {
   millisecondsToFrames as convertMillisecondsToFrames,
   secondsToFrames as convertSecondsToFrames,
@@ -106,6 +107,14 @@ export type {
 export type { CollisionWatch, CollisionWatchOptions } from './sceneCollision'
 export { MAIN_CAMERA_ID } from './sceneCamera'
 export type { ExposedCameraMetadata, ExposedSceneCamera, InspectionCamera } from './sceneCamera'
+export type {
+  BeatAuthoringContext,
+  BeatDefinitions,
+  BeatFrameCoordinates,
+  BeatRange,
+  BeatTick,
+  BeatTickUpdater
+} from '../animation/beats'
 
 export const hotreloadNameLookup = (mode: HotReloadSetting) => {
   switch (mode) {
@@ -150,6 +159,7 @@ export class AnimatedScene {
   sceneRenderTick: number = 0
   totalSceneTicks: number = 0
   private readonly animationTimeline = new AnimationTimeline(timelineFPS)
+  readonly timeline: SceneTimeline
   private sceneDependencies: DependencyUpdater[] = []
   private sceneInstructions: Map<number, SceneInstruction[]> = new Map()
   private planedSounds: Map<number, AudioInScene[]> = new Map()
@@ -249,6 +259,12 @@ export class AnimatedScene {
     this.camera = camera
     this.renderer = renderer
     this.controls = controls
+    this.timeline = new SceneTimeline(
+      this.animationTimeline,
+      timelineFPS,
+      (dependency) => this.sceneDependencies.push(dependency),
+      () => this.isBuilding
+    )
 
     // Store initial state
     this.initialSceneChildren = [...scene.children]
@@ -306,11 +322,14 @@ export class AnimatedScene {
   }
 
   do(instruction: SceneInstruction) {
-    this.appendInstruction(instruction, this.animationTimeline.getPointer())
+    const frame = this.animationTimeline.getPointer()
+    this.animationTimeline.assertFrameCanBeScheduled(frame, 'scene.do()')
+    this.appendInstruction(instruction, frame)
   }
 
   doAt(tick: number, instruction: SceneInstruction) {
     if (tick < 0) throw new Error('doAt: tick must be ≥ 0')
+    this.animationTimeline.assertFrameCanBeScheduled(tick, 'scene.doAt()')
     this.appendInstruction(instruction, tick)
   }
 
@@ -472,6 +491,7 @@ export class AnimatedScene {
   }
 
   onEachTick(updater: DependencyUpdater) {
+    this.timeline.assertGlobalRuntimeRegistrationAllowed('scene.onEachTick()')
     this.sceneDependencies.push(updater)
   }
 
@@ -507,7 +527,11 @@ export class AnimatedScene {
       (latest, tick) => Math.max(latest, tick + 1),
       0
     )
-    this.totalSceneTicks = Math.max(this.animationTimeline.getEndFrame(), lastInstructionTick)
+    this.totalSceneTicks = Math.max(
+      this.animationTimeline.getEndFrame(),
+      lastInstructionTick,
+      this.timeline.getDeclaredEndFrame()
+    )
   }
 
   registerAudio(audio: AssetSource) {
@@ -518,6 +542,7 @@ export class AnimatedScene {
     const audioPath = assetUrl(audio)
     if (this.isBuilding) {
       const timelinePointer = this.animationTimeline.getPointer()
+      this.animationTimeline.assertFrameCanBeScheduled(timelinePointer, 'scene.playAudio()')
       const listForFrame = this.planedSounds.get(timelinePointer)
 
       if (!listForFrame) {
@@ -1176,6 +1201,7 @@ export class AnimatedScene {
     this.sceneRenderTick = 0
     this.totalSceneTicks = 0
     this.animationTimeline.reset()
+    this.timeline.reset()
     this.sceneDependencies = []
     this.positioningSystem.reset()
     this.sceneInstructions = new Map()

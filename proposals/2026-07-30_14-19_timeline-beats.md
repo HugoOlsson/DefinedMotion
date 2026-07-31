@@ -119,3 +119,15 @@ Verifications may select a named beat as their frame range without manually repe
 ## Non-goals
 
 A beat does not own objects, hide content, reset state, clip rendering, create a layer, or create another timeline. It is a named global range that provides local runtime coordinates and a temporary authoring position.
+
+## Acceptance suite
+
+- `BEAT-01`: definitions use validated, non-overlapping, end-exclusive integer frame ranges and may contain gaps.
+- `BEAT-02`: beat authoring order does not affect global placement, and the prior global pointer is restored.
+- `BEAT-03`: pointer restoration also occurs when beat authoring throws.
+- `BEAT-04`: nested and Promise-returning beat authoring callbacks are rejected.
+- `BEAT-05`: scheduling may exactly fill a beat but may not cross its range.
+- `BEAT-06`: tick callbacks report exact local/global frames, frame-derived time, and endpoint progress.
+- `BEAT-07`: inspection reports the same beat coordinates as runtime ticks.
+
+Targeted command: `npm run test:timeline-beats --workspace definedmotion`.

@@ -509,6 +509,30 @@ scene.addAnims(foregroundEnter)
 
 `setTimelinePointer()` affects only subsequently scheduled work. Use `scene.secondsToFrames()` or `scene.millisecondsToFrames()` only when an API explicitly requires a frame position; ordinary animation durations remain seconds.
 
+### Authoring named timeline beats
+
+Define frame ranges once, then author each range through `scene.timeline.beat()`. Beats use the same global scheduler; they only provide a temporary start pointer and local runtime coordinates.
+
+```ts
+scene.timeline.defineBeats({
+  intro: { start: 0, end: scene.secondsToFrames(4) },
+  diagram: {
+    start: scene.secondsToFrames(4),
+    end: scene.secondsToFrames(10)
+  }
+})
+
+scene.timeline.beat('diagram', (beat) => {
+  scene.addAnims(revealDiagram)
+
+  beat.onEachTick(({ localFrame, globalFrame, beatProgress }) => {
+    diagram.setProgress(beatProgress)
+  })
+})
+```
+
+The authoring callback is synchronous, its scheduled work must stay inside the beat, and the prior global pointer is restored even if authoring throws. `beatProgress` is `0` on the first frame and `1` on the last; a one-frame beat reports `1`.
+
 ### Exposing meaningful objects
 
 `scene.expose()` registers an existing `THREE.Object3D` for semantic inspection and returns the same object:

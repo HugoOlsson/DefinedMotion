@@ -25,6 +25,12 @@ export {
   timelineFPS
 } from '../runtime/scene/sceneClass'
 export type {
+  BeatAuthoringContext,
+  BeatDefinitions,
+  BeatFrameCoordinates,
+  BeatRange,
+  BeatTick,
+  BeatTickUpdater,
   CollisionWatch,
   CollisionWatchOptions,
   ExposedCameraMetadata,
