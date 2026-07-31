@@ -19,11 +19,21 @@ Animations are created while the timeline is built, but values that depend on sc
 ```ts
 interface AnimationPlan {
   duration: number
+  easing?: Easing
   bind(context: AnimationStartContext): BoundAnimation
 }
 
+interface AnimationUpdate {
+  /** Easing-adjusted interpolation value. */
+  easedProgress: number
+  /** Uneased position in the scheduled frame range. */
+  linearProgress: number
+  isFirstFrame: boolean
+  isLastFrame: boolean
+}
+
 interface BoundAnimation {
-  update(progress: number): void
+  update(update: AnimationUpdate): void
 }
 ```
 
@@ -41,8 +51,8 @@ function moveTo(object, target, duration): AnimationPlan {
       const to = target.clone()
 
       return {
-        update(progress) {
-          object.position.lerpVectors(from, to, progress)
+        update({ easedProgress }) {
+          object.position.lerpVectors(from, to, easedProgress)
         }
       }
     }
@@ -58,7 +68,11 @@ When several animations start on the same frame, all of them must bind before an
 
 `bind()` captures state and creates the updater but does not mutate scene objects. All animation mutations begin in `update()`. This keeps the rule that animations starting on the same frame bind against the same pre-animation state.
 
-`update(progress)` sets the complete animation state for that progress and must not depend on earlier calls. Bound state is discarded when the scene resets. During exact seeking, DefinedMotion traces the preceding frames and calls `bind()` at the same animation start frame, reproducing the same captured values. `bind()` must therefore only perform replay-safe scene-local work, not external side effects.
+`linearProgress` is derived directly from the scheduled frame and always lies between `0` and `1`. `easedProgress` is the result of applying the plan's easing to that value. For animations longer than one frame, the scheduler preserves exact endpoint values, so both values are exactly `0` on the first frame and `1` on the last frame. An easing may repeat or overshoot values between those endpoints.
+
+`isFirstFrame` and `isLastFrame` are derived from frame indices rather than either progress value. They are both `true` for a one-frame animation. They let an updater perform endpoint work without introducing separate lifecycle callbacks or relying on progress comparisons.
+
+`update(...)` sets the complete animation state for that frame and must not depend on earlier calls. Its endpoint work must also be idempotent because seeking or retracing may evaluate the same frame again. Bound state is discarded when the scene resets. During exact seeking, DefinedMotion traces the preceding frames and calls `bind()` at the same animation start frame, reproducing the same captured values. `bind()` must therefore only perform replay-safe scene-local work, not external side effects.
 
 The same plan may be scheduled more than once. Every scheduled occurrence owns a separate bound instance.
 
@@ -95,7 +109,13 @@ The compiled integer frame count is the only timeline source of truth. An animat
 [startFrame, startFrame + durationFrames)
 ```
 
-The last included frame receives `progress = 1`. A one-frame animation receives only `progress = 1`. Instantaneous changes use `scene.do()` rather than a zero-frame animation.
+For a duration of more than one frame:
+
+```ts
+linearProgress = (currentFrame - startFrame) / (durationFrames - 1)
+```
+
+The first included frame receives `linearProgress = 0`, the last receives `linearProgress = 1`, and `easedProgress` is the easing-adjusted value. A one-frame animation receives only the final state: both progress values are `1`, and both endpoint booleans are `true`. Instantaneous changes use `scene.do()` rather than a zero-frame animation.
 
 Once scheduled, the authored seconds value is not used for execution. Pointer advancement, scene duration, seeking, inspection, rendering, and runtime evaluation use only integer frames. Fractional seconds are never accumulated on the timeline.
 
@@ -144,8 +164,8 @@ scene.addAnims({
     const to = calculateTargetFromCurrentScene()
 
     return {
-      update(progress) {
-        object.position.lerpVectors(from, to, progress)
+      update({ easedProgress }) {
+        object.position.lerpVectors(from, to, easedProgress)
       }
     }
   }

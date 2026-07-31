@@ -54,6 +54,13 @@ interface AnimationOptions {
   duration?: number
   easing?: Easing
 }
+
+interface TransformAnimationOptions extends AnimationOptions {
+  space?: "local" | "world"
+}
+
+moveTo(object, position, options?: TransformAnimationOptions)
+rotateTo(object, rotation, options?: TransformAnimationOptions)
 ```
 
 ```ts
@@ -66,11 +73,15 @@ moveTo(card, target, {
 
 All public animation durations are seconds. Scheduling compiles them once to integer frames using the scene FPS; the timeline and runtime remain entirely frame-based.
 
-Transform helpers accept explicit `"local"` or `"world"` space where applicable. Local space is the default. Mutable target values and targets derived from another object are snapshotted when the plan binds, so changes before the animation starts are reflected automatically.
+`moveTo` and `rotateTo` use local space by default. In local space, the target is relative to the object's parent. In world space, the target is interpreted in world coordinates and converted through the parent's world transform into a local target when the plan binds. Later parent movement affects the child normally; the animation is not a persistent world-space constraint.
+
+`matchTransform` captures the reference's world position, rotation, and scale at bind time and therefore matches its visible world pose even when the two objects have different parents. Mutable target values and referenced objects are captured when the plan binds, so changes before the animation starts are reflected automatically.
 
 ## Runtime semantics
 
-Duration in seconds is known while the timeline is built and is compiled when scheduled. `bind()` captures current scene values when the animation starts, and `update()` applies deterministic progress on active frames.
+Duration in seconds is known while the timeline is built and is compiled when scheduled. `bind()` captures current scene values when the animation starts, and `update()` receives `easedProgress`, raw `linearProgress`, and frame-derived `isFirstFrame` and `isLastFrame` values.
+
+Helpers use `easedProgress` for interpolation and the endpoint booleans for setup and cleanup. They do not infer lifecycle state from either progress value.
 
 Explicit starting values may be supplied when runtime capture is not wanted. Reset discards bound state, and exact seeking reproduces the same binding and result.
 
@@ -78,7 +89,7 @@ Animations starting on the same frame bind before any of them update.
 
 ## Entrance and exit behavior
 
-Effects never modify frames before their scheduled start. On their first active frame they apply the value for `progress = 0`, except for an effect whose duration compiles to one frame, which applies its final value.
+Effects never modify frames before their scheduled start. On their first active frame they apply the value for `easedProgress = 0`, except for an effect whose duration compiles to one frame, which applies its final value.
 
 ```text
 fadeIn:   hidden at zero opacity → visible at captured opacity
@@ -91,21 +102,21 @@ Entrance and exit effects capture their relevant runtime values when they bind. 
 
 ### Fade lifecycle
 
-`bind()` captures the target object's visibility, the existing materials in its subtree, and each material's current opacity. It does not mutate the object or its materials.
+`bind()` captures the target object's visibility, the existing materials in its subtree, and each material's current opacity and `transparent` value. It does not mutate the object or its materials.
 
-During `update()`, both fades set `transparent = true` on the captured materials. Materials are never cloned or replaced, and transparency remains enabled after the effect completes.
+During the fade, `update()` sets `transparent = true` on the captured materials. Materials are never cloned or replaced. On the last frame, the fade restores every captured `transparent` value after establishing the final visible or hidden state.
 
-`fadeOut` interpolates from the captured opacities to zero. On its final frame it sets the target object's root `visible = false` and restores every captured opacity while the object is hidden.
+`fadeOut` interpolates from the captured opacities to zero. On its last frame it sets the target object's root `visible = false`, then restores every captured opacity and `transparent` value while the object is hidden.
 
-`fadeIn` captures the restored opacity values, starts with the target root hidden at zero opacity, then sets it visible and interpolates to the captured values. On its final frame the object is visible with exactly the opacity values it had when the fade bound. A one-frame fade applies only this final state.
+`fadeIn` starts with the target root hidden at zero opacity, then sets it visible and interpolates to the captured opacity values. On its last frame the object is visible with exactly the opacity and `transparent` values it had when the fade bound. A one-frame fade applies only this final state.
 
-This lifecycle makes `fadeOut(object)` followed by `fadeIn(object)` work without retaining restoration state between animation calls. Fade updates remain absolute and idempotent: evaluating an earlier progress after the final progress reproduces the corresponding visibility and opacity.
+This lifecycle makes `fadeOut(object)` followed by `fadeIn(object)` work without retaining restoration state between animation calls. Fade updates remain absolute and idempotent: evaluating an earlier frame after the last frame reproduces the corresponding visibility, opacity, and transparency.
 
-Shared materials follow ordinary Three.js reference behavior. Other objects sharing a captured material also receive its temporary opacity changes and its persistent `transparent = true` change. The opacity is restored when `fadeOut` completes, but authors who need independent fading must provide independent materials. Documentation must present this as an intentional side effect rather than material isolation.
+Shared materials follow ordinary Three.js reference behavior. Other objects sharing a captured material receive the same temporary opacity and transparency changes while the fade is active. The captured values are restored on the last frame, but authors who need independent fading during the effect must provide independent materials. Documentation must present this as an intentional side effect rather than material isolation.
 
 The fade helpers do not modify `depthWrite`. Their own target root is not rendered while its opacity is exactly zero. Authors of complex transparent 3D geometry remain responsible for any additional depth-ordering requirements.
 
-`opacityTo` also enables transparency on existing materials, but it does not change root visibility or restore the previous opacity. It leaves the requested opacity as the resulting authored state.
+`opacityTo` also enables transparency on existing materials, but it does not change root visibility or restore the previous opacity. It leaves the requested opacity as the resulting authored state. A translucent result keeps `transparent = true`; a fully opaque result restores the `transparent` value captured when the animation bound.
 
 Scene reset and exact reconstruction restore authored visibility, opacity, and transparency before replaying scheduled fades, so seeking before a fade does not retain state from a later frame.
 

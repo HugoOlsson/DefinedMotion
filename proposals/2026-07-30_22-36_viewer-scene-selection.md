@@ -46,11 +46,14 @@ class InteractiveSceneSession {
 
 Selecting a scene:
 
-1. Pauses playback and cancels pending scrubbing.
+1. Assigns the request a new selection generation, pauses playback, and cancels pending scrubbing.
 2. Disposes the previous scene, controls, renderer, WebGL context, canvas, audio, observers, and registered cleanup work.
-3. Creates the selected scene through `createSceneById()`.
-4. Connects viewer playback, rendering, and UI callbacks.
-5. Builds and displays frame `0`.
+3. Creates and builds the selected scene through `createSceneById()`.
+4. Disposes the completed scene and stops if its generation is no longer current.
+5. Connects the current scene to viewer playback, rendering, and UI callbacks.
+6. Displays the effective initial frame: its valid preview marker when preview use is enabled, otherwise frame `0`.
+
+Only the latest selection generation may become active. If an older asynchronous creation finishes after a newer scene selection or source reload has started, its completed resources are disposed and it cannot replace the canvas, persist its ID, or update viewer state. Source reload uses the same latest-request-wins rule.
 
 Scene selection is disabled while video rendering is active. Creation and disposal behavior shared with automation should live in common internal helpers rather than being duplicated in the Svelte UI.
 
@@ -64,6 +67,7 @@ The viewer displays a searchable scene selector above the viewport:
 Scene: [ Microwave Cold Spots ▾ ]
 
 ☐ Show examples and tests
+☑ Use scene preview marker
 ```
 
 Entries are grouped as:
@@ -74,9 +78,9 @@ Examples
 Tests
 ```
 
-The configured default scene is marked in the selector. The checkbox filters selectable entries but does not interrupt an example or test that is already active; the current scene remains visible in the selector until another scene is chosen.
+The configured default scene is marked in the selector. **Show examples and tests** filters selectable entries but does not interrupt an example or test that is already active; the current scene remains visible in the selector until another scene is chosen.
 
-The checkbox defaults to off for a new project and its value is persisted.
+**Show examples and tests** defaults to off. **Use scene preview marker** defaults to on. Both values are persisted.
 
 ## Persistence
 
@@ -86,6 +90,7 @@ Viewer-only state is stored through Electron's persistent store, scoped to the c
 interface ViewerPreferences {
   selectedSceneId?: string
   showExamplesAndTests: boolean
+  usePreviewMarker: boolean
 }
 ```
 
@@ -101,9 +106,9 @@ The viewer URL also associates restored frame state with its scene:
 ?scene=microwave-cold-spots&frame=4687
 ```
 
-A frame is restored only when the URL scene matches the selected scene. Manual scene switching starts at frame `0`.
+A frame is restored only when the URL scene matches the selected scene. With preview use enabled, a restored frame before the selected scene's marker is clamped to the marker. Manual scene switching starts at the effective initial frame: the marker when enabled and present, otherwise frame `0`.
 
-Source reload rebuilds the stored selected scene rather than returning to the configured default.
+Source reload rebuilds the stored selected scene rather than returning to the configured default and respects the same preview preference and boundary.
 
 ## Examples and tests
 
@@ -123,9 +128,11 @@ Regression coverage must verify:
 
 - repeated switching between two scenes leaves one canvas, renderer, audio state, and active observer set;
 - project and reference assets resolve correctly after switching;
-- the selected ID and checkbox survive viewer restart and source reload;
+- the selected ID and both viewer preferences survive viewer restart and source reload;
 - deleting the selected scene falls back to `defaultScene`;
 - frame state is never restored into a different scene;
+- a selected scene opens at its preview marker only when preview use is enabled;
+- rapid scene selections and source reloads activate only the latest request and dispose stale completions;
 - switching is unavailable during video rendering.
 
 ## Non-goals

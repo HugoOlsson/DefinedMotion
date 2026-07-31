@@ -61,14 +61,14 @@ ANIM-01  Sequential movement captures its source when it starts.
 ANIM-02  A mutable destination is captured when the animation starts.
 ANIM-03  Same-frame animations all bind before any update.
 ANIM-04  Competing writers update in registration order.
-ANIM-05  A one-frame animation receives progress 1.
+ANIM-05  A one-frame animation receives easedProgress = linearProgress = 1.
 ANIM-06  Exact seek and chronological tracing produce equivalent state.
 ANIM-07  Reset discards bound state and binds again.
 ```
 
 Changing or removing an acceptance rule requires changing the proposal explicitly. An implementation must not weaken its tests merely to make the suite pass.
 
-Acceptance IDs are approved before implementation begins. An implementing agent must not invent a weaker contract around the implementation it happened to write.
+Exploratory implementation may begin before every acceptance ID is finalized. Before an implementation is declared complete or merged, its acceptance contracts must be approved and must not be weakened around the behavior the implementation happened to produce.
 
 ## Unit tests
 
@@ -141,10 +141,10 @@ Package tests install the packed library into a small consumer project and verif
 
 For each proposal:
 
-1. Add its acceptance tests.
-2. Run the targeted suite and confirm the new tests fail for the missing behavior.
-3. Implement the smallest complete behavior.
-4. Repeatedly run `test:proposal`.
+1. Experiment as needed to establish a viable implementation.
+2. Agree on the observable acceptance contracts before declaring the proposal complete.
+3. Add the acceptance tests and confirm they detect the missing or disabled behavior where practical.
+4. Implement the smallest complete behavior and repeatedly run `test:proposal`.
 5. Run `test:integration` once the targeted suite passes.
 6. Run `npm test` before declaring the proposal complete.
 7. Run `test:full` only when the proposal affects its expensive layers or as part of CI, merge, or release validation.

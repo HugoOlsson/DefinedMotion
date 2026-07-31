@@ -45,7 +45,11 @@ interface FlexOptions {
 }
 ```
 
-Without an explicit width or height, the container fits its content and padding. `justifyContent` only has visible extra space to distribute when the main-axis size is explicit.
+`gap` and `padding` default to `0`. `alignItems` and `justifyContent` default to `"flex-start"`. Container anchors default to `"center"` and `"middle"`, matching the text and LaTeX primitives.
+
+An explicit `width` or `height` includes padding. Without an explicit value, that dimension fits its content and padding. Each dimension is resolved independently, and `justifyContent` only has visible extra space to distribute when the main-axis size is explicit.
+
+The first version does not shrink, wrap, or clip oversized content. The explicit layout box remains the requested size and excess content remains visible outside it. Padding larger than the explicit size leaves zero content space and likewise produces visible overflow.
 
 Grid uses a fixed column count and automatic rows:
 
@@ -65,7 +69,24 @@ const cards = layout.grid({
 ])
 ```
 
+```ts
+interface GridOptions {
+  columns: number
+  columnGap?: number
+  rowGap?: number
+  padding?: number
+  width?: number
+  height?: number
+  alignItems?: "flex-start" | "center" | "flex-end"
+  justifyItems?: "flex-start" | "center" | "flex-end"
+  anchorX?: "left" | "center" | "right"
+  anchorY?: "top" | "middle" | "bottom"
+}
+```
+
 Columns use the widest intrinsic item in that column. Rows use the tallest intrinsic item in that row.
+
+Grid gaps and padding default to `0`; `alignItems` and `justifyItems` default to `"flex-start"`; and its anchors default to `"center"` and `"middle"`. Grid width and height follow the same explicit-size, automatic-size, padding, and overflow rules as flex.
 
 ## Layout space
 
@@ -88,6 +109,8 @@ LayoutGroup
 Layout owns the slot transform. Animations own the visual's transform inside the slot. Animated position, rotation, or scale therefore does not trigger reflow or overwrite the layout position. This follows CSS behavior where transforms do not affect layout.
 
 Layout measures each visual's intrinsic local bounds. A successful text or LaTeX content update invalidates its containing layout, which reflows before the next completed frame.
+
+Invalidation propagates through every containing layout. Dirty nested layouts resolve from the innermost container outward before rendering and frame verification, so an inner content or membership change is reflected by every ancestor in the same completed frame. Because the initial feature excludes parent-dependent percentages, stretch, and flex growth, this is a tree traversal rather than a general constraint solver.
 
 ## Appending items
 
@@ -114,7 +137,7 @@ scene.do(() => {
 scene.addAnims(fadeIn(bullet))
 ```
 
-`append()` creates a slot and synchronously reflows the container. The following animation starts at the same timeline pointer. `scene.do()` remains the primitive for instantaneous, replay-safe scene mutations and does not advance the pointer.
+`append()` creates a slot and synchronously reflows the container. It also invalidates the containing layout chain, which resolves from that container outward before the frame is completed. The following animation starts at the same timeline pointer. `scene.do()` remains the primitive for instantaneous, replay-safe scene mutations and does not advance the pointer.
 
 Items should be constructed and measured during scene build, then appended later. Asynchronous construction inside `scene.do()` is not supported.
 

@@ -30,7 +30,7 @@ No label or explicit frame is required because the beat and builder pointer alre
 
 ## Viewer behavior
 
-If the marker is at frame `markerFrame`, the viewer:
+The viewer has a persisted **Use scene preview marker** preference, enabled by default. If the scene has a marker at frame `markerFrame` and the preference is enabled, the viewer:
 
 1. Rebuilds the scene and timeline normally.
 2. Starts from the freshly rebuilt scene state.
@@ -41,30 +41,41 @@ Everything scheduled on `markerFrame` runs in the normal frame order, including 
 
 The marker is the lower boundary for viewer restoration, scrubbing, and playback:
 
-- frames before it remain visible on the timeline but are shaded and unreachable;
+- frames before it remain visible on the timeline but are dimmed or hatched, labelled **Not evaluated in preview**, and unreachable;
+- the marker is drawn as a prominent vertical line labelled **Preview starts here**;
 - global frame numbers and time labels do not change;
 - restoring a saved frame before it opens the marker frame;
-- viewer restart returns to the marker;
 - scrubbing after it retraces from the same marker.
 
 The preview intentionally does not reconstruct animation, instruction, or accumulated callback state from before the marker.
 
+If the preference is disabled, the viewer traces from frame `0` and makes the complete timeline available. The marker remains visible in a muted style labelled **Preview marker disabled**. Toggling the preference rebuilds the scene: enabling it clamps the target frame to the marker, while disabling it exactly retraces the current frame from frame `0`.
+
+The preference affects only interactive viewing and is stored per project across source reloads and viewer restarts. A scene without a marker always traces from frame `0`; the control may be shown disabled without changing the stored preference.
+
 ## Marker validity
 
-The marker must be a clean animation boundary. An animation crosses the marker when:
+After the timeline is built, the marker must identify an actual scene frame:
+
+```text
+Number.isInteger(markerFrame)
+0 <= markerFrame < sceneDurationFrames
+```
+
+The marker must also be a clean animation boundary. An animation crosses the marker when:
 
 ```text
 animation.startFrame < markerFrame < animation.endFrame
 ```
 
-where `endFrame` is exclusive. A crossing animation makes the scene build invalid. The viewer does not render or enable playback and instead displays an error containing the marker frame and the crossing animation range:
+where `endFrame` is exclusive. An out-of-range marker or crossing animation makes the scene build invalid. The viewer does not render or enable playback and instead displays an error containing the marker frame and cause:
 
 ```text
 Invalid preview marker at frame 100:
 animation [80, 140) crosses the marker.
 ```
 
-Any CLI command that builds the scene reports the same error and exits nonzero before rendering, verification, or other automation begins. This makes invalid marker placement visible to agents instead of silently falling back to a slower trace.
+Any CLI command that builds the scene reports the same error and exits nonzero before rendering, verification, or other automation begins. Marker validity is checked even when the viewer preference is disabled because the preference controls use of a valid marker, not whether authored marker errors exist. This makes invalid placement visible to agents instead of silently falling back to a slower trace.
 
 ## Viewer state
 
@@ -80,7 +91,7 @@ Outside a beat:
 Approximate preview · starts at frame 4580
 ```
 
-The badge provides a **Trace from start** action. This performs an exact viewer trace and temporarily unlocks the complete timeline for the current build. The marker becomes active again after the next source reload.
+The badge and timeline make clear that earlier state was skipped. The persisted **Use scene preview marker** toggle replaces a temporary **Trace from start** action.
 
 Without a marker, the viewer traces from frame `0` and the complete timeline is available.
 
@@ -101,8 +112,8 @@ These paths still validate marker placement when the scene is built, then evalua
 
 Remove `HotReloadSetting` from the public API:
 
-- no marker replaces `TraceFromStart`;
+- no marker, or disabling **Use scene preview marker**, traces from frame `0`;
 - `previewFromHere()` replaces the explicit performance purpose of `BeginFromCurrent`;
-- `BeginFreshOnSave` is removed; **Trace from start** remains an explicit viewer action.
+- `BeginFreshOnSave` is removed; source reload follows the persisted viewer preference.
 
 The scene constructor no longer receives a hot-reload mode.
