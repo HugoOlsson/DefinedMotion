@@ -49,6 +49,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-many-short-sounds | test | Many Short Sounds | `tests/audio/test_many_short_sounds.scene.ts` |
 | test-material-on-latex | test | Material On LaTeX | `tests/svg/test_material_on_latex.scene.ts` |
 | test-place-once-positioning | test | Positioning: Persistent Compared with Place Once | `tests/positioning/test_place_once_positioning.scene.ts` |
+| test-primitive-layout | test | Primitive Layout Contract | `tests/rendering/test_primitive_layout.scene.ts` |
 | test-product-layout-positioning | test | Positioning: 3D Product Layout | `tests/positioning/test_product_layout_positioning.scene.ts` |
 | test-regular-text-latex | test | Regular Text LaTeX | `tests/svg/test_regular_text_latex.scene.ts` |
 | test-relative-positioning | test | Relative Positioning | `tests/positioning/test_relative_positioning.scene.ts` |

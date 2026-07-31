@@ -581,6 +581,38 @@ scene.addAnims(latex.highlight(mass, { color: '#38bdf8' }))
 
 Import `latex` beside `createLatex` from `definedmotion/latex`. `morphTo` is awaited because it prepares and measures the target during scene construction; its source expression and stored part handles remain late-bound. The stable visual root adopts the target expression only on the morph's last frame. `latex.particleTransition(from, to)` remains available when two separate `LatexVisual`s are intentional.
 
+### Laying out measurable visuals
+
+Use `layout.flex` for rows and columns and `layout.grid` for fixed-column grids. The names follow the corresponding CSS concepts, but the first version intentionally has no wrapping, growth, shrinkage, or percentages.
+
+```ts
+const content = layout.flex(
+  {
+    flexDirection: 'column',
+    gap: 16,
+    padding: 24,
+    width: 600,
+    alignItems: 'center',
+    anchorX: 'center',
+    anchorY: 'top'
+  },
+  [title, explanation, equation]
+)
+
+scene.add(content)
+```
+
+Layout owns an internal slot around each visual. The slot receives the layout position; the visual's own position, rotation, scale, and Z value remain available for animation and do not affect reflow. `getLocalBounds()` reports the anchored layout box, while ordinary world and screen measurement still sees visible overflow.
+
+Append a visual that was constructed and measured during scene build from a replay-safe `scene.do()` action:
+
+```ts
+scene.do(() => list.append(nextBullet))
+scene.addAnims(fadeIn(nextBullet))
+```
+
+The append and the entrance begin at the same pointer. Appending is synchronous, parented or duplicate visuals are rejected, and nested layouts resolve from the changed inner container outward before the frame is completed.
+
 ### Authoring named timeline beats
 
 Define frame ranges once, then author each range through `scene.timeline.beat()`. Beats use the same global scheduler; they only provide a temporary start pointer and local runtime coordinates.

@@ -260,6 +260,12 @@
       "source": "tests/positioning/test_place_once_positioning.scene.ts"
     },
     {
+      "id": "test-primitive-layout",
+      "name": "Primitive Layout Contract",
+      "kind": "test",
+      "source": "tests/rendering/test_primitive_layout.scene.ts"
+    },
+    {
       "id": "test-product-layout-positioning",
       "name": "Positioning: 3D Product Layout",
       "kind": "test",

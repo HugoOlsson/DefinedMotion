@@ -9,39 +9,38 @@ Provide predictable planar rows, columns, and grids for measurable visuals witho
 Rows and columns use one flex constructor with familiar CSS names:
 
 ```ts
-const column = layout.flex({
-  flexDirection: "column",
-  gap: 16,
-  padding: 24,
-  width: 600,
-  alignItems: "center",
-  justifyContent: "flex-start",
-  anchorX: "center",
-  anchorY: "top",
-}, [
-  title,
-  explanation,
-  equation,
-])
+const column = layout.flex(
+  {
+    flexDirection: 'column',
+    gap: 16,
+    padding: 24,
+    width: 600,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    anchorX: 'center',
+    anchorY: 'top'
+  },
+  [title, explanation, equation]
+)
 ```
 
 ```ts
 interface FlexOptions {
-  flexDirection: "row" | "column"
+  flexDirection: 'row' | 'column'
   gap?: number
   padding?: number
   width?: number
   height?: number
-  alignItems?: "flex-start" | "center" | "flex-end"
+  alignItems?: 'flex-start' | 'center' | 'flex-end'
   justifyContent?:
-    | "flex-start"
-    | "center"
-    | "flex-end"
-    | "space-between"
-    | "space-around"
-    | "space-evenly"
-  anchorX?: "left" | "center" | "right"
-  anchorY?: "top" | "middle" | "bottom"
+    | 'flex-start'
+    | 'center'
+    | 'flex-end'
+    | 'space-between'
+    | 'space-around'
+    | 'space-evenly'
+  anchorX?: 'left' | 'center' | 'right'
+  anchorY?: 'top' | 'middle' | 'bottom'
 }
 ```
 
@@ -54,19 +53,17 @@ The first version does not shrink, wrap, or clip oversized content. The explicit
 Grid uses a fixed column count and automatic rows:
 
 ```ts
-const cards = layout.grid({
-  columns: 3,
-  columnGap: 20,
-  rowGap: 16,
-  padding: 24,
-  alignItems: "center",
-  justifyItems: "center",
-}, [
-  cardA,
-  cardB,
-  cardC,
-  cardD,
-])
+const cards = layout.grid(
+  {
+    columns: 3,
+    columnGap: 20,
+    rowGap: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyItems: 'center'
+  },
+  [cardA, cardB, cardC, cardD]
+)
 ```
 
 ```ts
@@ -77,10 +74,10 @@ interface GridOptions {
   padding?: number
   width?: number
   height?: number
-  alignItems?: "flex-start" | "center" | "flex-end"
-  justifyItems?: "flex-start" | "center" | "flex-end"
-  anchorX?: "left" | "center" | "right"
-  anchorY?: "top" | "middle" | "bottom"
+  alignItems?: 'flex-start' | 'center' | 'flex-end'
+  justifyItems?: 'flex-start' | 'center' | 'flex-end'
+  anchorX?: 'left' | 'center' | 'right'
+  anchorY?: 'top' | 'middle' | 'bottom'
 }
 ```
 
@@ -117,17 +114,20 @@ Invalidation propagates through every containing layout. Dirty nested layouts re
 The first version supports appending already-created measurable visuals:
 
 ```ts
-const list = layout.flex({
-  flexDirection: "column",
-  gap: 16,
-  alignItems: "flex-start",
-  anchorX: "left",
-  anchorY: "top",
-}, [])
+const list = layout.flex(
+  {
+    flexDirection: 'column',
+    gap: 16,
+    alignItems: 'flex-start',
+    anchorX: 'left',
+    anchorY: 'top'
+  },
+  []
+)
 
 const bullet = await createText({
-  text: "Rotate the food",
-  fontSize: 36,
+  text: 'Rotate the food',
+  fontSize: 36
 })
 
 scene.do(() => {
@@ -163,3 +163,16 @@ The first version includes:
 - `append()` and deterministic reset.
 
 It excludes wrapping, flex growth and shrinkage, ordering, percentages, stretch, item removal, arbitrary insertion, grid spanning, CSS parsing, and animated reflow.
+
+## Acceptance suite
+
+- `LAYOUT-01`: automatic flex bounds include intrinsic item sizes, gaps, and uniform padding.
+- `LAYOUT-02`: layout owns slot transforms while preserving each visual's authored transform.
+- `LAYOUT-03`: explicit main-axis space follows the supported `justifyContent` values without shrinking oversized items.
+- `LAYOUT-04`: grids derive independent column widths and row heights and align items within each track.
+- `LAYOUT-05`: `append()` rejects parented or duplicate visuals and synchronously updates the container.
+- `LAYOUT-06`: bounds and membership invalidation resolve from nested layouts outward in the same completed frame.
+- `LAYOUT-07`: explicit layout-box bounds remain fixed while oversized content remains visible as overflow.
+- `LAYOUT-08`: exact seeking rebuilds initial membership before replaying scheduled appends.
+
+Targeted command: `npm run test:layout --workspace definedmotion`. The selectable `test-primitive-layout` scene covers real text/LaTeX measurement, runtime append, animation inside slots, and exact-seek replay.

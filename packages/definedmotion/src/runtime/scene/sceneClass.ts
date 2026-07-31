@@ -62,6 +62,7 @@ import {
 } from './frameResource'
 import { type Positioning, PositioningSystem } from '../positioning'
 import type { RenderProgress } from '../../renderProgress'
+import { resolveSceneLayouts } from '../visuals/layout'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -1170,6 +1171,7 @@ export class AnimatedScene {
         await this.sceneDependencies[d](index, ticksToMillis(index))
       }
 
+      resolveSceneLayouts(this.scene)
       this.positioningSystem.solve(this.scene)
     })
   }

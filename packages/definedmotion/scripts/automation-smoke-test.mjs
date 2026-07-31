@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 69) {
-    throw new Error(`Expected 69 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 70) {
+    throw new Error(`Expected 70 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -272,6 +272,25 @@ try {
     throw new Error(
       'Text/LaTeX readiness, stable updates, effects, anchors, or local bounds were incorrect'
     )
+  }
+
+  const layoutStart = run(['inspect', 'test-primitive-layout', '--frame', '0', '--no-build'])
+  const layoutEnd = run(['inspect', 'test-primitive-layout', '--frame', '4', '--no-build'])
+  const layoutObject = (result, id) => result.objects.find((object) => object.id === id)
+  if (
+    layoutEnd.sceneInfo.durationInFrames !== 5 ||
+    layoutObject(layoutStart, 'layout-static-column')?.localBounds?.size[0] !== 34 ||
+    layoutObject(layoutStart, 'layout-dynamic-list')?.localBounds?.size[0] !== 0 ||
+    layoutObject(layoutStart, 'layout-first-appended')?.attached !== false ||
+    layoutObject(layoutStart, 'layout-second-appended')?.attached !== false ||
+    !(layoutObject(layoutEnd, 'layout-dynamic-list')?.localBounds?.size[0] > 0) ||
+    !(layoutObject(layoutEnd, 'layout-dynamic-list')?.localBounds?.size[1] > 0) ||
+    layoutObject(layoutEnd, 'layout-first-appended')?.attached !== true ||
+    layoutObject(layoutEnd, 'layout-second-appended')?.attached !== true ||
+    layoutObject(layoutEnd, 'layout-first-appended')?.visible !== true ||
+    layoutObject(layoutEnd, 'layout-second-appended')?.visible !== true
+  ) {
+    throw new Error('Primitive layout bounds, append replay, or slot animation was incorrect')
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')
