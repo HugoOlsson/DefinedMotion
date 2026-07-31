@@ -38,9 +38,18 @@ scene.do(action)
 scene.onEachTick(updater)
 ```
 
-`wait(durationFrames)` is an ordinary animation plan. Saving and restoring the pointer replaces background and explicitly positioned scheduling. `do()` remains the single discrete, replay-safe action primitive.
+`wait(duration)` is an ordinary animation plan whose public duration is expressed in seconds. Saving and restoring the pointer replaces background and explicitly positioned scheduling. `do()` remains the single discrete, replay-safe action primitive.
 
-Remove global authoring-time conversion helpers such as `millisToTicks` after they are replaced by the scene-dependent:
+The current `addWait()` accepts milliseconds, so migration must convert its values rather than preserve the same numeric literal:
+
+```ts
+scene.addWait(500)          // legacy milliseconds
+scene.addAnims(wait(0.5))   // new seconds
+```
+
+This migration also changes duration conversion from the current ceiling behavior to the new nearest-frame rule. Very short legacy waits that compile to zero frames must become `scene.do()` when they represent an instantaneous action, or use a longer positive duration.
+
+Remove global authoring-time conversion helpers such as `millisToTicks` after they are replaced by scene-dependent helpers for structural frame positions:
 
 ```ts
 scene.secondsToFrames(value)
@@ -169,7 +178,7 @@ This cleanup does not remove:
 
 - `addAnims`, `do`, or `onEachTick`;
 - global frame-based timing;
-- scene-dependent seconds/milliseconds-to-frame helpers;
+- seconds-based public animation durations and scene-dependent conversion helpers for structural frame positions;
 - exact seek, render, verification, and capture paths;
 - `fadeIn`, `fadeOut`, core easing, or custom animations in their new forms;
 - specialized LaTeX effects;

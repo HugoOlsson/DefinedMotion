@@ -18,7 +18,7 @@ Animations are created while the timeline is built, but values that depend on sc
 
 ```ts
 interface AnimationPlan {
-  durationFrames: number
+  duration: number
   bind(context: AnimationStartContext): BoundAnimation
 }
 
@@ -27,14 +27,14 @@ interface BoundAnimation {
 }
 ```
 
-The plan contains schedule-time information such as duration. `bind()` runs once at the animation's start frame and creates its updater using the scene state at that moment.
+`duration` is the user-facing duration in seconds. The plan contains this schedule-time information immediately, while `bind()` runs once at the animation's start frame and creates its updater using the scene state at that moment.
 
 For example, `moveTo()` knows its duration immediately but snapshots both mutable endpoints when it starts:
 
 ```ts
-function moveTo(object, target, durationFrames): AnimationPlan {
+function moveTo(object, target, duration): AnimationPlan {
   return {
-    durationFrames,
+    duration,
 
     bind() {
       const from = object.position.clone()
@@ -56,13 +56,40 @@ Runtime capture is the default for mutable endpoint values. If `target` refers t
 
 When several animations start on the same frame, all of them must bind before any of them update. This ensures that parallel animations observe the same pre-animation scene state.
 
+`bind()` captures state and creates the updater but does not mutate scene objects. All animation mutations begin in `update()`. This keeps the rule that animations starting on the same frame bind against the same pre-animation state.
+
 `update(progress)` sets the complete animation state for that progress and must not depend on earlier calls. Bound state is discarded when the scene resets. During exact seeking, DefinedMotion traces the preceding frames and calls `bind()` at the same animation start frame, reproducing the same captured values. `bind()` must therefore only perform replay-safe scene-local work, not external side effects.
 
 The same plan may be scheduled more than once. Every scheduled occurrence owns a separate bound instance.
 
 ## Frames and duration
 
-Frames are the only timeline source of truth. `durationFrames` is an integer of at least `1`, and an animation starting at `startFrame` occupies the end-exclusive range:
+Authors express animation durations in seconds:
+
+```ts
+fadeIn(title, { duration: 0.6 })
+wait(0.5)
+```
+
+When an animation is scheduled, the scene converts its duration exactly once using its FPS:
+
+```ts
+durationFrames = Math.round(duration * scene.fps)
+```
+
+The internal scheduled representation stores frame values, not time:
+
+```ts
+interface ScheduledAnimation {
+  startFrame: number
+  durationFrames: number
+  endFrame: number
+}
+```
+
+`duration` must be a finite positive number and must compile to at least one frame. Shorter values are rejected; instantaneous changes use `scene.do()`.
+
+The compiled integer frame count is the only timeline source of truth. An animation starting at `startFrame` occupies the end-exclusive range:
 
 ```text
 [startFrame, startFrame + durationFrames)
@@ -70,14 +97,16 @@ Frames are the only timeline source of truth. `durationFrames` is an integer of 
 
 The last included frame receives `progress = 1`. A one-frame animation receives only `progress = 1`. Instantaneous changes use `scene.do()` rather than a zero-frame animation.
 
-Convenience conversion is scene-dependent because the timeline FPS belongs to the scene:
+Once scheduled, the authored seconds value is not used for execution. Pointer advancement, scene duration, seeking, inspection, rendering, and runtime evaluation use only integer frames. Fractional seconds are never accumulated on the timeline.
+
+Scene-dependent conversion helpers remain for APIs that explicitly require structural frame positions, such as beat boundaries or `setTimelinePointer()`:
 
 ```ts
-scene.secondsToFrames(0.6)
-scene.millisecondsToFrames(500)
+scene.secondsToFrames(20)
+scene.millisecondsToFrames(20_000)
 ```
 
-Both helpers round to the nearest integer frame and may return `0`. Animation construction rejects a `durationFrames` value below `1`; instantaneous changes use `scene.do()`. Once converted, scheduling and animation plans contain frames only.
+They are not needed for ordinary animation durations. Both helpers use the same nearest-frame conversion as animation scheduling.
 
 ## Why this replaces `addDeferredAnims`
 
@@ -108,7 +137,7 @@ Custom state-dependent animations use the same mechanism:
 
 ```ts
 scene.addAnims({
-  durationFrames: 60,
+  duration: 1,
 
   bind() {
     const from = object.position.clone()
@@ -123,7 +152,7 @@ scene.addAnims({
 })
 ```
 
-The duration and other scheduling configuration must remain fixed when the plan is created because later timeline positions depend on them. Mutable starting values and endpoints are snapshotted in `bind()`.
+The duration and other scheduling configuration must remain fixed when the plan is created because later timeline positions depend on their compiled frame counts. Mutable starting values and endpoints are snapshotted in `bind()`.
 
 ## Frame execution order
 
