@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
-import { createFastText, createLine, createRectangle } from 'definedmotion/rendering'
+import { createText, createLine, createRectangle } from 'definedmotion/rendering'
 
 export default defineScene({
   id: 'test-chart-layout-positioning',
@@ -53,11 +53,11 @@ export function chartLayoutPositioningScene(): AnimatedScene {
         return bar
       })
 
-      const title = await createFastText('Quarterly revenue', 2.2, 0xf8fafc)
+      const title = await createText({ text: 'Quarterly revenue', fontSize: 2.2, color: 0xf8fafc })
       title.name = 'chart-title'
-      const xLabel = await createFastText('Quarter', 1.2, 0x94a3b8)
+      const xLabel = await createText({ text: 'Quarter', fontSize: 1.2, color: 0x94a3b8 })
       xLabel.name = 'chart-x-label'
-      const yLabel = await createFastText('Revenue (MSEK)', 1.2, 0x94a3b8)
+      const yLabel = await createText({ text: 'Revenue (MSEK)', fontSize: 1.2, color: 0x94a3b8 })
       yLabel.name = 'chart-y-label'
       yLabel.rotation.z = Math.PI / 2
 
@@ -65,15 +65,15 @@ export function chartLayoutPositioningScene(): AnimatedScene {
       legend.name = 'chart-legend'
       const actualSwatch = createRectangle(1.6, 1.1, { color: '#38bdf8' })
       actualSwatch.position.set(-2.6, 1.25, 0)
-      const actualLabel = await createFastText('Actual', 1.05, 0xcbd5e1)
+      const actualLabel = await createText({ text: 'Actual', fontSize: 1.05, color: 0xcbd5e1 })
       actualLabel.position.set(0.5, 1.25, 0)
       const forecastSwatch = createRectangle(1.6, 1.1, { color: '#a78bfa' })
       forecastSwatch.position.set(-2.6, -1.25, 0)
-      const forecastLabel = await createFastText('Forecast', 1.05, 0xcbd5e1)
+      const forecastLabel = await createText({ text: 'Forecast', fontSize: 1.05, color: 0xcbd5e1 })
       forecastLabel.position.set(0.8, -1.25, 0)
       legend.add(actualSwatch, actualLabel, forecastSwatch, forecastLabel)
 
-      const legendNote = await createFastText('Updated live', 0.85, 0x64748b)
+      const legendNote = await createText({ text: 'Updated live', fontSize: 0.85, color: 0x64748b })
       legendNote.name = 'chart-legend-note'
 
       scene.add(dashboard, plotContent, title, xLabel, yLabel, legend, legendNote)

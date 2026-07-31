@@ -152,18 +152,6 @@
       "source": "tests/animation/test_core_effects.scene.ts"
     },
     {
-      "id": "test-deferred-anims",
-      "name": "Deferred Animations",
-      "kind": "test",
-      "source": "tests/deferred/testing_deferredAnims.scene.ts"
-    },
-    {
-      "id": "test-deferred-anims-2",
-      "name": "Deferred Anims2",
-      "kind": "test",
-      "source": "tests/deferred/testing_deferredAnims2.scene.ts"
-    },
-    {
       "id": "test-dynamic-bounds-positioning",
       "name": "Positioning: Dynamic Bounds and Shape Changes",
       "kind": "test",
@@ -180,42 +168,6 @@
       "name": "HDRI Performance",
       "kind": "test",
       "source": "tests/environment/test_hdri_performance.scene.ts"
-    },
-    {
-      "id": "test-latex-blue-particle-transition",
-      "name": "LaTeX Blue Particle Transition",
-      "kind": "test",
-      "source": "tests/latex/test_latex_blue_particle_transition.scene.ts"
-    },
-    {
-      "id": "test-latex-highlight-animation",
-      "name": "LaTeX Highlight Animation",
-      "kind": "test",
-      "source": "tests/latex/test_latex_highlight_animation.scene.ts"
-    },
-    {
-      "id": "test-latex-mark-animation",
-      "name": "LaTeX Mark Animation",
-      "kind": "test",
-      "source": "tests/latex/test_latex_mark_animation.scene.ts"
-    },
-    {
-      "id": "test-latex-particle-transition",
-      "name": "LaTeX Particle Transition",
-      "kind": "test",
-      "source": "tests/latex/test_latex_particle_transition.scene.ts"
-    },
-    {
-      "id": "test-latex-particle-transition-complex",
-      "name": "LaTeX Particle Transition Complex",
-      "kind": "test",
-      "source": "tests/latex/test_latex_particle_transition_complex.scene.ts"
-    },
-    {
-      "id": "test-latex-particle-transition-super-complex",
-      "name": "LaTeX Particle Transition Super Complex",
-      "kind": "test",
-      "source": "tests/latex/test_latex_particle_transition_super_complex.scene.ts"
     },
     {
       "id": "test-latex-query-variables",
@@ -314,22 +266,10 @@
       "source": "tests/positioning/test_transformed_dependency_chain_positioning.scene.ts"
     },
     {
-      "id": "test-transition-svgs",
-      "name": "Transition Svgs",
-      "kind": "test",
-      "source": "tests/svg/test_transition_svgs.scene.ts"
-    },
-    {
       "id": "test-update-svg-object",
       "name": "Update SVG Object",
       "kind": "test",
       "source": "tests/svg/test_update_svg_object.scene.ts"
-    },
-    {
-      "id": "test-updater-1",
-      "name": "Updater1",
-      "kind": "test",
-      "source": "tests/animation/test_updater.scene.ts"
     },
     {
       "id": "test-viewer-preview",
@@ -342,30 +282,6 @@
       "name": "Text and LaTeX Primitive Contract",
       "kind": "test",
       "source": "tests/rendering/test_visual_primitives.scene.ts"
-    },
-    {
-      "id": "test-with-environment-latex-particle-transition",
-      "name": "With Environment LaTeX Particle Transition",
-      "kind": "test",
-      "source": "tests/latex/test_with_environment_latex_particle_transition.scene.ts"
-    },
-    {
-      "id": "test-write-latex-animation",
-      "name": "Write LaTeX Animation",
-      "kind": "test",
-      "source": "tests/latex/test_write_latex_animation.scene.ts"
-    },
-    {
-      "id": "test-write-latex-animation-2",
-      "name": "Write LaTeX Animation 2",
-      "kind": "test",
-      "source": "tests/latex/test_write_latex_animation_2.scene.ts"
-    },
-    {
-      "id": "test-write-latex-animation-3",
-      "name": "Write LaTeX Animation 3",
-      "kind": "test",
-      "source": "tests/latex/test_write_latex_animation_3.scene.ts"
     },
     {
       "id": "test-yellow-grip-symbol-svg",

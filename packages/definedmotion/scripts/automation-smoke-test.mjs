@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 72) {
-    throw new Error(`Expected 72 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 58) {
+    throw new Error(`Expected 58 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -136,8 +136,8 @@ try {
     videoFrameA,
     '--no-build'
   ])
-  if (videoResult.durationInFrames !== 680) {
-    throw new Error('Video scene did not derive its 680-frame duration from media metadata')
+  if (videoResult.durationInFrames !== 679) {
+    throw new Error('Video scene did not round its media duration to the expected 679 frames')
   }
   run(['still', 'test-video-plane', '--frame', '60', '--output', videoFrameARepeat, '--no-build'])
   run(['still', 'test-video-plane', '--frame', '30', '--output', videoFrameB, '--no-build'])
@@ -244,7 +244,7 @@ try {
   }
 
   const visuals = run(['inspect', 'test-visual-primitives', '--frame', '0', '--no-build'])
-  const visualEffects = run(['inspect', 'test-visual-primitives', '--frame', '9', '--no-build'])
+  const visualEffects = run(['inspect', 'test-visual-primitives', '--frame', '11', '--no-build'])
   const visualObject = (id) => visuals.objects.find((object) => object.id === id)
   const leftText = visualObject('visual-text-left-top')
   const centerText = visualObject('visual-text-centered')
@@ -255,8 +255,11 @@ try {
   const latexEffectsCleanup = visualEffects.objects.find(
     (object) => object.id === 'visual-latex-effects-cleanup'
   )
+  const latexParticleTarget = visualEffects.objects.find(
+    (object) => object.id === 'visual-latex-particle-target'
+  )
   if (
-    visuals.sceneInfo.durationInFrames !== 10 ||
+    visuals.sceneInfo.durationInFrames !== 12 ||
     leftText?.text !== 'Updated title' ||
     leftText?.metadata.data?.rootStable !== true ||
     leftText?.localBounds?.min[0] !== 0 ||
@@ -274,7 +277,8 @@ try {
     invalidVisuals?.text !== 'font=true;latex=true' ||
     latexEffects?.latex !== String.raw`a = \frac{F}{\dmClass{mass}{m}}` ||
     latexEffects?.metadata.data?.rootStable !== true ||
-    latexEffectsCleanup?.text !== 'cleanup=true'
+    latexEffectsCleanup?.text !== 'cleanup=true' ||
+    latexParticleTarget?.visible !== true
   ) {
     throw new Error(
       'Text/LaTeX readiness, stable updates, effects, anchors, or local bounds were incorrect'

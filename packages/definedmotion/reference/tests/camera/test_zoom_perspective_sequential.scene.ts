@@ -1,8 +1,7 @@
-import { wait } from 'definedmotion/animation'
+import { camera, wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
-import { zoomCameraToAnim } from 'definedmotion/animation'
 
 
 export default defineScene({
@@ -19,8 +18,8 @@ export function test_zoom_perspective_sequential(): AnimatedScene {
 
     const initialFov = (dm.camera as THREE.PerspectiveCamera).fov
 
-    dm.addDeferredAnims(zoomCameraToAnim(dm.camera, { fov: 30 }, 900))
-    dm.addDeferredAnims(zoomCameraToAnim(dm.camera, { fov: initialFov }, 900))
+    dm.addAnims(camera.zoomTo(dm.camera, 30, { duration: 0.9 }))
+    dm.addAnims(camera.zoomTo(dm.camera, initialFov, { duration: 0.9 }))
 
     dm.addAnims(wait((200) / 1000))
   })

@@ -192,5 +192,6 @@ The primary animation documentation presents the complete core set on one short 
 - `EFFECT-07`: world transform targets convert through the parent once at bind time.
 - `EFFECT-08`: `matchTransform` reproduces a world pose and rejects poses requiring shear.
 - `EFFECT-09`: `wait` and `createAnimation` remain ordinary runtime-bound plans.
+- `EFFECT-10`: camera movement, pose, zoom, and framing are ordinary late-bound plans and update the correct camera projection property.
 
 Targeted command: `npm run test:core-effects --workspace definedmotion`.

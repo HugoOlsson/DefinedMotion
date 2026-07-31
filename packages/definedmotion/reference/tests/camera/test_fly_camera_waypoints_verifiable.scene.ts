@@ -1,9 +1,8 @@
-import { wait } from 'definedmotion/animation'
+import { camera, wait } from 'definedmotion/animation'
 // test_fly_minimal_two_poses.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
-import { flyCameraToAnim } from 'definedmotion/animation'
 
 
 export default defineScene({
@@ -71,17 +70,13 @@ export function test_fly_minimal_two_poses(): AnimatedScene {
     dm.camera.lookAt(0, 0, 0)
 
     // Leg 1: fly to CAM_A
-    dm.addDeferredAnims(
-      flyCameraToAnim(dm.camera, { position: CAM_A_POS, rotation: CAM_A_QUAT }, 1000)
-    )
+    dm.addAnims(camera.moveToPose(dm.camera, { position: CAM_A_POS, rotation: CAM_A_QUAT }, { duration: 1 }))
 
     // Small pause to inspect
     dm.addAnims(wait((200) / 1000))
 
     // Leg 2: fly to CAM_B
-    dm.addDeferredAnims(
-      flyCameraToAnim(dm.camera, { position: CAM_B_POS, rotation: CAM_B_QUAT }, 1000)
-    )
+    dm.addAnims(camera.moveToPose(dm.camera, { position: CAM_B_POS, rotation: CAM_B_QUAT }, { duration: 1 }))
 
     dm.addAnims(wait((200) / 1000))
 
@@ -90,8 +85,6 @@ export function test_fly_minimal_two_poses(): AnimatedScene {
     const m = new THREE.Matrix4().lookAt(from, target, new THREE.Vector3(0, 1, 0))
     const q = new THREE.Quaternion().setFromRotationMatrix(m)
 
-    dm.addDeferredAnims(
-      flyCameraToAnim(dm.camera, { position: startPos, rotation: q}, 1000)
-    )
+    dm.addAnims(camera.moveToPose(dm.camera, { position: startPos, rotation: q }, { duration: 1 }))
   })
 }

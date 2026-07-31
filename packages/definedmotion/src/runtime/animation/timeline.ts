@@ -1,4 +1,3 @@
-import type { UserAnimation } from './protocols'
 import {
   bindScheduledAnimation,
   compileAnimationPlan,
@@ -9,31 +8,18 @@ import {
 } from './plan'
 import { SceneRuntimeError } from '../scene/sceneErrors'
 
-interface ScheduledLegacyAnimation {
-  readonly kind: 'legacy'
-  readonly startFrame: number
-  readonly endFrame: number
-  readonly animation: UserAnimation
-}
-
 export interface ScheduledAnimationRange {
   readonly startFrame: number
   readonly endFrame: number
 }
 
-type ScheduledAnimation = ScheduledAnimationPlan | ScheduledLegacyAnimation
-export type AnimationInput = AnimationPlan | UserAnimation
+type ScheduledAnimation = ScheduledAnimationPlan
+export type AnimationInput = AnimationPlan
 
 interface AuthoringRange {
   readonly name: string
   readonly startFrame: number
   readonly endFrame: number
-}
-
-const isLegacyAnimation = (value: unknown): value is UserAnimation => {
-  if (typeof value !== 'object' || value === null) return false
-  const candidate = value as Partial<UserAnimation>
-  return Array.isArray(candidate.interpolation) && typeof candidate.updater === 'function'
 }
 
 export class AnimationTimeline {
@@ -79,54 +65,21 @@ export class AnimationTimeline {
     let longestDuration = 0
     const scheduledAnimations: ScheduledAnimation[] = []
     for (const animation of animations) {
-      if (isAnimationPlan(animation)) {
-        const scheduled = compileAnimationPlan(animation, this.pointer, this.fps)
-        this.assertAnimationRangeAllowed(scheduled.startFrame, scheduled.endFrame)
-        scheduledAnimations.push(scheduled)
-        longestDuration = Math.max(longestDuration, scheduled.durationFrames)
-      } else if (isLegacyAnimation(animation)) {
-        const scheduled = this.compileLegacyAt(this.pointer, animation)
-        this.assertAnimationRangeAllowed(scheduled.startFrame, scheduled.endFrame)
-        scheduledAnimations.push(scheduled)
-        longestDuration = Math.max(longestDuration, animation.interpolation.length)
-      } else {
+      if (!isAnimationPlan(animation)) {
         throw new SceneRuntimeError(
           'INVALID_ANIMATION',
-          'addAnims() received neither an AnimationPlan nor a legacy animation'
+          'addAnims() requires AnimationPlan values'
         )
       }
+      const scheduled = compileAnimationPlan(animation, this.pointer, this.fps)
+      this.assertAnimationRangeAllowed(scheduled.startFrame, scheduled.endFrame)
+      scheduledAnimations.push(scheduled)
+      longestDuration = Math.max(longestDuration, scheduled.durationFrames)
     }
 
     this.animations.push(...scheduledAnimations)
     this.pointer += longestDuration
     this.reservedEndFrame = Math.max(this.reservedEndFrame, this.pointer)
-  }
-
-  insertLegacyAt(frame: number, ...animations: UserAnimation[]): void {
-    if (!Number.isInteger(frame) || frame < 0) {
-      throw new SceneRuntimeError(
-        'INVALID_TIMELINE_POINTER',
-        `Animation insertion frame must be a non-negative integer, received ${frame}`
-      )
-    }
-    const scheduledAnimations = animations.map((animation) => {
-      const scheduled = this.compileLegacyAt(frame, animation)
-      this.assertAnimationRangeAllowed(scheduled.startFrame, scheduled.endFrame)
-      return scheduled
-    })
-    this.animations.push(...scheduledAnimations)
-  }
-
-  addSequentialLegacy(...animations: UserAnimation[]): void {
-    let offset = 0
-    const scheduledAnimations: ScheduledLegacyAnimation[] = []
-    for (const animation of animations) {
-      const scheduled = this.compileLegacyAt(this.pointer + offset, animation)
-      this.assertAnimationRangeAllowed(scheduled.startFrame, scheduled.endFrame)
-      scheduledAnimations.push(scheduled)
-      offset += animation.interpolation.length
-    }
-    this.animations.push(...scheduledAnimations)
   }
 
   reservePointerAdvance(durationFrames: number): void {
@@ -199,22 +152,9 @@ export class AnimationTimeline {
       (animation) => animation.startFrame <= frame && frame < animation.endFrame
     )
 
-    for (const animation of active) {
-      if (animation.kind === 'plan' && !animation.bound) bindScheduledAnimation(animation)
-    }
+    for (const animation of active) if (!animation.bound) bindScheduledAnimation(animation)
 
-    for (const animation of active) {
-      if (animation.kind === 'plan') {
-        updateScheduledAnimation(animation, frame)
-      } else {
-        const localFrame = frame - animation.startFrame
-        await animation.animation.updater(
-          animation.animation.interpolation[localFrame],
-          frame,
-          localFrame === animation.animation.interpolation.length - 1
-        )
-      }
-    }
+    for (const animation of active) updateScheduledAnimation(animation, frame)
   }
 
   reset(): void {
@@ -222,21 +162,6 @@ export class AnimationTimeline {
     this.reservedEndFrame = 0
     this.animations = []
     this.authoringRange = undefined
-  }
-
-  private compileLegacyAt(frame: number, animation: UserAnimation): ScheduledLegacyAnimation {
-    if (!isLegacyAnimation(animation)) {
-      throw new SceneRuntimeError(
-        'INVALID_ANIMATION',
-        'Expected a legacy animation with interpolation and updater values'
-      )
-    }
-    return {
-      kind: 'legacy',
-      startFrame: frame,
-      endFrame: frame + animation.interpolation.length,
-      animation
-    }
   }
 
   private assertAnimationRangeAllowed(startFrame: number, endFrame: number): void {

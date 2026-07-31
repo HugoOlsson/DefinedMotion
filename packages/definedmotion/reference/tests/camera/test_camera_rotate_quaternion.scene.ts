@@ -1,8 +1,7 @@
-import { wait } from 'definedmotion/animation'
+import { camera, wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
-import { rotateCameraToAnim } from 'definedmotion/animation'
 
 
 export default defineScene({
@@ -19,8 +18,8 @@ export function test_camera_rotate_quaternion(): AnimatedScene {
     const yawRight = new THREE.Quaternion().setFromEuler(new THREE.Euler(0,  Math.PI/4, 0))
     const pitchDown = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/6, 0, 0))
 
-    dm.addDeferredAnims(rotateCameraToAnim(dm.camera, { rotation: yawRight }, 800))
-    dm.addDeferredAnims(rotateCameraToAnim(dm.camera, { rotation: pitchDown }, 800))
+    dm.addAnims(camera.rotateTo(dm.camera, yawRight, { duration: 0.8 }))
+    dm.addAnims(camera.rotateTo(dm.camera, pitchDown, { duration: 0.8 }))
 
     dm.addAnims(wait((300) / 1000))
   })

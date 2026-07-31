@@ -1,7 +1,5 @@
 import * as THREE from 'three'
 import { SceneRuntimeError } from '../scene/sceneErrors'
-import { fade as legacyFade } from './animations'
-import type { UserAnimation } from './protocols'
 import type { AnimationPlan, Easing } from './plan'
 
 export interface AnimationOptions {
@@ -170,15 +168,10 @@ const matricesApproximatelyEqual = (left: THREE.Matrix4, right: THREE.Matrix4): 
   return difference <= largest * 1e-7
 }
 
-export function fadeIn(object: THREE.Object3D, options?: AnimationOptions): AnimationPlan
-/** @deprecated Numeric durations use the legacy millisecond animation API. */
-export function fadeIn(object: THREE.Object3D, durationMs: number): UserAnimation
-export function fadeIn(
+export const fadeIn = (
   object: THREE.Object3D,
-  options: AnimationOptions | number = {}
-): AnimationPlan | UserAnimation {
-  if (typeof options === 'number') return legacyFade(object, options)
-  return {
+  options: AnimationOptions = {}
+): AnimationPlan => ({
     ...planOptions(options),
     bind() {
       const materials = collectMaterialStates(object)
@@ -200,18 +193,12 @@ export function fadeIn(
         }
       }
     }
-  }
-}
+  })
 
-export function fadeOut(object: THREE.Object3D, options?: AnimationOptions): AnimationPlan
-/** @deprecated Numeric durations use the legacy millisecond animation API. */
-export function fadeOut(object: THREE.Object3D, durationMs: number): UserAnimation
-export function fadeOut(
+export const fadeOut = (
   object: THREE.Object3D,
-  options: AnimationOptions | number = {}
-): AnimationPlan | UserAnimation {
-  if (typeof options === 'number') return legacyFade(object, options).reverse()
-  return {
+  options: AnimationOptions = {}
+): AnimationPlan => ({
     ...planOptions(options),
     bind() {
       const wasVisible = object.visible
@@ -234,8 +221,7 @@ export function fadeOut(
         }
       }
     }
-  }
-}
+  })
 
 export const opacityTo = (
   object: THREE.Object3D,

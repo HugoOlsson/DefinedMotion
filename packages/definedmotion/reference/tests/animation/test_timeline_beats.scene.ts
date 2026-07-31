@@ -19,7 +19,7 @@ export function testTimelineBeats(): AnimatedScene {
       const box = scene.expose(
         'timeline-beat-box',
         createRectangle(4, 4, { color: '#38bdf8' })
-      ) as THREE.Object3D & { text: string }
+      ) as unknown as THREE.Object3D & { text: string }
       box.position.x = -6
       box.scale.setScalar(0.5)
       box.text = 'unstarted'
@@ -28,7 +28,7 @@ export function testTimelineBeats(): AnimatedScene {
       const pointerMarker = scene.expose(
         'timeline-beat-pointer',
         createRectangle(1, 1, { color: '#f59e0b' })
-      ) as THREE.Object3D & { text: string }
+      ) as unknown as THREE.Object3D & { text: string }
       pointerMarker.position.set(0, -5, 0)
       scene.add(pointerMarker)
 

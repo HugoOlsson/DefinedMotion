@@ -1,9 +1,8 @@
-import { wait } from 'definedmotion/animation'
+import { camera, wait } from 'definedmotion/animation'
 // test_2d_camera_hits_markers.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
-import { moveCameraToAnim } from 'definedmotion/animation'
 
 
 export default defineScene({
@@ -34,16 +33,10 @@ export function test_2d_camera_hits_markers(): AnimatedScene {
     const z = dm.camera.position.z
     dm.camera.position.set(0, 0, z)
 
-    // Move center over A, then B, then C — one deferred call per step (sequential)
-    dm.addDeferredAnims(
-      moveCameraToAnim(dm.camera, { position: new THREE.Vector3(-8,  6, z) }, 700)
-    )
-    dm.addDeferredAnims(
-      moveCameraToAnim(dm.camera, { position: new THREE.Vector3( 9, -4, z) }, 700)
-    )
-    dm.addDeferredAnims(
-      moveCameraToAnim(dm.camera, { position: new THREE.Vector3( 0,  0, z) }, 700)
-    )
+    // Move center over A, then B, then C.
+    dm.addAnims(camera.moveTo(dm.camera, new THREE.Vector3(-8, 6, z), { duration: 0.7 }))
+    dm.addAnims(camera.moveTo(dm.camera, new THREE.Vector3(9, -4, z), { duration: 0.7 }))
+    dm.addAnims(camera.moveTo(dm.camera, new THREE.Vector3(0, 0, z), { duration: 0.7 }))
 
     dm.addAnims(wait((400) / 1000))
   })

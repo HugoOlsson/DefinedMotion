@@ -31,17 +31,9 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-colored-latex-to-svg | test | Colored LaTeX To SVG | `tests/svg/test_colored_latex_to_svg.scene.ts` |
 | test-complex-latex-to-svg | test | Complex LaTeX To SVG | `tests/svg/test_complex_latex_to_svg.scene.ts` |
 | test-core-effects | test | Core Animation Effects Contract | `tests/animation/test_core_effects.scene.ts` |
-| test-deferred-anims | test | Deferred Animations | `tests/deferred/testing_deferredAnims.scene.ts` |
-| test-deferred-anims-2 | test | Deferred Anims2 | `tests/deferred/testing_deferredAnims2.scene.ts` |
 | test-dynamic-bounds-positioning | test | Positioning: Dynamic Bounds and Shape Changes | `tests/positioning/test_dynamic_bounds_positioning.scene.ts` |
 | test-fly-minimal-two-poses | test | Fly Minimal Two Poses | `tests/camera/test_fly_camera_waypoints_verifiable.scene.ts` |
 | test-hdri-performance | test | HDRI Performance | `tests/environment/test_hdri_performance.scene.ts` |
-| test-latex-blue-particle-transition | test | LaTeX Blue Particle Transition | `tests/latex/test_latex_blue_particle_transition.scene.ts` |
-| test-latex-highlight-animation | test | LaTeX Highlight Animation | `tests/latex/test_latex_highlight_animation.scene.ts` |
-| test-latex-mark-animation | test | LaTeX Mark Animation | `tests/latex/test_latex_mark_animation.scene.ts` |
-| test-latex-particle-transition | test | LaTeX Particle Transition | `tests/latex/test_latex_particle_transition.scene.ts` |
-| test-latex-particle-transition-complex | test | LaTeX Particle Transition Complex | `tests/latex/test_latex_particle_transition_complex.scene.ts` |
-| test-latex-particle-transition-super-complex | test | LaTeX Particle Transition Super Complex | `tests/latex/test_latex_particle_transition_super_complex.scene.ts` |
 | test-latex-query-variables | test | LaTeX Query Variables | `tests/svg/test_query_latex_variables.scene.ts` |
 | test-latex-to-svg | test | LaTeX To SVG | `tests/svg/test_latex_to_svg.scene.ts` |
 | test-layout-check | test | Layout Check | `tests/inspection/test_layout_check.scene.ts` |
@@ -58,15 +50,9 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-super-complex-latex-to-svg | test | Super Complex LaTeX To SVG | `tests/svg/test_super_complex_latex_to_svg.scene.ts` |
 | test-timeline-beats | test | Timeline Beats Contract | `tests/animation/test_timeline_beats.scene.ts` |
 | test-transformed-dependency-chain-positioning | test | Positioning: Transformed 3D Dependency Chain | `tests/positioning/test_transformed_dependency_chain_positioning.scene.ts` |
-| test-transition-svgs | test | Transition Svgs | `tests/svg/test_transition_svgs.scene.ts` |
 | test-update-svg-object | test | Update SVG Object | `tests/svg/test_update_svg_object.scene.ts` |
-| test-updater-1 | test | Updater1 | `tests/animation/test_updater.scene.ts` |
 | test-viewer-preview | test | Viewer Preview Boundary | `tests/animation/test_viewer_preview.scene.ts` |
 | test-visual-primitives | test | Text and LaTeX Primitive Contract | `tests/rendering/test_visual_primitives.scene.ts` |
-| test-with-environment-latex-particle-transition | test | With Environment LaTeX Particle Transition | `tests/latex/test_with_environment_latex_particle_transition.scene.ts` |
-| test-write-latex-animation | test | Write LaTeX Animation | `tests/latex/test_write_latex_animation.scene.ts` |
-| test-write-latex-animation-2 | test | Write LaTeX Animation 2 | `tests/latex/test_write_latex_animation_2.scene.ts` |
-| test-write-latex-animation-3 | test | Write LaTeX Animation 3 | `tests/latex/test_write_latex_animation_3.scene.ts` |
 | test-yellow-grip-symbol-svg | test | Yellow Grip Symbol SVG | `tests/svg/test_yellow_grip_symbol_svg.scene.ts` |
 | test-zoom-perspective-sequential | test | Zoom Perspective Sequential | `tests/camera/test_zoom_perspective_sequential.scene.ts` |
 | tutorial-easy-1 | example | Tutorial: Easy 1 | `examples/tutorials/easy1.scene.ts` |

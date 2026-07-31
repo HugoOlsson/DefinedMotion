@@ -1,11 +1,29 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
-import { createFastText, createLine } from 'definedmotion/rendering'
-import { setOpacity } from 'definedmotion/animation'
+import { createText, createLine } from 'definedmotion/rendering'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
+
+const applyOpacity = <T extends THREE.Object3D>(
+  object: T,
+  opacity: number,
+  enableTransparency = true,
+  hideWhenZero = true
+): T => {
+  const visible = opacity > 0.001
+  if (hideWhenZero) object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (enableTransparency) current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+  return object
+}
 
 export default defineScene({
   id: 'newtons-second-law',
@@ -86,11 +104,11 @@ export function newtonsSecondLawScene(): AnimatedScene {
     async (scene) => {
       scene.scene.background = new THREE.Color('#080b16')
 
-      const title = await createFastText("Newton's Second Law", 3.15, 0xf8fafc)
+      const title = await createText({ text: "Newton's Second Law", fontSize: 3.15, color: 0xf8fafc })
       title.position.set(0, 27, 1)
       scene.add(title)
 
-      const subtitle = await createFastText('Predict motion with force and mass', 1.2, 0x94a3b8)
+      const subtitle = await createText({ text: 'Predict motion with force and mass', fontSize: 1.2, color: 0x94a3b8 })
       subtitle.position.set(0, 23.5, 1)
       scene.add(subtitle)
 
@@ -106,9 +124,9 @@ export function newtonsSecondLawScene(): AnimatedScene {
       scene.add(formula)
 
       const termLegend = new THREE.Group()
-      const forceLegend = await createFastText('force', 1.05, 0x22d3ee)
-      const massLegend = await createFastText('mass', 1.05, 0xfbbf24)
-      const accelerationLegend = await createFastText('acceleration', 1.05, 0xc084fc)
+      const forceLegend = await createText({ text: 'force', fontSize: 1.05, color: 0x22d3ee })
+      const massLegend = await createText({ text: 'mass', fontSize: 1.05, color: 0xfbbf24 })
+      const accelerationLegend = await createText({ text: 'acceleration', fontSize: 1.05, color: 0xc084fc })
       forceLegend.position.x = -8
       accelerationLegend.position.x = 8
       termLegend.add(forceLegend, massLegend, accelerationLegend)
@@ -160,7 +178,7 @@ export function newtonsSecondLawScene(): AnimatedScene {
         createSVGShape(latexToSVG(value), value.includes('boxed') ? 17 : 25)
       )
       equationGroups.forEach((equation, index) => {
-        setOpacity(equation, index === 0 ? 1 : 0, true, false)
+        applyOpacity(equation, index === 0 ? 1 : 0, true, false)
         numericalEquation.add(equation)
       })
       numericalEquation.position.set(27, 6, 1)
@@ -219,7 +237,7 @@ export function newtonsSecondLawScene(): AnimatedScene {
         return trail
       })
 
-      const relationship = await createFastText('distance grows with  a · t²', 1.05, 0x64748b)
+      const relationship = await createText({ text: 'distance grows with  a · t²', fontSize: 1.05, color: 0x64748b })
       relationship.position.set(25, -24, 1)
       scene.add(relationship)
 
@@ -304,7 +322,7 @@ export function newtonsSecondLawScene(): AnimatedScene {
           stageLabels.show(state.index)
           explanations.show(state.index)
           equationGroups.forEach((equation, index) => {
-            setOpacity(equation, index === state.index ? 1 : 0, true, false)
+            applyOpacity(equation, index === state.index ? 1 : 0, true, false)
           })
           numericalEquation.text = state.index === 0 || state.summary ? 'a = F / m' : state.equation
         }
@@ -378,9 +396,9 @@ const createTextSwitcher = async (
   color: number
 ): Promise<TextSwitcher> => {
   const group = Object.assign(new THREE.Group(), { text: values[0] })
-  const labels = await Promise.all(values.map((value) => createFastText(value, size, color)))
+  const labels = await Promise.all(values.map((value) => createText({ text: value, fontSize: size, color: color })))
   labels.forEach((label, index) => {
-    setOpacity(label, index === 0 ? 1 : 0, true, false)
+    applyOpacity(label, index === 0 ? 1 : 0, true, false)
     group.add(label)
   })
   return {
@@ -388,7 +406,7 @@ const createTextSwitcher = async (
     show: (index): void => {
       group.text = values[index]
       labels.forEach((label, labelIndex) => {
-        setOpacity(label, labelIndex === index ? 1 : 0, true, false)
+        applyOpacity(label, labelIndex === index ? 1 : 0, true, false)
       })
     }
   }

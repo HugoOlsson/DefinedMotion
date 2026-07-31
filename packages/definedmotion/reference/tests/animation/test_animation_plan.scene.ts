@@ -19,7 +19,7 @@ export function testAnimationPlan(): AnimatedScene {
       const box = scene.expose(
         'animation-plan-box',
         createRectangle(4, 4, { color: '#22d3ee' })
-      ) as THREE.Object3D & { text: string }
+      ) as unknown as THREE.Object3D & { text: string }
       box.position.x = -6
       box.text = 'x=-6.000'
       scene.add(box)

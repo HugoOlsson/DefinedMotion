@@ -1,11 +1,29 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
-import { setOpacity } from 'definedmotion/animation'
-import { createFastText, createLine } from 'definedmotion/rendering'
+import { createText, createLine } from 'definedmotion/rendering'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
+
+const applyOpacity = <T extends THREE.Object3D>(
+  object: T,
+  opacity: number,
+  enableTransparency = true,
+  hideWhenZero = true
+): T => {
+  const visible = opacity > 0.001
+  if (hideWhenZero) object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (enableTransparency) current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+  return object
+}
 
 export default defineScene({
   id: 'matrix-multiplication',
@@ -83,13 +101,9 @@ export function matrixMultiplicationScene(): AnimatedScene {
       scene.scene.background = new THREE.Color('#050814')
 
       const header = new THREE.Group()
-      const title = await createFastText('Transform space, not the drawing', 2.8, 0xf8fafc)
+      const title = await createText({ text: 'Transform space, not the drawing', fontSize: 2.8, color: 0xf8fafc })
       title.position.set(-19, 26, 1)
-      const subtitle = await createFastText(
-        'Every point follows one continuously changing rule',
-        1.12,
-        0x94a3b8
-      )
+      const subtitle = await createText({ text: 'Every point follows one continuously changing rule', fontSize: 1.12, color: 0x94a3b8 })
       subtitle.position.set(-19, 22.6, 1)
       const composition = createSVGShape(
         latexToSVG(
@@ -174,7 +188,7 @@ export function matrixMultiplicationScene(): AnimatedScene {
         scene.add(group)
       })
 
-      const ruleNote = await createFastText('same rule · every point · all at once', 0.92, 0x64748b)
+      const ruleNote = await createText({ text: 'same rule · every point · all at once', fontSize: 0.92, color: 0x64748b })
       ruleNote.position.set(-39.7, -14.2, 2)
       scene.add(ruleNote)
 
@@ -275,7 +289,7 @@ export function matrixMultiplicationScene(): AnimatedScene {
 
       const phaseLabels = await Promise.all(
         ['IDENTITY', 'A · SHEAR', 'B · ROTATE', 'BA · COMPOSED'].map((label) =>
-          createFastText(label, 0.82, 0x94a3b8)
+          createText({ text: label, fontSize: 0.82, color: 0x94a3b8 })
         )
       )
       phaseLabels.forEach((label, index) => {
@@ -379,7 +393,7 @@ export function matrixMultiplicationScene(): AnimatedScene {
           const opacity = narrativeOpacity(frame, stage)
           group.visible = opacity > 0.005
           if (group.visible) {
-            setOpacity(group, opacity, true, false)
+            applyOpacity(group, opacity, true, false)
             group.position.y = 6.6 + (1 - opacity) * 0.65
           }
         })
@@ -387,7 +401,7 @@ export function matrixMultiplicationScene(): AnimatedScene {
         phaseLabels.forEach((label, index) => {
           const opacity = narrativeOpacity(frame, index)
           label.visible = opacity > 0.005
-          if (label.visible) setOpacity(label, opacity, true, false)
+          if (label.visible) applyOpacity(label, opacity, true, false)
         })
         phaseUnderline.material.color.copy(accent)
 
@@ -395,11 +409,11 @@ export function matrixMultiplicationScene(): AnimatedScene {
         productOverlay.group.visible = productReveal > 0.005
         productOverlay.outline.material.opacity = Math.sin(productReveal * Math.PI) * 0.7
         finalEquality.visible = productReveal > 0.005
-        if (finalEquality.visible) setOpacity(finalEquality, productReveal, true, false)
+        if (finalEquality.visible) applyOpacity(finalEquality, productReveal, true, false)
 
         const intro = smootherStep(normalized(frame, 0, 55))
         header.position.y = (1 - intro) * 0.7
-        setOpacity(header, intro, true, false)
+        applyOpacity(header, intro, true, false)
       })
 
       scene.addAnims(wait((DURATION_MS) / 1000))
@@ -427,9 +441,9 @@ const createNarrativeCard = async (
   color: string
 ): Promise<NarrativeCard> => {
   const group = new THREE.Group()
-  const eyebrowText = await createFastText(eyebrow, 0.88, new THREE.Color(color).getHex())
+  const eyebrowText = await createText({ text: eyebrow, fontSize: 0.88, color: new THREE.Color(color).getHex() })
   eyebrowText.position.set(0, 4.1, 0)
-  const descriptionText = await createFastText(description, 0.95, 0xcbd5e1)
+  const descriptionText = await createText({ text: description, fontSize: 0.95, color: 0xcbd5e1 })
   descriptionText.position.set(0, 1.5, 0)
   const formulaShape = createSVGShape(latexToSVG(formula), 16.5)
   formulaShape.position.set(0, -3.4, 0)

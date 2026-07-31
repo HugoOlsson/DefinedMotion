@@ -4,7 +4,7 @@ import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 import { linspace } from 'definedmotion/math'
 import { COLORS } from 'definedmotion/rendering'
 import { addBackgroundGradient, addSceneLighting } from 'definedmotion/rendering'
-import { createFastText } from 'definedmotion/rendering'
+import { createText } from 'definedmotion/rendering'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 
@@ -125,7 +125,7 @@ export function vectorFieldScene(): AnimatedScene {
         }
       }
 
-      const textNode = scene.expose('title', await createFastText('Vector Field', 5), {
+      const textNode = scene.expose('title', await createText({ text: 'Vector Field', fontSize: 5 }), {
         description: 'Billboard title positioned above the vector field',
         tags: ['text', 'title']
       })

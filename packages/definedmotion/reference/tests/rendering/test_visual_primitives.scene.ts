@@ -121,6 +121,20 @@ export function testVisualPrimitives(): AnimatedScene {
       scene.addAnims(latex.mark(animatedMass, { duration: 2 / scene.fps }))
       scene.addAnims(morph)
       scene.addAnims(latex.highlight(animatedMass, { duration: 2 / scene.fps }))
+      const transitionTarget = await createLatex({
+        latex: String.raw`E = mc^2`,
+        fontSize: 3,
+        color: '#f97316'
+      })
+      transitionTarget.position.copy(animatedEquation.position)
+      scene.add(transitionTarget)
+      scene.expose('visual-latex-particle-target', transitionTarget)
+      scene.addAnims(
+        latex.particleTransition(animatedEquation, transitionTarget, {
+          duration: 2 / scene.fps,
+          particleCount: 120
+        })
+      )
       scene.do(() => {
         effectsMarker.text = `cleanup=${animatedEquation.getObjectByName('DefinedMotionLatexMorphParticles') === undefined}`
       })

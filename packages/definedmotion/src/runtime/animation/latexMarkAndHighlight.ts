@@ -1,28 +1,28 @@
 
 
 import { queryLaTeXClass } from "../svg/latexSVGQueries";
-import { easeInOutQuad } from "./interpolations";
-import { UserAnimation } from "./protocols";
 import * as THREE from 'three'
+
+interface ProgressUpdater {
+  updater(progress: number, frame?: number, isLast?: boolean): void
+}
 
 // ---------------------------------------------------------------------------
 // LaTeX "mark" animation: pulsating brackets around a set of classes
 // ---------------------------------------------------------------------------
 
-export function latexMarkAnim(
+export function createLatexMarkController(
   root: THREE.Object3D,
   classNames: string | string[],
   cfg: {
-    durationMs?: number;
     color?: THREE.ColorRepresentation;
     padding?: number;     // fraction of width/height
     pulses?: number;      // how many pulses over the duration
     scaleAmp?: number;    // how much the brackets grow/shrink
     maxOpacity?: number;
   } = {}
-): () => UserAnimation {
+): () => ProgressUpdater {
   const {
-    durationMs = 2000,
     color = 0xffffff,
     padding = 0.05,
     pulses = 2,
@@ -33,8 +33,6 @@ export function latexMarkAnim(
   const classList = Array.isArray(classNames) ? classNames : [classNames];
 
   return () => {
-    const interpolation = easeInOutQuad(0, 1, durationMs);
-
     let initialized = false;
     let bracketGroup: THREE.Group | null = null;
     let line: THREE.LineSegments | null = null;
@@ -151,9 +149,8 @@ export function latexMarkAnim(
       material = null;
     };
 
-    return new UserAnimation(
-      interpolation,
-      (t: number, _tick?: number, isLast?: boolean) => {
+    return {
+      updater(t: number, _tick?: number, isLast?: boolean) {
         if (!initialized) {
           buildBracketGroup();
           initialized = true;
@@ -173,7 +170,7 @@ export function latexMarkAnim(
           disposeBracketGroup();
         }
       }
-    );
+    };
   };
 }
 
@@ -194,24 +191,19 @@ type HighlightMatState = {
 };
 
 /**
- * Deferred highlight animation over one or more LaTeX classes.
- *
- * It uses queryLaTeXClass(...) internally to find the meshes, then
- * pulses their color toward `highlightColor` for the duration.
+ * Late-bound highlight controller over one or more LaTeX classes.
  */
-export function latexHighlightAnim(
+export function createLatexHighlightController(
   root: THREE.Object3D,
   classNames: string | string[],
   cfg: {
-    durationMs?: number;
     highlightColor?: THREE.ColorRepresentation;
     pulses?: number;
     minMix?: number; // minimum mix factor between base and highlight
     maxMix?: number; // maximum mix factor between base and highlight
   } = {}
-): () => UserAnimation {
+): () => ProgressUpdater {
   const {
-    durationMs = 1000,
     highlightColor = 0xffdd55,
     pulses = 2,
     minMix = 0.0,
@@ -222,8 +214,6 @@ export function latexHighlightAnim(
   const hiColor = new THREE.Color(highlightColor);
 
   return () => {
-    const interpolation = easeInOutQuad(0, 1, durationMs);
-
     let initialized = false;
     const matStates = new Map<THREE.Material, HighlightMatState>();
 
@@ -309,9 +299,8 @@ export function latexHighlightAnim(
 
     const tmp = new THREE.Color();
 
-    return new UserAnimation(
-      interpolation,
-      (t: number, _tick?: number, isLast?: boolean) => {
+    return {
+      updater(t: number, _tick?: number, isLast?: boolean) {
         if (!initialized) {
           collectMaterials();
           initialized = true;
@@ -344,6 +333,6 @@ export function latexHighlightAnim(
           restoreMaterials();
         }
       }
-    );
+    };
   };
 }

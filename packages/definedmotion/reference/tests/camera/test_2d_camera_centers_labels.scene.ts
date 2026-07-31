@@ -2,7 +2,7 @@
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
-import { moveCameraToAnim } from 'definedmotion/animation'
+import { camera } from 'definedmotion/animation'
 
 
 export default defineScene({
@@ -53,10 +53,10 @@ export function test_2d_camera_centers_labels(): AnimatedScene {
     dm.camera.position.copy(S1.position.clone().add(zOffset))
 
     // center camera over each square in clockwise order
-    dm.addDeferredAnims( moveCameraToAnim(dm.camera, { position: S2.position.clone().add(zOffset) }, 600) )
-    dm.addDeferredAnims( moveCameraToAnim(dm.camera, { position: S3.position.clone().add(zOffset) }, 600) )
-    dm.addDeferredAnims( moveCameraToAnim(dm.camera, { position: S4.position.clone().add(zOffset) }, 600) )
-    dm.addDeferredAnims( moveCameraToAnim(dm.camera, { position: S1.position.clone().add(zOffset) }, 600) )
+    dm.addAnims(camera.moveTo(dm.camera, S2.position.clone().add(zOffset), { duration: 0.6 }))
+    dm.addAnims(camera.moveTo(dm.camera, S3.position.clone().add(zOffset), { duration: 0.6 }))
+    dm.addAnims(camera.moveTo(dm.camera, S4.position.clone().add(zOffset), { duration: 0.6 }))
+    dm.addAnims(camera.moveTo(dm.camera, S1.position.clone().add(zOffset), { duration: 0.6 }))
 
   })
 }

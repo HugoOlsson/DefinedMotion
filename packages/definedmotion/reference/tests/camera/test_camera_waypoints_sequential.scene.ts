@@ -1,6 +1,5 @@
-import { wait } from 'definedmotion/animation'
+import { camera, wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
-import { moveCameraToAnim } from "definedmotion/animation";
 import { AnimatedScene, SpaceSetting } from "definedmotion";
 import * as THREE from 'three'
 
@@ -28,10 +27,9 @@ export function test_camera_waypoints_sequential(): AnimatedScene {
     dm.camera.position.set(0, 8, 16)
     dm.camera.lookAt(0, 0, 0)
 
-    // SEQUENTIAL: one call per addDeferredAnims
-    dm.addDeferredAnims(moveCameraToAnim(dm.camera, { position: new THREE.Vector3(-8, 6, 14) }, 900))
-    dm.addDeferredAnims(moveCameraToAnim(dm.camera, { position: new THREE.Vector3(  8, 6, 14) }, 900))
-    dm.addDeferredAnims(moveCameraToAnim(dm.camera, { position: new THREE.Vector3(  0, 7, 10) }, 900))
+    dm.addAnims(camera.moveTo(dm.camera, new THREE.Vector3(-8, 6, 14), { duration: 0.9 }))
+    dm.addAnims(camera.moveTo(dm.camera, new THREE.Vector3(8, 6, 14), { duration: 0.9 }))
+    dm.addAnims(camera.moveTo(dm.camera, new THREE.Vector3(0, 7, 10), { duration: 0.9 }))
 
     dm.addAnims(wait((400) / 1000))
   })

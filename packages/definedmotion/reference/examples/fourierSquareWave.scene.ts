@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
-import { createLine, createFastText } from 'definedmotion/rendering'
+import { createLine, createText } from 'definedmotion/rendering'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
@@ -49,11 +49,11 @@ export function fourierSquareWaveScene(): AnimatedScene {
     async (scene) => {
       scene.scene.background = new THREE.Color('#070a18')
 
-      const title = await createFastText('Building a Square Wave', 3.2, 0xf8fafc)
+      const title = await createText({ text: 'Building a Square Wave', fontSize: 3.2, color: 0xf8fafc })
       title.position.set(0, 27, 1)
       scene.add(title)
 
-      const subtitle = await createFastText('Odd harmonics become geometry', 1.25, 0x94a3b8)
+      const subtitle = await createText({ text: 'Odd harmonics become geometry', fontSize: 1.25, color: 0x94a3b8 })
       subtitle.position.set(0, 23.5, 1)
       scene.add(subtitle)
 
@@ -80,11 +80,11 @@ export function fourierSquareWaveScene(): AnimatedScene {
       })
       scene.add(divider)
 
-      const epicycleCaption = await createFastText('EPICYCLES', 1.05, 0x64748b)
+      const epicycleCaption = await createText({ text: 'EPICYCLES', fontSize: 1.05, color: 0x64748b })
       epicycleCaption.position.set(-34, 9.5, 1)
       scene.add(epicycleCaption)
 
-      const waveCaption = await createFastText('PARTIAL SUM', 1.05, 0x64748b)
+      const waveCaption = await createText({ text: 'PARTIAL SUM', fontSize: 1.05, color: 0x64748b })
       waveCaption.position.set(20, 9.5, 1)
       scene.add(waveCaption)
 
@@ -157,7 +157,7 @@ export function fourierSquareWaveScene(): AnimatedScene {
       )
       const harmonicLabels = await Promise.all(
         Array.from({ length: TERM_COUNT }, (_, index) =>
-          createFastText(`N = ${index + 1}`, 1.35, 0xe2e8f0)
+          createText({ text: `N = ${index + 1}`, fontSize: 1.35, color: 0xe2e8f0 })
         )
       )
       harmonicLabels.forEach((label, index) => {
@@ -167,7 +167,7 @@ export function fourierSquareWaveScene(): AnimatedScene {
       harmonicCount.position.set(-34, -22.5, 1)
       scene.add(harmonicCount)
 
-      const convergence = await createFastText('more circles  →  sharper edges', 1.15, 0x94a3b8)
+      const convergence = await createText({ text: 'more circles  →  sharper edges', fontSize: 1.15, color: 0x94a3b8 })
       convergence.position.set(22, -22.5, 1)
       scene.add(convergence)
 

@@ -1,13 +1,9 @@
 import * as THREE from 'three'
 import { COLORS } from './helpers'
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
-import fontJSON from '../fonts/montserrat.json'
 import { createAssetReference } from '../assets'
 
-import { Text } from 'troika-three-text'
 import { preloadFont, configureTextBuilder } from 'troika-three-text'
 import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
 import { Vector3 } from 'three'
@@ -39,13 +35,6 @@ export const loadFonts = (): Promise<void> => {
 export interface ObjectOptions {
   color?: THREE.ColorRepresentation
   material?: THREE.Material
-}
-
-let loadedFont: any = null
-
-const loader = new FontLoader()
-const loadFont = () => {
-  loadedFont = loader.parse(fontJSON as any)
 }
 
 interface MeshWithColorMaterial extends THREE.Mesh {
@@ -343,150 +332,4 @@ export const createCircle = (radius: number = 10, options?: CircleOptions) => {
   }
 
   return mesh
-}
-
-export const updateText = async (text: any, newText: string) => {
-  if (text.text === newText) return
-  text.text = newText
-
-  await new Promise<void>((resolve) => {
-    text.sync(() => {
-      resolve()
-    })
-  })
-
-  return
-}
-
-export const createFastText = async (text: string, size: number = 10, color: number = 0xffffff) => {
-  // Create a Troika Text instance
-  const textMesh = new Text()
-
-  // Set basic properties
-  textMesh.text = text
-  textMesh.fontSize = size
-  textMesh.color = color
-  textMesh.font = fontTroika
-
-  // Center the text
-  textMesh.anchorX = 'center'
-  textMesh.anchorY = 'middle'
-
-  // Create a wrapper object to maintain compatibility with your existing code
-
-  // Sync any changes and make text visible
-  await new Promise<void>((resolve) => {
-    textMesh.sync(() => {
-      resolve()
-    })
-  })
-
-  return textMesh
-}
-
-export const createMeshText = (text: string, size: number = 10, options?: ObjectOptions) => {
-  if (!loadedFont) {
-    loadFont()
-  }
-
-  const textOptions = {
-    font: loadedFont,
-    size: size,
-    depth: size / 10,
-    curveSegments: 12,
-    bevelEnabled: true,
-    bevelThickness: 0,
-    bevelSize: 1,
-    bevelOffset: 0,
-    bevelSegments: 5
-  }
-
-  const geometry = new TextGeometry(text, textOptions)
-
-  // Compute the bounding box
-  geometry.computeBoundingBox()
-
-  // Calculate the center offset based on the bounding box
-  const centerX = -0.5 * (geometry.boundingBox!.max.x + geometry.boundingBox!.min.x)
-  const centerY = -0.5 * (geometry.boundingBox!.max.y + geometry.boundingBox!.min.y)
-
-  // Apply the translation to center the text
-  geometry.translate(centerX, centerY, 0)
-
-  return createMesh(geometry, options)
-}
-
-export const createChars = (text: string, size: number = 10, options?: ObjectOptions) => {
-  if (!loadedFont) {
-    loadFont()
-  }
-
-  console.log('Font loaded:', loadedFont)
-
-  const letterSpacing = 0.1 * size // Default spacing is 5% of character size
-  const centerText = true
-
-  // Create a group to hold all character meshes
-  const textGroup = new THREE.Group()
-
-  // Track the total width to position characters correctly
-  let currentPosition = 0
-
-  // Create individual characters
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-
-    // Skip if it's a space, but add spacing
-    if (char === ' ') {
-      currentPosition += size * 0.5 // Space width is half the character size
-      continue
-    }
-
-    const textOptions = {
-      font: loadedFont,
-      size: size,
-      depth: 3,
-      curveSegments: 12,
-      bevelEnabled: true,
-      bevelThickness: 10,
-      bevelSize: 1,
-      bevelOffset: 0,
-      bevelSegments: 5
-    }
-
-    // Create geometry for this character
-    const geometry = new TextGeometry(char, textOptions)
-
-    // Compute bounding box for positioning
-    geometry.computeBoundingBox()
-
-    // Center the character vertically
-    const centerY = -0.5 * (geometry.boundingBox!.max.y + geometry.boundingBox!.min.y)
-
-    // We don't center horizontally - we'll position each character sequentially
-    geometry.translate(0, centerY, 0)
-
-    // Create mesh for this character
-    const charMesh = createMesh(geometry, options)
-
-    // Position character at the current offset
-    charMesh.position.x = currentPosition
-
-    // Add to group
-    textGroup.add(charMesh)
-
-    // Update position for next character
-    const charWidth = geometry.boundingBox!.max.x - geometry.boundingBox!.min.x
-    currentPosition += charWidth + letterSpacing
-  }
-
-  // Calculate total width (minus the last letter spacing)
-  const totalWidth = currentPosition - letterSpacing
-
-  // Center the entire text group if requested
-  if (centerText) {
-    textGroup.position.x = -totalWidth / 2
-  }
-
-  return textGroup
 }

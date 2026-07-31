@@ -19,7 +19,7 @@ const scripts = {
   'viewer-scene-selection': 'test:viewer-selection',
   'documentation-system': 'test:documentation',
   'implementation-testing': 'test:testing-system',
-  'legacy-deletion': 'test:unit'
+  'legacy-deletion': 'test:legacy-deletion'
 }
 
 if (!name || !scripts[name]) {

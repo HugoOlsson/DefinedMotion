@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
-import { createFastText, createRectangle } from 'definedmotion/rendering'
+import { createText, createRectangle } from 'definedmotion/rendering'
 
 export default defineScene({
   id: 'test-product-layout-positioning',
@@ -35,7 +35,7 @@ export function productLayoutPositioningScene(): AnimatedScene {
       cameraLens.position.set(0, 3.55, 0.96)
       product.add(body, screen, screenGlow, cameraLens)
 
-      const productName = await createFastText('Defined Phone', 1.55, 0xf8fafc)
+      const productName = await createText({ text: 'Defined Phone', fontSize: 1.55, color: 0xf8fafc })
       productName.name = 'product-name'
 
       const specPanel = new THREE.Group()
@@ -45,15 +45,15 @@ export function productLayoutPositioningScene(): AnimatedScene {
         stroke: { color: '#2f4664', width: 0.16, placement: 'inside' }
       })
       panelBackground.position.z = -0.1
-      const specTitle = await createFastText('Highlights', 1.15, 0xe2e8f0)
+      const specTitle = await createText({ text: 'Highlights', fontSize: 1.15, color: 0xe2e8f0 })
       specTitle.position.set(0, 1.55, 0)
-      const specOne = await createFastText('120 Hz display', 0.82, 0x7dd3fc)
+      const specOne = await createText({ text: '120 Hz display', fontSize: 0.82, color: 0x7dd3fc })
       specOne.position.set(0, 0.2, 0)
-      const specTwo = await createFastText('48 MP camera', 0.82, 0xc4b5fd)
+      const specTwo = await createText({ text: '48 MP camera', fontSize: 0.82, color: 0xc4b5fd })
       specTwo.position.set(0, -1.1, 0)
       specPanel.add(panelBackground, specTitle, specOne, specTwo)
 
-      const price = await createFastText('9 995 SEK', 1.25, 0x86efac)
+      const price = await createText({ text: '9 995 SEK', fontSize: 1.25, color: 0x86efac })
       price.name = 'product-price'
 
       const depthBadge = new THREE.Mesh(

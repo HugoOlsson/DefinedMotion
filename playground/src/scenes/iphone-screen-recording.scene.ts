@@ -1,8 +1,7 @@
 import * as THREE from 'three'
 
 import { defineScene } from 'definedmotion'
-import { easeLinear } from 'definedmotion/animation'
-import { createAnim } from 'definedmotion/animation'
+import { createAnimation } from 'definedmotion/animation'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 import { loadGLB } from 'definedmotion/rendering'
 import { createVideoPlane } from 'definedmotion/media'
@@ -134,9 +133,14 @@ function createIphoneScreenRecordingScene(): AnimatedScene {
       rearCamera.position.set(32, 2, -62)
       rearCamera.lookAt(0, 0, 0)
 
-      const orbit = createAnim(easeLinear(0, 1, DURATION_MS), (progress) => {
-        phone.rotation.y = Math.PI + Math.sin(progress * Math.PI * 2) * 0.32
-        phone.rotation.z = Math.sin(progress * Math.PI * 2) * 0.025
+      const orbit = createAnimation({
+        duration: DURATION_MS / 1000,
+        bind: () => ({
+          update({ linearProgress }) {
+            phone.rotation.y = Math.PI + Math.sin(linearProgress * Math.PI * 2) * 0.32
+            phone.rotation.z = Math.sin(linearProgress * Math.PI * 2) * 0.025
+          }
+        })
       })
 
       scene.addAnims(await screen.playWithAudio(), orbit)

@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
-import { createFastText, createRectangle } from 'definedmotion/rendering'
+import { createText, createRectangle } from 'definedmotion/rendering'
 
 export default defineScene({
   id: 'test-place-once-positioning',
@@ -20,7 +20,7 @@ const createLabeledPanel = async (
     color: panelColor,
     stroke: { color: '#94a3b8', width: 0.12, placement: 'inside' }
   })
-  const text = await createFastText(label, 0.9, textColor)
+  const text = await createText({ text: label, fontSize: 0.9, color: textColor })
   text.position.z = 0.1
   group.add(panel, text)
   return group
@@ -50,11 +50,7 @@ export function placeOncePositioningScene(): AnimatedScene {
       )
       persistentBadge.name = 'persistent-badge'
 
-      const heading = await createFastText(
-        'Persistent relationship vs initial placement',
-        1.25,
-        0xf8fafc
-      )
+      const heading = await createText({ text: 'Persistent relationship vs initial placement', fontSize: 1.25, color: 0xf8fafc })
       heading.position.set(0, 9, 0)
 
       scene.add(background, anchor, persistent, oneShot, persistentBadge, heading)

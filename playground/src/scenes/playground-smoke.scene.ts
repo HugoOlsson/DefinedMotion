@@ -1,5 +1,5 @@
 import { AnimatedScene, defineScene, SpaceSetting } from 'definedmotion'
-import { createAnim, easeInOutQuad } from 'definedmotion/animation'
+import { moveTo } from 'definedmotion/animation'
 import { createCircle } from 'definedmotion/rendering'
 
 export default defineScene({
@@ -12,11 +12,10 @@ export default defineScene({
       SpaceSetting.TwoDim,
       (scene) => {
         const circle = createCircle(2)
+        circle.position.x = -5
         scene.add(circle)
         scene.addAnims(
-          createAnim(easeInOutQuad(-5, 5, 1_000), (x) => {
-            circle.position.x = x
-          })
+          moveTo(circle, { x: 5, y: 0, z: 0 }, { duration: 1, easing: 'ease-in-out' })
         )
       }
     )

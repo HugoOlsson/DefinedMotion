@@ -1,6 +1,5 @@
 import { defineScene } from 'definedmotion'
-import { concatInterpols, easeInOutQuad, posXSigmoid } from 'definedmotion/animation'
-import { createAnim } from 'definedmotion/animation'
+import { moveTo } from 'definedmotion/animation'
 import { createCircle } from 'definedmotion/rendering'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
@@ -20,8 +19,6 @@ export function tutorial_easy1(): AnimatedScene {
   // We return an animated scene that has some settings and lastly has a callback function
   // The first two parameters are resolution, this will be a vertical clip
   // The third argument sets if we want 3D or 2D
-  // The forth allows us to say how hot reload should be handled,
-  // With trace from start, at hot reload, the actions of all frames before the current, will be accounted for.
   // Use scene.previewFromHere() at a clean boundary when exact replay is too expensive during editing.
 
   return new AnimatedScene(
@@ -32,33 +29,22 @@ export function tutorial_easy1(): AnimatedScene {
       // Helper function to create a "THREE.CircleGeometry"
       // You can just use any Three.js code if you want
       const circle = createCircle(5)
+      circle.position.x = -5
 
       // Add our circle to the scene
       scene.add(circle)
 
-      // Create an animation that makes it move from left to right
-      // This is very modular and easy to build on
-      // createAnim takes two argument, an interpolation (just calculated number[]), and a call back function where you can use each value
-      // So here we are creating the interpolation with easeInOutQuad: number[]
-      // And give a function that is called for each frame with the current interpolation value
-      const anim = createAnim(easeInOutQuad(-5, 5, 500), (value) => (circle.position.x = value))
-
-      // We use "addAnims" to schedule an animation, it will run from the frame (tick) it was added at
-      // Since this is our first added animation in this scene, we are currently at tick 0, So it will just add to the start.
-      // But say that we are in a complex animation and our previous buildings would mean that we are at frame 49878 for example (we wouldn't know this)
-      // Then it just adds the animation with that offset
-      scene.addAnims(anim)
-
-      // To make the circle also go back, we can reverse the entire animation and add it again
-      // Notice that we are copying it, this is so that the reverse() doesn't affect the original variable "anim"
-      scene.addAnims(anim.copy().reverse())
+      scene.addAnims(moveTo(circle, { x: 5, y: 0, z: 0 }, { duration: 0.5 }))
+      scene.addAnims(moveTo(circle, { x: -5, y: 0, z: 0 }, { duration: 0.5 }))
 
       // We now finally add a function that will be called at each frame (tick) in our animation
       // This doesn't push the tick forward like the "addAnims" does.
       // It just declares a function that should be run at each frame
       // For this animation, we want to set a color to the circle at each frame.
       scene.onEachTick((tick) => {
-        circle.material.color = new THREE.Color().setRGB(posXSigmoid(circle.position.x / 4), 1, 1)
+        const distance = Math.abs(circle.position.x / 4)
+        const colorMix = 2 * (1 / (1 + Math.exp(-distance)) - 0.5)
+        circle.material.color = new THREE.Color().setRGB(colorMix, 1, 1)
       })
     }
   )

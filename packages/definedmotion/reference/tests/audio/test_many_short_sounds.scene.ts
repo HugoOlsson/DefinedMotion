@@ -2,8 +2,7 @@
 
 
 import { defineScene } from 'definedmotion'
-import { easeLinear } from 'definedmotion/animation'
-import { createAnim } from 'definedmotion/animation'
+import { wait } from 'definedmotion/animation'
 import { createRectangle } from 'definedmotion/rendering'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
@@ -39,18 +38,13 @@ export function test_many_short_sounds(): AnimatedScene {
       scene.add(background)
       scene.registerAudio(tickSound)
 
-      let lastIndex
-      const switchAnimation = createAnim(easeLinear(0, 0.999, slideColors.length * 300), (value) => {
-        const index = Math.floor(value * slideColors.length)
-
-        if (index !== lastIndex) {
-          lastIndex = index
+      for (let index = 0; index < slideColors.length; index++) {
+        scene.do(() => {
           background.material.color = new THREE.Color(slideColors[index])
           scene.playAudio(tickSound)
-        }
-      })
-
-      scene.addAnims(switchAnimation)
+        })
+        scene.addAnims(wait(0.3))
+      }
     }
   )
 

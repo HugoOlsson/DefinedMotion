@@ -11,8 +11,7 @@ import { AnimatedScene, SpaceSetting } from 'definedmotion';
 import { latexToSVG } from 'definedmotion/latex';
 import { createSVGShape } from 'definedmotion/latex';
 import { queryLaTeXClass } from 'definedmotion/latex';
-import { createAnim } from 'definedmotion/animation';
-import { easeInOutQuad } from 'definedmotion/animation';
+import { createAnimation } from 'definedmotion/animation';
 
 export function test_latex_query_variables(): AnimatedScene {
   return new AnimatedScene(
@@ -54,18 +53,24 @@ export function test_latex_query_variables(): AnimatedScene {
         mesh.material = (mesh.material as THREE.Material).clone();
     }
 
-    const colorAnim = createAnim(easeInOutQuad(0, 1, 300), (t) => {
-        tmpColor.lerpColors(white, targetColor, t); // tmp = white * (1-t) + target * t
-        for (const mesh of variableMeshes) {
-            const mat = mesh.material as THREE.MeshBasicMaterial;
-            mat.color.copy(tmpColor);
-        }
+    const colorAnimation = (from: THREE.Color, to: THREE.Color) => createAnimation({
+        duration: 0.3,
+        easing: 'ease-in-out',
+        bind: () => ({
+            update({ easedProgress }) {
+                tmpColor.lerpColors(from, to, easedProgress);
+                for (const mesh of variableMeshes) {
+                    const mat = mesh.material as THREE.MeshBasicMaterial;
+                    mat.color.copy(tmpColor);
+                }
+            }
+        })
     });
 
 
     for (let i = 0; i<20; i++) {
-        dm.addAnims(colorAnim.copy())
-        dm.addAnims(colorAnim.copy().reverse())
+        dm.addAnims(colorAnimation(white, targetColor))
+        dm.addAnims(colorAnimation(targetColor, white))
     }
    
     }

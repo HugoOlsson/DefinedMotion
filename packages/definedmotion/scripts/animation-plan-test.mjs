@@ -218,24 +218,6 @@ try {
     assert.equal(binds, 2)
   }
 
-  // Legacy arrays remain schedulable during migration through the same timeline.
-  {
-    const timeline = new AnimationTimeline(30)
-    const values = []
-    timeline.add({
-      interpolation: [2, 4],
-      updater(value, frame, isLast) {
-        values.push({ value, frame, isLast })
-      }
-    })
-    await timeline.runFrame(0)
-    await timeline.runFrame(1)
-    assert.deepEqual(values, [
-      { value: 2, frame: 0, isLast: false },
-      { value: 4, frame: 1, isLast: true }
-    ])
-  }
-
   // ANIM-09: invalid plans fail with stable, actionable runtime codes.
   assert.throws(
     () => compileAnimationPlan({ duration: 0.001, bind: () => ({ update() {} }) }, 0, 30),

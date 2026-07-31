@@ -1,4 +1,4 @@
-import { wait } from 'definedmotion/animation'
+import { camera, wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { addBackgroundGradient, addSceneLighting } from 'definedmotion/rendering'
 import { loadGLB } from 'definedmotion/rendering'
@@ -6,10 +6,7 @@ import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import type { SceneAsset } from 'definedmotion/assets'
 import * as THREE from 'three'
 import { createBumpMap } from 'definedmotion/rendering'
-import { moveRotateCameraAnimation3D } from 'definedmotion/animation'
-import { createAnim } from 'definedmotion/animation'
-import { easeLinear } from 'definedmotion/animation'
-import { createFastText, createLine, updateText } from 'definedmotion/rendering'
+import { createText, createLine } from 'definedmotion/rendering'
 import { COLORS } from 'definedmotion/rendering'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 
@@ -253,7 +250,7 @@ const setText = async (textNode: any, addedCharacter: string) => {
   }
 
   // Update the text node
-  await updateText(textNode, nextText)
+  await textNode.setText(nextText)
 }
 const typeAnimation = (
   scene: AnimatedScene,
@@ -262,42 +259,25 @@ const typeAnimation = (
   speed: number,
   sounds: { tick: SceneAsset; key: SceneAsset }
 ) => {
-  let lastIndex = -1
   let keyStroke: THREE.Mesh | undefined
   let pointLight: THREE.PointLight | undefined
-  let lastCharacter
-  const animation = createAnim(
-    easeLinear(0, 1, characters.length * speed),
-    async (value, _, isLast) => {
-      const index = Math.round(value * (characters.length - 1))
-      const character = characters[index]
-
-      if (index !== lastIndex) {
-        lastIndex = index
-        ;({ keyStroke, pointLight } = setPosition(scene.scene, translateToKey(character)))
-        await setText(textNode, character)
-        if (lastCharacter === backCharacter && character === backCharacter) {
-        } else {
-          scene.playAudio(sounds.key, character === backCharacter || character === ' ' ? 0.5 : 0.2)
-          scene.playAudio(sounds.tick, character === ' ' ? 0.2 : 0.05)
-        }
-        lastCharacter = character
+  let lastCharacter: string | undefined
+  for (const character of characters) {
+    scene.do(async () => {
+      ;({ keyStroke, pointLight } = setPosition(scene.scene, translateToKey(character)))
+      await setText(textNode, character)
+      if (!(lastCharacter === backCharacter && character === backCharacter)) {
+        scene.playAudio(sounds.key, character === backCharacter || character === ' ' ? 0.5 : 0.2)
+        scene.playAudio(sounds.tick, character === ' ' ? 0.2 : 0.05)
       }
-
-      if (isLast) {
-        setTimeout(() => {
-          if (keyStroke) {
-            scene.scene.remove(keyStroke)
-          }
-          if (pointLight) {
-            scene.scene.remove(pointLight)
-          }
-        }, 500)
-      }
-    }
-  )
-
-  return animation
+      lastCharacter = character
+    })
+    scene.addAnims(wait(speed / 1000))
+  }
+  scene.do(() => {
+    if (keyStroke) scene.scene.remove(keyStroke)
+    if (pointLight) scene.scene.remove(pointLight)
+  })
 }
 
 export function keyboardScene(): AnimatedScene {
@@ -345,30 +325,42 @@ export function keyboardScene(): AnimatedScene {
       const targetRot = new THREE.Quaternion(-0.6683053, -0.001480137, -0.001329754, 0.7438844)
 
       scene.addAnims(
-        moveRotateCameraAnimation3D(
+        camera.moveToPose(
           scene.camera,
-          scene.camera.position,
-          scene.camera.quaternion,
-          targetPos,
-          targetRot,
-          1000
+          { position: targetPos, rotation: targetRot },
+          { duration: 1 }
         )
       )
 
-      const rotateAnim = moveRotateCameraAnimation3D(
-        scene.camera,
-        targetPos,
-        targetRot,
-        new THREE.Vector3(-2.196693 - 1, 20.67784, 9.621079 + 1).multiplyScalar(0.65),
-        new THREE.Quaternion(-0.5668163, -0.003930429, -0.002704235, 0.8238304),
-        4000
+      const alternatePos = new THREE.Vector3(
+        -2.196693 - 1,
+        20.67784,
+        9.621079 + 1
+      ).multiplyScalar(0.65)
+      const alternateRot = new THREE.Quaternion(
+        -0.5668163,
+        -0.003930429,
+        -0.002704235,
+        0.8238304
       )
-
-      scene.addSequentialBackgroundAnims(
-        ...Array(10)
-          .fill(0)
-          .flatMap(() => [rotateAnim, rotateAnim.copy().reverse()])
-      )
+      const resumeAt = scene.getTimelinePointer()
+      for (let index = 0; index < 10; index++) {
+        scene.addAnims(
+          camera.moveToPose(
+            scene.camera,
+            { position: alternatePos, rotation: alternateRot },
+            { duration: 4 }
+          )
+        )
+        scene.addAnims(
+          camera.moveToPose(
+            scene.camera,
+            { position: targetPos, rotation: targetRot },
+            { duration: 4 }
+          )
+        )
+      }
+      scene.setTimelinePointer(resumeAt)
 
       const lightY = 5
       const lightX = -2
@@ -390,19 +382,33 @@ export function keyboardScene(): AnimatedScene {
 
       //setPosition(scene.scene, translateToKey(' '))
 
-      const text = scene.expose('typed-message', await createFastText('', 0.4), {
-        description: 'The message currently being typed on the keyboard surface',
-        tags: ['text', 'dynamic']
-      })
+      const text = scene.expose(
+        'typed-message',
+        await createText({
+          text: '',
+          fontSize: 0.4,
+          anchorX: 'left',
+          anchorY: 'bottom'
+        }),
+        {
+          description: 'The message currently being typed on the keyboard surface',
+          tags: ['text', 'dynamic']
+        }
+      )
       text.rotateX(-Math.PI / 2)
       text.position.y = 0.02
 
       text.position.z = -3.5
       text.position.x = -5
 
-      text.anchorX = 'left'
-      text.anchorY = 'bottom'
-      text.material.opacity = 0.8
+      text.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return
+        const materials = Array.isArray(child.material) ? child.material : [child.material]
+        for (const material of materials) {
+          material.transparent = true
+          material.opacity = 0.8
+        }
+      })
       scene.add(text)
 
       const point1 = new THREE.Vector3(-5, 0.05, -3.4)
@@ -420,73 +426,63 @@ export function keyboardScene(): AnimatedScene {
       const deleteSpeed = 30
 
       const line1 = 'Hello Instagram!'
-      scene.addAnims(typeAnimation(scene, line1, text, typeSpeed, sounds))
+      typeAnimation(scene, line1, text, typeSpeed, sounds)
       scene.addAnims(wait((1000) / 1000))
-      scene.addAnims(
-        typeAnimation(
-          scene,
-          [...line1].map(() => backCharacter).join(''),
-          text,
-          deleteSpeed,
-          sounds
-        )
+      typeAnimation(
+        scene,
+        [...line1].map(() => backCharacter).join(''),
+        text,
+        deleteSpeed,
+        sounds
       )
 
       scene.addAnims(wait((300) / 1000))
       const line2 = 'I am just testing my programmatic animation library!'
-      scene.addAnims(typeAnimation(scene, line2, text, typeSpeed, sounds))
+      typeAnimation(scene, line2, text, typeSpeed, sounds)
       scene.addAnims(wait((1000) / 1000))
-      scene.addAnims(
-        typeAnimation(
-          scene,
-          [...line2].map(() => backCharacter).join(''),
-          text,
-          deleteSpeed,
-          sounds
-        )
+      typeAnimation(
+        scene,
+        [...line2].map(() => backCharacter).join(''),
+        text,
+        deleteSpeed,
+        sounds
       )
 
       scene.addAnims(wait((300) / 1000))
       const line3 = `It is inspired by 3Blue1Brown's Manim and Motion Canvas. It is meant for technical and mathematical animations!`
-      scene.addAnims(typeAnimation(scene, line3, text, typeSpeed, sounds))
+      typeAnimation(scene, line3, text, typeSpeed, sounds)
       scene.addAnims(wait((1000) / 1000))
-      scene.addAnims(
-        typeAnimation(
-          scene,
-          [...line3].map(() => backCharacter).join(''),
-          text,
-          deleteSpeed,
-          sounds
-        )
+      typeAnimation(
+        scene,
+        [...line3].map(() => backCharacter).join(''),
+        text,
+        deleteSpeed,
+        sounds
       )
 
       scene.addAnims(wait((300) / 1000))
       const line4 =
         'One of its features is that when you save your code, the animation updates immediately in the viewport. No need to render the video, open the file and then see the result!'
-      scene.addAnims(typeAnimation(scene, line4, text, typeSpeed, sounds))
+      typeAnimation(scene, line4, text, typeSpeed, sounds)
       scene.addAnims(wait((1000) / 1000))
-      scene.addAnims(
-        typeAnimation(
-          scene,
-          [...line4].map(() => backCharacter).join(''),
-          text,
-          deleteSpeed,
-          sounds
-        )
+      typeAnimation(
+        scene,
+        [...line4].map(() => backCharacter).join(''),
+        text,
+        deleteSpeed,
+        sounds
       )
 
       scene.addAnims(wait((300) / 1000))
       const line5 = `Use the project by visiting "DefinedMotion" by Hugo Olsson on GitHub, thanks!`
-      scene.addAnims(typeAnimation(scene, line5, text, typeSpeed, sounds))
+      typeAnimation(scene, line5, text, typeSpeed, sounds)
       scene.addAnims(wait((1000) / 1000))
-      scene.addAnims(
-        typeAnimation(
-          scene,
-          [...line5].map(() => backCharacter).join(''),
-          text,
-          deleteSpeed,
-          sounds
-        )
+      typeAnimation(
+        scene,
+        [...line5].map(() => backCharacter).join(''),
+        text,
+        deleteSpeed,
+        sounds
       )
 
       const initialZoom = scene.camera.zoom

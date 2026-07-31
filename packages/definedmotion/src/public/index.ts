@@ -19,11 +19,7 @@ export {
   AnimatedScene,
   MAIN_CAMERA_ID,
   SceneRuntimeError,
-  SpaceSetting,
-  millisToTicks,
-  renderOutputFps,
-  ticksToMillis,
-  timelineFPS
+  SpaceSetting
 } from '../runtime/scene/sceneClass'
 export type {
   BeatAuthoringContext,

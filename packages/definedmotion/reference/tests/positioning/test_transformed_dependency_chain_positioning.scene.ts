@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
-import { createFastText } from 'definedmotion/rendering'
+import { createText } from 'definedmotion/rendering'
 
 export default defineScene({
   id: 'test-transformed-dependency-chain-positioning',
@@ -57,7 +57,7 @@ export function transformedDependencyChainPositioningScene(): AnimatedScene {
       endRig.position.set(-1, 3, -1)
       depthRig.position.set(2, 1, -3)
 
-      const title = await createFastText('REVERSE-REGISTERED 3D CHAIN', 0.9, 0xf8fafc)
+      const title = await createText({ text: 'REVERSE-REGISTERED 3D CHAIN', fontSize: 0.9, color: 0xf8fafc })
       title.position.set(0, 7.3, 0)
 
       const floor = new THREE.Mesh(

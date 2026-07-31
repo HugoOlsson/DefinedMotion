@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
-import { createFastText, createLine } from 'definedmotion/rendering'
+import { createText, createLine } from 'definedmotion/rendering'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
@@ -51,15 +51,11 @@ export function galtonBoardScene(): AnimatedScene {
     async (scene) => {
       scene.scene.background = new THREE.Color('#070b16')
 
-      const title = await createFastText('Order from Randomness', 3.1, 0xf8fafc)
+      const title = await createText({ text: 'Order from Randomness', fontSize: 3.1, color: 0xf8fafc })
       title.position.set(0, 27, 1)
       scene.add(title)
 
-      const subtitle = await createFastText(
-        'A Galton board turns many coin-flip paths into a bell curve',
-        1.18,
-        0x94a3b8
-      )
+      const subtitle = await createText({ text: 'A Galton board turns many coin-flip paths into a bell curve', fontSize: 1.18, color: 0x94a3b8 })
       subtitle.position.set(0, 23.5, 1)
       scene.add(subtitle)
 
@@ -128,7 +124,7 @@ export function galtonBoardScene(): AnimatedScene {
       )
       addBins(bins)
       const binLabels = await Promise.all(
-        Array.from({ length: BIN_COUNT }, (_, index) => createFastText(`${index}`, 0.78, 0x64748b))
+        Array.from({ length: BIN_COUNT }, (_, index) => createText({ text: `${index}`, fontSize: 0.78, color: 0x64748b }))
       )
       binLabels.forEach((label, index) => {
         label.position.set(binX(index), -27.45, 1)
@@ -158,7 +154,7 @@ export function galtonBoardScene(): AnimatedScene {
       normalCurve.updatePoints(expectedCurvePoints())
       scene.add(normalCurve)
 
-      const curveLabel = await createFastText('expected bell curve', 1.05, 0xf9a8d4)
+      const curveLabel = await createText({ text: 'expected bell curve', fontSize: 1.05, color: 0xf9a8d4 })
       curveLabel.position.set(30, -9.2, 1)
       curveLabel.visible = false
       scene.add(curveLabel)
@@ -220,11 +216,7 @@ export function galtonBoardScene(): AnimatedScene {
       sampleLabels.group.position.set(-40, -29, 1)
       scene.add(sampleLabels.group)
 
-      const insight = await createFastText(
-        'many independent choices  →  a predictable shape',
-        1.15,
-        0x94a3b8
-      )
+      const insight = await createText({ text: 'many independent choices  →  a predictable shape', fontSize: 1.15, color: 0x94a3b8 })
       insight.position.set(19, -29, 1)
       scene.add(insight)
 
@@ -466,7 +458,7 @@ const createTextSwitcher = async (
   color: number
 ): Promise<TextSwitcher> => {
   const group = Object.assign(new THREE.Group(), { text: values[0] })
-  const labels = await Promise.all(values.map((value) => createFastText(value, size, color)))
+  const labels = await Promise.all(values.map((value) => createText({ text: value, fontSize: size, color: color })))
   labels.forEach((label, index) => {
     label.visible = index === 0
     group.add(label)

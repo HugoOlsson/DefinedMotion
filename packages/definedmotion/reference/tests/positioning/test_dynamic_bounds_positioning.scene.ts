@@ -1,7 +1,7 @@
 import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
-import { createFastText } from 'definedmotion/rendering'
+import { createText } from 'definedmotion/rendering'
 
 export default defineScene({
   id: 'test-dynamic-bounds-positioning',
@@ -33,11 +33,11 @@ export function dynamicBoundsPositioningScene(): AnimatedScene {
       )
       subject.name = 'shape-changing-subject'
 
-      const title = await createFastText('EXACT ABOVE', 0.8, 0xf8fafc)
+      const title = await createText({ text: 'EXACT ABOVE', fontSize: 0.8, color: 0xf8fafc })
       title.name = 'dynamic-title'
-      const status = await createFastText('RANGED RIGHT', 0.72, 0xfbbf24)
+      const status = await createText({ text: 'RANGED RIGHT', fontSize: 0.72, color: 0xfbbf24 })
       status.name = 'dynamic-status'
-      const detail = await createFastText('CHAINED DETAIL', 0.55, 0xfde68a)
+      const detail = await createText({ text: 'CHAINED DETAIL', fontSize: 0.55, color: 0xfde68a })
       detail.name = 'dynamic-detail'
       const leftPin = new THREE.Mesh(
         new THREE.OctahedronGeometry(0.62),

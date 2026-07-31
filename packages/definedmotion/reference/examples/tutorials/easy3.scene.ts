@@ -9,9 +9,7 @@ import { defineScene } from 'definedmotion'
 
 import * as THREE from 'three'
 
-import { easeLinear } from 'definedmotion/animation'
-import { createAnim } from 'definedmotion/animation'
-import { createFastText, createRectangle, updateText } from 'definedmotion/rendering'
+import { createText, createRectangle } from 'definedmotion/rendering'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
@@ -90,7 +88,7 @@ export function tutorial_easy3(): AnimatedScene {
       // The rectangle acts like a slide background; we’ll change its color.
       // ───────────────────────────────────────────────────────────────────────
       const card = createRectangle(200, 200) // simple square card
-      const title = await createFastText('', 1.5) // scale = 1.5 ⇒ nice big headline
+      const title = await createText({ text: '', fontSize: 1.5 }) // scale = 1.5 ⇒ nice big headline
       scene.add(card, title)
 
       // Optional: center them if your renderer doesn’t already
@@ -110,26 +108,15 @@ export function tutorial_easy3(): AnimatedScene {
       //   - update the headline text
       //   - play a tick sound
       // ───────────────────────────────────────────────────────────────────────
-      let lastIndex = -1
-      const totalTicks = ALTERNATIVES.length * TICKS_PER_SLIDE
-
-      const switcher = createAnim(easeLinear(0, 1, totalTicks), (value) => {
-        // Convert 0..1 into a slide index. Modulo makes the final frame safe.
-        const i = Math.floor(value * ALTERNATIVES.length) % ALTERNATIVES.length
-        if (i === lastIndex) return
-        lastIndex = i
-
-        // Update color + text
-        const color = SLIDE_COLORS[i % SLIDE_COLORS.length]
-        ;(card.material as THREE.MeshBasicMaterial).color = new THREE.Color(color)
-        updateText(title, ALTERNATIVES[i])
-
-        // Click!
-        scene.playAudio(tickSound)
-      })
-
-      // Start the slide show
-      scene.addAnims(switcher)
+      for (let index = 0; index < ALTERNATIVES.length; index++) {
+        scene.do(async () => {
+          const color = SLIDE_COLORS[index % SLIDE_COLORS.length]
+          ;(card.material as THREE.MeshBasicMaterial).color = new THREE.Color(color)
+          await title.setText(ALTERNATIVES[index])
+          scene.playAudio(tickSound)
+        })
+        scene.addAnims(wait(TICKS_PER_SLIDE / 1000))
+      }
 
       // Let it run a bit after the last change (nice tail for render/export)
       scene.addAnims(wait((1_000) / 1000))

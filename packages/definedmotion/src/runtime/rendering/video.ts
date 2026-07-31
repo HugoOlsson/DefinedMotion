@@ -1,13 +1,12 @@
 import * as THREE from 'three'
-import { createAnim, type UserAnimation } from '../animation/protocols'
-import { easeLinear } from '../animation/interpolations'
+import type { AnimationPlan } from '../animation/plan'
 import { assetUrl, type AssetSource } from '../assets'
 import type {
   ExactFramePreparationContext,
   FrameResource,
   RealtimeFrameContext
 } from '../scene/frameResource'
-import { timelineFPS, type AnimatedScene } from '../scene/sceneClass'
+import type { AnimatedScene } from '../scene/sceneClass'
 
 export interface VideoPlaneOptions {
   /** Stable identity for the decoder and texture across scene rebuilds. */
@@ -25,9 +24,10 @@ export interface VideoPlayOptions {
 }
 
 export interface VideoPlane extends THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> {
-  play(durationMs: number, options?: VideoPlayOptions): UserAnimation
+  /** Silent playback duration in seconds. */
+  play(duration: number, options?: VideoPlayOptions): AnimationPlan
   /** Plays the complete source at 1x while routing its embedded audio through the scene timeline. */
-  playWithAudio(): Promise<UserAnimation>
+  playWithAudio(): Promise<AnimationPlan>
 }
 
 interface VideoFrameState {
@@ -105,15 +105,15 @@ export function createVideoPlane(
 
   Object.defineProperties(mesh, {
     play: {
-      value: (durationMs: number, playOptions: VideoPlayOptions = {}) =>
-        videoAnimation(videoSource, state, durationMs, playOptions)
+      value: (duration: number, playOptions: VideoPlayOptions = {}) =>
+        videoAnimation(videoSource, state, duration, playOptions)
     },
     playWithAudio: {
       value: async () => {
         const durationMs = await videoSource.getDurationMs()
         scene.registerAudio(source)
         scene.playAudio(source)
-        return videoAnimation(videoSource, state, durationMs, {})
+        return videoAnimation(videoSource, state, durationMs / 1000, {})
       }
     }
   })
@@ -409,33 +409,36 @@ class ControlledVideoTexture extends THREE.Texture {
 const videoAnimation = (
   source: VideoSource,
   state: VideoFrameState,
-  durationMs: number,
+  duration: number,
   options: VideoPlayOptions
-): UserAnimation => {
-  positive(durationMs, 'durationMs')
+): AnimationPlan => {
+  positive(duration, 'duration')
   const sourceStart = nonNegative(options.sourceStartMs ?? 0, 'sourceStartMs') / 1000
   const playbackRate = positive(options.playbackRate ?? 1, 'playbackRate')
   const loop = options.loop ?? false
-  const sourceDuration = (durationMs / 1000) * playbackRate
-  let previousElapsed: number | undefined
-  let previousTick: number | undefined
+  const sourceDuration = duration * playbackRate
 
-  return createAnim(easeLinear(0, sourceDuration, durationMs), (elapsed, tick, isLast) => {
-    const tickDelta = previousTick === undefined ? 0 : tick - previousTick
-    const evaluatedRate =
-      previousElapsed === undefined || tickDelta <= 0
-        ? playbackRate
-        : ((elapsed - previousElapsed) * timelineFPS) / tickDelta
-    const time = source.normalizeTime(sourceStart + elapsed, loop)
-    state.timeSeconds = time
-    state.playbackRate = evaluatedRate > 0 ? evaluatedRate : playbackRate
-    state.loop = loop
-    const movingForward =
-      previousElapsed === undefined ? elapsed <= TIME_TOLERANCE_SECONDS : evaluatedRate > 0
-    state.advancing = !isLast && movingForward
-    previousElapsed = elapsed
-    previousTick = tick
-  })
+  return {
+    duration,
+    easing: 'linear',
+    bind: () => {
+      let previousProgress: number | undefined
+      return {
+        update({ linearProgress, isLastFrame }) {
+          const elapsed = sourceDuration * linearProgress
+          const movingForward =
+            previousProgress === undefined
+              ? elapsed <= TIME_TOLERANCE_SECONDS
+              : linearProgress > previousProgress
+          state.timeSeconds = source.normalizeTime(sourceStart + elapsed, loop)
+          state.playbackRate = playbackRate
+          state.loop = loop
+          state.advancing = !isLastFrame && movingForward
+          previousProgress = linearProgress
+        }
+      }
+    }
+  }
 }
 
 const waitForMetadata = (video: HTMLVideoElement, signal: AbortSignal): Promise<void> => {

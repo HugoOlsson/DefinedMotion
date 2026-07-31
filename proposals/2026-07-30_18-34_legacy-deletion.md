@@ -188,3 +188,9 @@ This cleanup does not remove:
 - the existing positioning system without a separate replacement decision.
 
 Deletion is complete when canonical documentation and curated examples contain no legacy names, public barrels expose no alternate path, workspace search finds no consumers, and exact rendering plus verification regression tests pass.
+
+## Acceptance contracts
+
+- `DELETE-01`: replaced implementation modules are absent.
+- `DELETE-02`: supported source, generated types, templates, documentation, examples, and playground scenes contain no removed identifiers.
+- `DELETE-03`: the public animation entry point exposes only the canonical plan, effects, and camera paths.

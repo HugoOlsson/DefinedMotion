@@ -1,4 +1,4 @@
-import { wait } from 'definedmotion/animation'
+import { camera, createAnimation, fadeIn, fadeOut, wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { COLORS } from 'definedmotion/rendering'
 import { addBackgroundGradient, addSceneLighting } from 'definedmotion/rendering'
@@ -6,16 +6,27 @@ import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
 import { linspace } from 'definedmotion/math'
-import { createAnim, UserAnimation } from 'definedmotion/animation'
-import { easeInOutQuad } from 'definedmotion/animation'
-import {
-  fadeIn,
-  fadeOut,
-  moveCameraAnimation3D,
-  setOpacity
-} from 'definedmotion/animation'
-import { createFastText, updateText } from 'definedmotion/rendering'
+import { createText } from 'definedmotion/rendering'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
+
+const applyOpacity = <T extends THREE.Object3D>(
+  object: T,
+  opacity: number,
+  enableTransparency = true,
+  hideWhenZero = true
+): T => {
+  const visible = opacity > 0.001
+  if (hideWhenZero) object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (enableTransparency) current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+  return object
+}
 
 export default defineScene({
   id: 'functions',
@@ -93,8 +104,14 @@ const morphAnimation = (
   vecFunc2: [number, number][],
   duration: number = 500
 ) => {
-  return createAnim(easeInOutQuad(0, 1, duration), (value) => {
-    line.setPoints(interpolate(vecFunc1, vecFunc2, value))
+  return createAnimation({
+    duration: duration / 1000,
+    easing: 'ease-in-out',
+    bind: () => ({
+      update({ easedProgress }) {
+        line.setPoints(interpolate(vecFunc1, vecFunc2, easedProgress))
+      }
+    })
   })
 }
 export function animatedFunctionsScene(): AnimatedScene {
@@ -126,16 +143,16 @@ export function animatedFunctionsScene(): AnimatedScene {
       scene.camera.position.set(0, 0, 10)
       const informationTextNode = scene.expose(
         'scaling-note',
-        await createFastText('Some of the functions are scaled.', 0.6),
+        await createText({ text: 'Some of the functions are scaled.', fontSize: 0.6 }),
         {
           description: 'Supporting note shown above the current function name',
           tags: ['text', 'supporting-copy']
         }
       )
       informationTextNode.position.y = 13.5
-      setOpacity(informationTextNode, 0.4)
+      applyOpacity(informationTextNode, 0.4)
       scene.add(informationTextNode)
-      const textNode = scene.expose('function-name', await createFastText('', 1.5), {
+      const textNode = scene.expose('function-name', await createText({ text: '', fontSize: 1.5 }), {
         description: 'The name of the function currently represented by the plot',
         tags: ['text', 'title', 'dynamic']
       })
@@ -154,34 +171,31 @@ export function animatedFunctionsScene(): AnimatedScene {
       scene.camera.quaternion.set(-0.07633829, 0.3762715, 0.03112576, 0.9228345)
       scene.camera.zoom = 0.8
 
-      const moveAnimation = moveCameraAnimation3D(
-        scene.camera,
-        scene.camera.position.clone(),
-        new THREE.Vector3(-9.625222, 4.32878, 29.57185),
-        2500
-      )
+      const cameraStart = scene.camera.position.clone()
+      const cameraEnd = new THREE.Vector3(-9.625222, 4.32878, 29.57185)
 
       scene.onEachTick(() => {
         scene.camera.lookAt(0, 0, -2)
       })
 
-      scene.addSequentialBackgroundAnims(
-        ...Array(20)
-          .fill(0)
-          .flatMap(() => [moveAnimation, moveAnimation.copy().reverse()])
-      )
+      const resumeAt = scene.getTimelinePointer()
+      for (let index = 0; index < 20; index++) {
+        scene.addAnims(camera.moveTo(scene.camera, cameraEnd, { duration: 2.5 }))
+        scene.addAnims(camera.moveTo(scene.camera, cameraStart, { duration: 2.5 }))
+      }
+      scene.setTimelinePointer(resumeAt)
 
       for (let i = 0; i < vecFuncs.length - 1; i++) {
         // scene.playAudio(fadeSound, 0.03)
 
-        scene.addSequentialBackgroundAnims(
-          morphAnimation(plotLine, vecFuncs[i], vecFuncs[i + 1], 300)
-        )
-        scene.addAnims(fadeOut(textNode, 150))
+        const morphStart = scene.getTimelinePointer()
+        scene.addAnims(morphAnimation(plotLine, vecFuncs[i], vecFuncs[i + 1], 300))
+        scene.setTimelinePointer(morphStart)
+        scene.addAnims(fadeOut(textNode, { duration: 0.15 }))
         scene.do(async () => {
-          await updateText(textNode, functions[i + 1][0])
+          await textNode.setText(functions[i + 1][0])
         })
-        scene.addAnims(fadeIn(textNode, 150))
+        scene.addAnims(fadeIn(textNode, { duration: 0.15 }))
         scene.addAnims(wait((800) / 1000))
       }
 

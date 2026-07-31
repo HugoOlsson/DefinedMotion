@@ -1,5 +1,4 @@
 import { captureCanvasFrame, triggerEncoder } from '../animation/captureCanvas'
-import { type DependencyUpdater, type UserAnimation } from '../animation/protocols'
 import { AnimationTimeline } from '../animation/timeline'
 import { SceneTimeline } from '../animation/beats'
 import {
@@ -80,9 +79,6 @@ export const renderSkip = definedMotionConfig.renderEveryNthFrame
 // Convert ticks (frames) to milliseconds
 export const ticksToMillis = (ticks: number) => (ticks / timelineFPS) * 1000
 
-// Convert milliseconds to the closest whole number of ticks
-export const millisToTicks = (ms: number) => Math.ceil((ms / 1000) * timelineFPS)
-
 export const renderOutputFps = () => timelineFPS / renderSkip
 
 export interface RenderVideoOptions {
@@ -128,6 +124,7 @@ export type {
 } from '../animation/beats'
 
 type SceneInstruction = (tick: number) => any
+type DependencyUpdater = (sceneTick: number, time: number) => any
 
 export let globalContainerRef: HTMLElement
 let globalInteractiveMode = true
@@ -508,31 +505,8 @@ export class AnimatedScene {
     return this.cameraRegistry.size
   }
 
-  addAnims(...animations: (AnimationPlan | UserAnimation)[]) {
+  addAnims(...animations: AnimationPlan[]) {
     this.animationTimeline.add(...animations)
-  }
-
-  insertAnimsAt(tick: number, ...animations: UserAnimation[]) {
-    this.animationTimeline.insertLegacyAt(tick, ...animations)
-  }
-
-  addDeferredAnims(...futureAnimations: (() => UserAnimation)[]) {
-    // Execute once during planning just to get durations
-    const tempAnims = futureAnimations.map(fn => fn())
-    const longest = Math.max(...tempAnims.map((a) => a.interpolation.length))
-    
-    this.do((tick) => {
-      const calculatedAnimations: UserAnimation[] = []
-      for (const futureAnimation of futureAnimations) {
-        calculatedAnimations.push(futureAnimation()) // Execute again at runtime
-      }
-      this.insertAnimsAt(tick, ...calculatedAnimations)
-    })
-    this.animationTimeline.reservePointerAdvance(longest)
-  }
-
-  addSequentialBackgroundAnims(...sequentialAnimations: UserAnimation[]) {
-    this.animationTimeline.addSequentialLegacy(...sequentialAnimations)
   }
 
   onEachTick(updater: DependencyUpdater) {

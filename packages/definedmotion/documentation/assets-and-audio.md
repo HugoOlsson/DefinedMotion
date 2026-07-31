@@ -10,6 +10,6 @@ scene.playAudio(narration, 0.8)
 
 Asset paths are relative, use forward slashes, and cannot contain parent traversal, queries, or fragments. `SceneAsset` can also return a response, text, JSON, blob, or array buffer.
 
-Register audio during build before scheduling playback. Audio events use the same global frame timeline and are reconstructed on seek. Media helpers under `definedmotion/media` integrate video with exact and real-time frame preparation.
+Register audio during build before scheduling playback. Audio events use the same global frame timeline and are reconstructed on seek. Media helpers under `definedmotion/media` integrate video with exact and real-time frame preparation. `video.play(durationSeconds, options)` returns an ordinary linear `AnimationPlan`; source offsets remain milliseconds because they address positions inside the media file.
 
 Reference examples use `referenceAsset()`; library-owned fonts and environments use `packageAsset()`. Consumer scenes normally use `scene.asset()`.

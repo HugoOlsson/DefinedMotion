@@ -2,8 +2,14 @@ import * as THREE from 'three'
 import { queryLaTeXClass } from '../svg/latexSVGQueries'
 import { latexVisualController } from '../visuals/latexInternal'
 import type { LatexPart, LatexVisual } from '../visuals/types'
-import { latexHighlightAnim, latexMarkAnim } from './latexMarkAndHighlight'
-import { latexParticleTransitionAnim, latexWriteAnim } from './latexTransitionsAndWrite'
+import {
+  createLatexHighlightController,
+  createLatexMarkController
+} from './latexMarkAndHighlight'
+import {
+  createLatexParticleTransitionController,
+  createLatexWriteController
+} from './latexTransitionsAndWrite'
 import type { AnimationPlan, Easing } from './plan'
 
 export type LatexEffectTarget = LatexVisual | LatexPart
@@ -68,7 +74,7 @@ const assertPartExists = (target: LatexEffectTarget): void => {
   }
 }
 
-const legacyPlan = (
+const controllerPlan = (
   duration: number,
   easing: Easing | undefined,
   bindLegacy: () => { updater(progress: number, frame: number, isLast: boolean): unknown }
@@ -231,10 +237,9 @@ const firstColor = (object: THREE.Object3D): THREE.Color => {
 
 export const mark = (target: LatexEffectTarget, options: LatexMarkOptions = {}): AnimationPlan => {
   const visual = targetVisual(target)
-  return legacyPlan(options.duration ?? 2, options.easing, () => {
+  return controllerPlan(options.duration ?? 2, options.easing, () => {
     assertPartExists(target)
-    return latexMarkAnim(visual, targetClass(target), {
-      durationMs: (options.duration ?? 2) * 1000,
+    return createLatexMarkController(visual, targetClass(target), {
       color: options.color,
       padding: options.padding,
       pulses: options.pulses,
@@ -249,10 +254,9 @@ export const highlight = (
   options: LatexHighlightOptions = {}
 ): AnimationPlan => {
   const visual = targetVisual(target)
-  return legacyPlan(options.duration ?? 1, options.easing, () => {
+  return controllerPlan(options.duration ?? 1, options.easing, () => {
     assertPartExists(target)
-    return latexHighlightAnim(visual, targetClass(target), {
-      durationMs: (options.duration ?? 1) * 1000,
+    return createLatexHighlightController(visual, targetClass(target), {
       highlightColor: options.color,
       pulses: options.pulses,
       minMix: options.minMix,
@@ -262,9 +266,8 @@ export const highlight = (
 }
 
 export const write = (visual: LatexVisual, options: LatexWriteOptions = {}): AnimationPlan =>
-  legacyPlan(options.duration ?? 1, options.easing, () =>
-    latexWriteAnim(visual, {
-      durationMs: (options.duration ?? 1) * 1000,
+  controllerPlan(options.duration ?? 1, options.easing, () =>
+    createLatexWriteController(visual, {
       direction: options.direction,
       penWidth: options.penWidth
     })()
@@ -275,9 +278,8 @@ export const particleTransition = (
   to: LatexVisual,
   options: LatexParticleTransitionOptions = {}
 ): AnimationPlan =>
-  legacyPlan(options.duration ?? 1, options.easing, () =>
-    latexParticleTransitionAnim(from, to, {
-      durationMs: (options.duration ?? 1) * 1000,
+  controllerPlan(options.duration ?? 1, options.easing, () =>
+    createLatexParticleTransitionController(from, to, {
       particleCount: options.particleCount
     })()
   )

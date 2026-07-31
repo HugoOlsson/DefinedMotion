@@ -1,7 +1,22 @@
 import * as THREE from 'three'
-import { UserAnimation } from './protocols'
-import { easeInOutQuad } from './interpolations'
-import { setOpacity } from './animations'
+
+interface ProgressUpdater {
+  updater(progress: number, frame?: number, isLast?: boolean): void
+}
+
+const setOpacity = (object: THREE.Object3D, opacity: number): void => {
+  const visible = opacity > 0.001
+  object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] })
+      .material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+}
 
 /** Simple deterministic pseudo-random in [0,1) from an integer seed. */
 function rand01(seed: number): number {
@@ -247,22 +262,15 @@ function pickColorFromGroup(group: THREE.Group): THREE.Color {
 }
 
 /**
- * DEFERRED VERSION
- *
- * Returns a factory () => UserAnimation so you can use:
- *
- *   dm.addDeferredAnims(
- *     latexParticleTransitionAnim(groupA, groupB, { durationMs: 1500, particleCount: 3000 })
- *   )
- *
- * No scene side-effects happen until the animation's updater runs.
+ * Creates a late-bound progress controller used by the public LaTeX effect plan.
+ * No scene side-effects happen until its updater runs.
  */
-export function latexParticleTransitionAnim(
+export function createLatexParticleTransitionController(
   fromGroup: THREE.Group,
   toGroup: THREE.Group,
-  cfg: { durationMs?: number; particleCount?: number } = {}
-): () => UserAnimation {
-  const { durationMs = 1000, particleCount = 2500 } = cfg
+  cfg: { particleCount?: number } = {}
+): () => ProgressUpdater {
+  const { particleCount = 2500 } = cfg
 
   return () => {
     // Surface-sampled positions for both formulas (runtime, after layout)
@@ -270,10 +278,8 @@ export function latexParticleTransitionAnim(
     let endPositions   = buildSurfaceSamples(toGroup,   particleCount)
 
     if (startPositions.length === 0 || endPositions.length === 0) {
-      const I = easeInOutQuad(0, 1, durationMs)
-      return new UserAnimation(
-        I,
-        (t: number, _tick?: number, isLast?: boolean) => {
+      return {
+        updater(t: number, _tick?: number, isLast?: boolean) {
           setOpacity(fromGroup, 1 - t)
           setOpacity(toGroup, t)
           if (isLast) {
@@ -281,7 +287,7 @@ export function latexParticleTransitionAnim(
             setOpacity(toGroup, 1)
           }
         }
-      )
+      }
     }
 
     // Spatially sort both sets so index i ↔ i is a "nearby" mapping
@@ -317,14 +323,11 @@ export function latexParticleTransitionAnim(
 
     const phase1End = 0.15
     const phase2End = 0.85
-    const interpolation = easeInOutQuad(0, 1, durationMs)
-
-    // Lazy init so the "planning" call in addDeferredAnims doesn't touch the scene
+    // Scene attachment remains lazy until the scheduled occurrence starts.
     let initialized = false
 
-    return new UserAnimation(
-      interpolation,
-      (t: number, _tick?: number, isLast?: boolean) => {
+    return {
+      updater(t: number, _tick?: number, isLast?: boolean) {
         // One-time scene setup, only on first actual tick
         if (!initialized) {
           if (parent) parent.add(particles)
@@ -370,7 +373,7 @@ export function latexParticleTransitionAnim(
           material.dispose()
         }
       }
-    )
+    }
   }
 }
 
@@ -387,27 +390,16 @@ type GlyphEntry = {
 };
 
 /**
- * Deferred "Write" animation for a LaTeX SVG group.
- *
- * Usage:
- *   dm.addDeferredAnims(
- *     latexWriteAnim(latexGroup, {
- *       durationMs: 1200,
- *       direction: 'ltr',   // or 'rtl'
- *       penWidth: 0.18      // relative brush width (0.0–1.0-ish)
- *     })
- *   );
+ * Late-bound write controller for a LaTeX SVG group.
  */
-export function latexWriteAnim(
+export function createLatexWriteController(
   targetGroup: THREE.Group,
   cfg: {
-    durationMs?: number;
     direction?: 'ltr' | 'rtl';
     penWidth?: number; // relative width of the "pen" over [minX,maxX]
   } = {}
-): () => UserAnimation {
+): () => ProgressUpdater {
   const {
-    durationMs = 1000,
     direction = 'ltr',
     penWidth = 0.15,
   } = cfg;
@@ -465,14 +457,12 @@ export function latexWriteAnim(
 
     // Degenerate fallback: simple fade-in
     if (!glyphs.length || !isFinite(minX) || !isFinite(maxX)) {
-      const I = easeInOutQuad(0, 1, durationMs);
-      return new UserAnimation(
-        I,
-        (t: number, _tick?: number, isLast?: boolean) => {
+      return {
+        updater(t: number, _tick?: number, isLast?: boolean) {
           setOpacity(targetGroup, t);
           if (isLast) setOpacity(targetGroup, 1);
         }
-      );
+      };
     }
 
     const span = Math.max(maxX - minX, 1e-6);
@@ -503,12 +493,10 @@ export function latexWriteAnim(
       }
     };
 
-    const interpolation = easeInOutQuad(0, 1, durationMs);
     let initialized = false;
 
-    return new UserAnimation(
-      interpolation,
-      (t: number, _tick?: number, isLast?: boolean) => {
+    return {
+      updater(t: number, _tick?: number, isLast?: boolean) {
         if (!initialized) {
           hideAllGlyphs();
           initialized = true;
@@ -553,6 +541,6 @@ export function latexWriteAnim(
           restoreAllGlyphs();
         }
       }
-    );
+    };
   };
 }

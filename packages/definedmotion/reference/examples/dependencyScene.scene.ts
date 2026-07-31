@@ -1,7 +1,6 @@
 import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
-import { setOpacity } from 'definedmotion/animation'
 import { hexColor } from 'definedmotion/rendering'
 import {
   addBackgroundGradient,
@@ -10,6 +9,25 @@ import { createLine } from 'definedmotion/rendering'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 
+
+const applyOpacity = <T extends THREE.Object3D>(
+  object: T,
+  opacity: number,
+  enableTransparency = true,
+  hideWhenZero = true
+): T => {
+  const visible = opacity > 0.001
+  if (hideWhenZero) object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (enableTransparency) current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+  return object
+}
 
 export default defineScene({
   id: 'dependency',
@@ -50,7 +68,7 @@ export function dependencyScene(): AnimatedScene {
             sphere: new THREE.Mesh(geometry, material),
             lines: Array(numberOfSpheres - 1)
               .fill(0)
-              .map((_) => setOpacity(createLine(), 0.1))
+              .map((_) => applyOpacity(createLine(), 0.1))
           }
         })
 

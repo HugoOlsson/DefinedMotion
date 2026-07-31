@@ -1,17 +1,35 @@
 import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
-import { createFastText, createLine, PaddedLine } from 'definedmotion/rendering'
+import { createText, createLine, PaddedLine } from 'definedmotion/rendering'
 
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 import { addBackgroundGradient } from 'definedmotion/rendering'
 import { COLORS } from 'definedmotion/rendering'
-import { fade, setOpacity, zoomOut } from 'definedmotion/animation'
 import { linspace } from 'definedmotion/math'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
 
 
+
+const applyOpacity = <T extends THREE.Object3D>(
+  object: T,
+  opacity: number,
+  enableTransparency = true,
+  hideWhenZero = true
+): T => {
+  const visible = opacity > 0.001
+  if (hideWhenZero) object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (enableTransparency) current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+  return object
+}
 
 export default defineScene({
   id: 'fourier-series',
@@ -104,6 +122,10 @@ interface RelationGroup {
   relation: Relation
   latexText: THREE.Group
   opacity: number
+  fromOpacity: number
+  targetOpacity: number
+  fromLatexScale: number
+  targetLatexScale: number
 }
 
 const N = 20
@@ -300,7 +322,7 @@ export function fourierSeriesScene(): AnimatedScene {
           connectionLines.push(line)
         }
 
-        /* const fourierTextNode = await createFastText(relation.name, 1)
+        /* const fourierTextNode = await createText(relation.name, 1)
       fourierTextNode.position.y = 13
 
       topGroup.add(fourierTextNode) */
@@ -323,7 +345,11 @@ export function fourierSeriesScene(): AnimatedScene {
           topGroup,
           relation,
           latexText: svgImage,
-          opacity: 1
+          opacity: 1,
+          fromOpacity: 1,
+          targetOpacity: 1,
+          fromLatexScale: 1,
+          targetLatexScale: 1
         })
       }
 
@@ -334,14 +360,14 @@ export function fourierSeriesScene(): AnimatedScene {
 
       const textsGroup = new THREE.Group()
 
-      const fourierTextNode = await createFastText('Fourier Series', 3)
+      const fourierTextNode = await createText({ text: 'Fourier Series', fontSize: 3 })
       fourierTextNode.position.y = 3
 
       textsGroup.add(fourierTextNode)
 
-      const textNode = await createFastText('Sawtooth Wave', 1.8)
+      const textNode = await createText({ text: 'Sawtooth Wave', fontSize: 1.8 })
       textNode.position.y = 0
-      setOpacity(textNode, 0.4)
+      applyOpacity(textNode, 0.4)
       textsGroup.add(textNode)
 
       textsGroup.position.y = 20
@@ -375,7 +401,8 @@ export function fourierSeriesScene(): AnimatedScene {
 
             if (mode2 === 2) {
               for (let i = 0; i < relationGroups.length; i++) {
-                scene.insertAnimsAt(tick, zoomOut(relationGroups[i].latexText, 200))
+                relationGroups[i].fromLatexScale = relationGroups[i].latexText.scale.x
+                relationGroups[i].targetLatexScale = 0
               }
             }
           }
@@ -383,20 +410,26 @@ export function fourierSeriesScene(): AnimatedScene {
           lastTransition = time
 
           for (let i = 0; i < relationGroups.length; i++) {
-            if (i !== Number(mode)) {
-              scene.insertAnimsAt(
-                tick,
-                fade(relationGroups[i].group, 200, relationGroups[i].opacity, 0.1)
-              )
-              relationGroups[i].opacity = 0.1
-            } else {
-              scene.insertAnimsAt(
-                tick,
-                fade(relationGroups[i].group, 200, relationGroups[i].opacity, 1)
-              )
-              relationGroups[i].opacity = 1
-            }
+            relationGroups[i].fromOpacity = relationGroups[i].opacity
+            relationGroups[i].targetOpacity = i === Number(mode) ? 1 : 0.1
           }
+        }
+
+        const linearTransition = THREE.MathUtils.clamp((time - lastTransition) / 200, 0, 1)
+        const transition = linearTransition * linearTransition * (3 - 2 * linearTransition)
+        for (const relationGroup of relationGroups) {
+          relationGroup.opacity = THREE.MathUtils.lerp(
+            relationGroup.fromOpacity,
+            relationGroup.targetOpacity,
+            transition
+          )
+          applyOpacity(relationGroup.group, relationGroup.opacity, true, false)
+          const latexScale = THREE.MathUtils.lerp(
+            relationGroup.fromLatexScale,
+            relationGroup.targetLatexScale,
+            transition
+          )
+          relationGroup.latexText.scale.setScalar(latexScale)
         }
 
         for (const relationGroup of relationGroups) {

@@ -48,7 +48,7 @@ export function createManyVideoPlanesTest(): AnimatedScene {
       scene.add(...videos)
       scene.addAnims(
         ...videos.map((video, index) =>
-          video.play(11_000, {
+          video.play(11, {
             sourceStartMs: (index % COLUMNS) * 750,
             loop: true
           })

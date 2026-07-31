@@ -16,10 +16,28 @@ import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import {
   addBackgroundGradient,
 } from 'definedmotion/rendering'
-import { setOpacity } from 'definedmotion/animation'
 import { createLine } from 'definedmotion/rendering'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 
+
+const applyOpacity = <T extends THREE.Object3D>(
+  object: T,
+  opacity: number,
+  enableTransparency = true,
+  hideWhenZero = true
+): T => {
+  const visible = opacity > 0.001
+  if (hideWhenZero) object.visible = visible
+  object.traverse((child) => {
+    const material = (child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (enableTransparency) current.transparent = true
+      current.opacity = opacity
+      current.depthWrite = visible
+    }
+  })
+  return object
+}
 
 export default defineScene({
   id: 'tutorial-medium-1',
@@ -91,7 +109,7 @@ export function tutorial_medium1(): AnimatedScene {
       // We connect each node i to node (i+1) to visualize a simple dependency.
       // ───────────────────────────────────────────────────────────────────────
       const nodes: Node[] = Array.from({ length: NODE_COUNT }, createNode)
-      const lines = nodes.map(() => setOpacity(createLine(), 0.12)) // faint lines
+      const lines = nodes.map(() => applyOpacity(createLine(), 0.12)) // faint lines
 
       scene.add(...nodes.map((n) => n.mesh), ...lines)
 

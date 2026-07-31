@@ -1,9 +1,10 @@
-export * from '../runtime/animation/animations'
+export { camera } from '../runtime/animation/cameraEffects'
+export type {
+  AnimatedCamera,
+  CameraFrameOptions,
+  CameraPose
+} from '../runtime/animation/cameraEffects'
 export * from '../runtime/animation/effects'
-export * from '../runtime/animation/interpolations'
-export * from '../runtime/animation/latexMarkAndHighlight'
-export * from '../runtime/animation/latexTransitionsAndWrite'
-export * from '../runtime/animation/protocols'
 export type {
   AnimationPlan,
   AnimationStartContext,

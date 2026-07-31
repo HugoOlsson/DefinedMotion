@@ -37,11 +37,6 @@ const compileModules = async () => {
     join(sceneDirectory, 'sceneErrors.mjs'),
     await transpile(join(sourceRoot, 'scene/sceneErrors.ts'))
   )
-  await writeFile(
-    join(animationDirectory, 'legacy-animations.mjs'),
-    'export const fade = () => { throw new Error("legacy fade was not expected") }\n'
-  )
-
   const planOutput = (await transpile(join(sourceRoot, 'animation/plan.ts'))).replace(
     '../scene/sceneErrors',
     '../scene/sceneErrors.mjs'
@@ -55,15 +50,20 @@ const compileModules = async () => {
 
   const effectsOutput = (await transpile(join(sourceRoot, 'animation/effects.ts')))
     .replace('./plan', './plan.mjs')
-    .replace('./animations', './legacy-animations.mjs')
     .replace('../scene/sceneErrors', '../scene/sceneErrors.mjs')
   await writeFile(join(animationDirectory, 'effects.mjs'), effectsOutput)
 
-  const [effectsModule, timelineModule] = await Promise.all([
+  const cameraEffectsOutput = (await transpile(join(sourceRoot, 'animation/cameraEffects.ts')))
+    .replace('./effects', './effects.mjs')
+    .replace('../scene/sceneErrors', '../scene/sceneErrors.mjs')
+  await writeFile(join(animationDirectory, 'cameraEffects.mjs'), cameraEffectsOutput)
+
+  const [effectsModule, cameraEffectsModule, timelineModule] = await Promise.all([
     import(pathToFileURL(join(animationDirectory, 'effects.mjs')).href),
+    import(pathToFileURL(join(animationDirectory, 'cameraEffects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'timeline.mjs')).href)
   ])
-  return { ...effectsModule, ...timelineModule }
+  return { ...effectsModule, ...cameraEffectsModule, ...timelineModule }
 }
 
 const approximately = (actual, expected, message) => {
@@ -73,6 +73,7 @@ const approximately = (actual, expected, message) => {
 try {
   const {
     AnimationTimeline,
+    camera,
     createAnimation,
     fadeIn,
     fadeOut,
@@ -85,6 +86,46 @@ try {
     scaleTo,
     wait
   } = await compileModules()
+
+  // EFFECT-10: camera plans share late binding and update projection-specific zoom.
+  {
+    const timeline = new AnimationTimeline(2)
+    const cameraObject = new THREE.PerspectiveCamera(75, 1, 0.1, 100)
+    const pose = {
+      position: new THREE.Vector3(2, 3, 4),
+      rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.5, 0))
+    }
+    timeline.add(
+      camera.moveToPose(cameraObject, pose, { duration: 1, easing: 'linear' }),
+      camera.zoomTo(cameraObject, 40, { duration: 1, easing: 'linear' })
+    )
+    pose.position.x = 6
+    await timeline.runFrame(0)
+    await timeline.runFrame(1)
+    assert.deepEqual(cameraObject.position.toArray(), [6, 3, 4])
+    approximately(cameraObject.quaternion.angleTo(pose.rotation), 0, 'camera pose rotation')
+    assert.equal(cameraObject.fov, 40)
+
+    const framingTimeline = new AnimationTimeline(2)
+    const framingCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 100)
+    framingCamera.position.set(0, 0, 10)
+    framingCamera.lookAt(0, 0, 0)
+    framingCamera.updateMatrixWorld(true)
+    const framingTarget = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2))
+    framingTarget.position.set(4, 1, 0)
+    framingTarget.updateMatrixWorld(true)
+    framingTimeline.add(
+      camera.frame(framingCamera, framingTarget, { duration: 1, easing: 'linear', padding: 1 })
+    )
+    await framingTimeline.runFrame(0)
+    await framingTimeline.runFrame(1)
+    const targetCenter = new THREE.Box3()
+      .setFromObject(framingTarget)
+      .getCenter(new THREE.Vector3())
+    const cameraDirection = framingCamera.getWorldDirection(new THREE.Vector3())
+    const directionToTarget = targetCenter.clone().sub(framingCamera.position).normalize()
+    assert.ok(cameraDirection.distanceTo(directionToTarget) < 1e-9)
+  }
 
   // EFFECT-01: fadeOut hides the root and restores authored material state.
   {

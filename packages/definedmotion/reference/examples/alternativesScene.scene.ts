@@ -1,10 +1,8 @@
 import { defineScene } from 'definedmotion'
-import { easeLinear } from 'definedmotion/animation'
-import { createAnim } from 'definedmotion/animation'
+import { wait } from 'definedmotion/animation'
 import {
-  createFastText,
-  createRectangle,
-  updateText
+  createText,
+  createRectangle
 } from 'definedmotion/rendering'
 import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
@@ -74,29 +72,21 @@ export function alternativesScene(): AnimatedScene {
         description: 'Full-frame color field behind the current course name',
         tags: ['background', 'dynamic-color']
       })
-      const textElement = scene.expose('course-name', await createFastText('', 1.5), {
+      const textElement = scene.expose('course-name', await createText({ text: '', fontSize: 1.5 }), {
         description: 'The course name currently shown in the center of the frame',
         tags: ['text', 'primary-subject', 'dynamic']
       })
       scene.add(background, textElement)
       scene.registerAudio(tickSound)
 
-      let lastIndex
-      const switchAnimation = createAnim(
-        easeLinear(0, 1, alternatives.length * 300),
-        async (value) => {
-          const index = Math.floor(value * alternatives.length)
-
-          if (index !== lastIndex) {
-            lastIndex = index
-            background.material.color = new THREE.Color(slideColors[index % slideColors.length])
-            await updateText(textElement, alternatives[index % alternatives.length])
-            scene.playAudio(tickSound)
-          }
-        }
-      )
-
-      scene.addAnims(switchAnimation)
+      for (let index = 0; index < alternatives.length; index++) {
+        scene.do(async () => {
+          background.material.color = new THREE.Color(slideColors[index % slideColors.length])
+          await textElement.setText(alternatives[index])
+          scene.playAudio(tickSound)
+        })
+        scene.addAnims(wait(0.3))
+      }
     }
   )
 }
