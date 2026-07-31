@@ -1,4 +1,5 @@
 export * from '../runtime/animation/animations'
+export * from '../runtime/animation/effects'
 export * from '../runtime/animation/interpolations'
 export * from '../runtime/animation/latexMarkAndHighlight'
 export * from '../runtime/animation/latexTransitionsAndWrite'

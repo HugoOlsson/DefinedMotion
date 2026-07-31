@@ -63,6 +63,10 @@ moveTo(object, position, options?: TransformAnimationOptions)
 rotateTo(object, rotation, options?: TransformAnimationOptions)
 ```
 
+The default duration is `0.5` seconds and the default easing is `"ease-in-out"`. `scaleIn` starts at uniform scale `0`; `scaleOut` ends at uniform scale `0`. Their `from` and `to` options accept either a uniform number or an explicit 3D scale. Transform helpers expose an optional `from` value when runtime capture is not wanted.
+
+Opacity targets must be finite values from `0` through `1`. Opacity effects clamp eased overshoot to that range; transform and scale effects preserve easing overshoot.
+
 ```ts
 moveTo(card, target, {
   duration: 0.6,
@@ -176,3 +180,17 @@ The primary API replaces or demotes:
 Generic reversal, interpolation-array manipulation, and rescaling of already-created animation objects are not required parts of the new API.
 
 The primary animation documentation presents the complete core set on one short page. Camera, LaTeX, and custom animation are separate sections. A new helper enters the core set only when it is broadly reusable, cannot be expressed clearly through composition, and satisfies the same quality contract.
+
+## Acceptance suite
+
+- `EFFECT-01`: fades temporarily enable transparency without cloning materials or changing `depthWrite`, then restore authored state.
+- `EFFECT-02`: `fadeOut` followed by `fadeIn` works without state shared between calls.
+- `EFFECT-03`: one-frame entrance and exit effects apply only their exact final state.
+- `EFFECT-04`: `opacityTo` changes opacity/transparency but not root visibility.
+- `EFFECT-05`: scale helpers bind runtime scale and modify scale only.
+- `EFFECT-06`: local transform targets and optional starting values bind at runtime.
+- `EFFECT-07`: world transform targets convert through the parent once at bind time.
+- `EFFECT-08`: `matchTransform` reproduces a world pose and rejects poses requiring shear.
+- `EFFECT-09`: `wait` and `createAnimation` remain ordinary runtime-bound plans.
+
+Targeted command: `npm run test:core-effects --workspace definedmotion`.

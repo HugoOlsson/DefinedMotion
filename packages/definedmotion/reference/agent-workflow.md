@@ -509,6 +509,26 @@ scene.addAnims(foregroundEnter)
 
 `setTimelinePointer()` affects only subsequently scheduled work. Use `scene.secondsToFrames()` or `scene.millisecondsToFrames()` only when an API explicitly requires a frame position; ordinary animation durations remain seconds.
 
+### Using the core effects
+
+Import the small canonical set from `definedmotion/animation`:
+
+```ts
+scene.addAnims(
+  fadeIn(card, { duration: 0.4 }),
+  scaleIn(card, { duration: 0.4, from: 0.8 })
+)
+
+scene.addAnims(
+  moveTo(card, targetPosition, { duration: 0.6, space: 'world' }),
+  rotateTo(card, targetRotation, { duration: 0.6, space: 'world' })
+)
+```
+
+The default duration is `0.5` seconds and the default easing is `ease-in-out`. `fadeIn`, `fadeOut`, `opacityTo`, `scaleIn`, `scaleOut`, `scaleTo`, `moveTo`, `rotateTo`, `matchTransform`, `wait`, and `createAnimation` all return ordinary `AnimationPlan`s. Mutable transform targets are read when the plan binds.
+
+Fades temporarily mutate the existing materials in the object's subtree. They never clone or replace materials and never modify `depthWrite`; consequently, other objects sharing those materials also show the temporary fade. Authored opacity and transparency are restored at the completed fade endpoint.
+
 ### Authoring named timeline beats
 
 Define frame ranges once, then author each range through `scene.timeline.beat()`. Beats use the same global scheduler; they only provide a temporary start pointer and local runtime coordinates.

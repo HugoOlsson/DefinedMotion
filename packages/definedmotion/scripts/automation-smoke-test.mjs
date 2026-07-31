@@ -53,8 +53,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 67) {
-    throw new Error(`Expected 67 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 68) {
+    throw new Error(`Expected 68 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -266,6 +266,24 @@ try {
     beatObject(beatEnd)?.text !== 'hold:14:1.00'
   ) {
     throw new Error('Timeline beat placement, progress, duration, or inspection was incorrect')
+  }
+
+  const effectsOut = run(['inspect', 'test-core-effects', '--frame', '29', '--no-build'])
+  const effectsIn = run(['inspect', 'test-core-effects', '--frame', '59', '--no-build'])
+  const effectsMatch = run(['inspect', 'test-core-effects', '--frame', '89', '--no-build'])
+  const effectObject = (result, id) => result.objects.find((object) => object.id === id)
+  if (
+    effectsMatch.sceneInfo.durationInFrames !== 105 ||
+    effectObject(effectsOut, 'core-fade')?.visible !== false ||
+    effectObject(effectsOut, 'core-scale')?.text !== 'scale=0.000' ||
+    effectObject(effectsOut, 'core-move')?.text !== 'x=-4.000' ||
+    effectObject(effectsIn, 'core-fade')?.visible !== true ||
+    effectObject(effectsIn, 'core-scale')?.text !== 'scale=1.000' ||
+    effectObject(effectsIn, 'core-move')?.text !== 'x=-12.000' ||
+    effectObject(effectsMatch, 'core-match')?.text !== 'x=10.000' ||
+    effectObject(effectsMatch, 'core-reference')?.text !== 'x=10.000'
+  ) {
+    throw new Error('Core effect endpoints, visibility lifecycle, or runtime binding was incorrect')
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')

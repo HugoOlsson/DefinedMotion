@@ -30,6 +30,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-chart-layout-positioning | test | Positioning: Responsive Chart Layout | `tests/positioning/test_chart_layout_positioning.scene.ts` |
 | test-colored-latex-to-svg | test | Colored LaTeX To SVG | `tests/svg/test_colored_latex_to_svg.scene.ts` |
 | test-complex-latex-to-svg | test | Complex LaTeX To SVG | `tests/svg/test_complex_latex_to_svg.scene.ts` |
+| test-core-effects | test | Core Animation Effects Contract | `tests/animation/test_core_effects.scene.ts` |
 | test-deferred-anims | test | Deferred Animations | `tests/deferred/testing_deferredAnims.scene.ts` |
 | test-deferred-anims-2 | test | Deferred Anims2 | `tests/deferred/testing_deferredAnims2.scene.ts` |
 | test-dynamic-bounds-positioning | test | Positioning: Dynamic Bounds and Shape Changes | `tests/positioning/test_dynamic_bounds_positioning.scene.ts` |

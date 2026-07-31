@@ -96,11 +96,6 @@ export const fadeInTowardsEnd = (object: THREE.Object3D, duration: number = 800)
   )
 }
 
-export const fadeIn = (object: THREE.Object3D, duration: number = 800) => fade(object, duration)
-
-export const fadeOut = (object: THREE.Object3D, duration: number = 800) =>
-  fade(object, duration).reverse()
-
 export const zoomIn = (
   object: THREE.Object3D,
   duration: number = 800,

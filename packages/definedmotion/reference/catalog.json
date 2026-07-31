@@ -146,6 +146,12 @@
       "source": "tests/svg/test_complex_latex_to_svg.scene.ts"
     },
     {
+      "id": "test-core-effects",
+      "name": "Core Animation Effects Contract",
+      "kind": "test",
+      "source": "tests/animation/test_core_effects.scene.ts"
+    },
+    {
       "id": "test-deferred-anims",
       "name": "Deferred Animations",
       "kind": "test",
