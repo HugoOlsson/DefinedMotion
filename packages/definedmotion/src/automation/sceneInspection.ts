@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type {
+  InspectBounds2D,
   InspectBounds3D,
   InspectCameraResult,
   InspectObjectResult,
@@ -67,7 +68,7 @@ const inspectObject = (
     id: exposed.id,
     type: object.type,
     ...(object.name ? { name: object.name } : {}),
-    ...textContent(object),
+    ...visualContent(object),
     ...(parentId ? { parentId } : {}),
     metadata: cloneMetadata(exposed.metadata),
     attached,
@@ -79,13 +80,34 @@ const inspectObject = (
     localTransform: localTransform(object),
     worldTransform: worldTransform(object),
     worldBounds,
+    ...localBounds(object),
     screenBounds: projected.bounds
   }
 }
 
-const textContent = (object: THREE.Object3D): { text?: string } => {
+const visualContent = (object: THREE.Object3D): { text?: string; latex?: string } => {
   const text = (object as THREE.Object3D & { text?: unknown }).text
-  return typeof text === 'string' ? { text } : {}
+  const latex = (object as THREE.Object3D & { latex?: unknown }).latex
+  return {
+    ...(typeof text === 'string' ? { text } : {}),
+    ...(typeof latex === 'string' ? { latex } : {})
+  }
+}
+
+const localBounds = (object: THREE.Object3D): { localBounds?: InspectBounds2D } => {
+  const measurable = object as THREE.Object3D & { getLocalBounds?: () => THREE.Box2 }
+  if (typeof measurable.getLocalBounds !== 'function') return {}
+  const bounds = measurable.getLocalBounds()
+  const size = bounds.getSize(new THREE.Vector2())
+  const center = bounds.getCenter(new THREE.Vector2())
+  return {
+    localBounds: {
+      min: [finite(bounds.min.x), finite(bounds.min.y)],
+      max: [finite(bounds.max.x), finite(bounds.max.y)],
+      size: [finite(size.x), finite(size.y)],
+      center: [finite(center.x), finite(center.y)]
+    }
+  }
 }
 
 export const inspectCamera = (

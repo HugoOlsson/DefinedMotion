@@ -59,6 +59,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-transition-svgs | test | Transition Svgs | `tests/svg/test_transition_svgs.scene.ts` |
 | test-update-svg-object | test | Update SVG Object | `tests/svg/test_update_svg_object.scene.ts` |
 | test-updater-1 | test | Updater1 | `tests/animation/test_updater.scene.ts` |
+| test-visual-primitives | test | Text and LaTeX Primitive Contract | `tests/rendering/test_visual_primitives.scene.ts` |
 | test-with-environment-latex-particle-transition | test | With Environment LaTeX Particle Transition | `tests/latex/test_with_environment_latex_particle_transition.scene.ts` |
 | test-write-latex-animation | test | Write LaTeX Animation | `tests/latex/test_write_latex_animation.scene.ts` |
 | test-write-latex-animation-2 | test | Write LaTeX Animation 2 | `tests/latex/test_write_latex_animation_2.scene.ts` |

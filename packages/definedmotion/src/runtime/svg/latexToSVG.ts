@@ -9,10 +9,15 @@ import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html'
 const adaptor = liteAdaptor()
 RegisterHTMLHandler(adaptor)
 
-const tex = new TeX({ packages: AllPackages,
+const tex = new TeX({ packages: AllPackages.filter(
+  (packageName) => packageName !== 'noerrors' && packageName !== 'noundefined'
+),
   macros: {
     // \dmClass{tag}{...} -> \class{dm-tag}{...}
     dmClass: ['{\\class{dm-#1}{#2}}', 2],
+  },
+  formatError: (_jax, error) => {
+    throw error
   },
  })
 const svgOut = new SVG({ fontCache: 'none' })

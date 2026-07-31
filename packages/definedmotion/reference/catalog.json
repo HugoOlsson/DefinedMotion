@@ -320,6 +320,12 @@
       "source": "tests/animation/test_updater.scene.ts"
     },
     {
+      "id": "test-visual-primitives",
+      "name": "Text and LaTeX Primitive Contract",
+      "kind": "test",
+      "source": "tests/rendering/test_visual_primitives.scene.ts"
+    },
+    {
       "id": "test-with-environment-latex-particle-transition",
       "name": "With Environment LaTeX Particle Transition",
       "kind": "test",

@@ -122,6 +122,13 @@ export interface InspectBounds3D {
   center: Vector3Tuple
 }
 
+export interface InspectBounds2D {
+  min: [number, number]
+  max: [number, number]
+  size: [number, number]
+  center: [number, number]
+}
+
 export interface InspectScreenBounds {
   x: number
   y: number
@@ -168,6 +175,7 @@ export interface InspectObjectResult {
   type: string
   name?: string
   text?: string
+  latex?: string
   parentId?: string
   metadata: InspectObjectMetadata
   attached: boolean
@@ -179,6 +187,7 @@ export interface InspectObjectResult {
   localTransform: InspectTransform
   worldTransform: InspectTransform
   worldBounds: InspectBounds3D | null
+  localBounds?: InspectBounds2D
   screenBounds: InspectScreenBounds | null
 }
 

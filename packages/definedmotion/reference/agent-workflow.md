@@ -77,12 +77,12 @@ Start broad with a timeline grid. Narrow the investigation with stills, inspecti
 | -------------------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
 | Find renderable scenes                       | `scenes`                    | Returns stable IDs and identifies the default scene and visual tests.       |
 | Avoid repeated Electron/WebGL startup        | `session start`             | Keeps the renderer environment warm across many requests.                   |
-| Export the complete animation                | `render`                    | Writes an MP4 and reports frame and encoding progress.                       |
+| Export the complete animation                | `render`                    | Writes an MP4 and reports frame and encoding progress.                      |
 | Learn scene duration                         | `inspect <scene> --frame 0` | `sceneInfo` includes duration, last valid frame, dimensions, FPS, and seed. |
 | See the complete progression                 | `timeline-grid`             | Places representative exact frames in one image.                            |
 | Check a visual detail                        | `still`                     | Produces one lossless, full-resolution frame.                               |
 | Confirm position, size, visibility, or state | `inspect`                   | Returns semantic objects, transforms, bounds, text, and in-frame data.      |
-| Find object collisions across the timeline   | `layout-check`              | Checks registered objects against visible renderable geometry every frame. |
+| Find object collisions across the timeline   | `layout-check`              | Checks registered objects against visible renderable geometry every frame.  |
 | Discover alternative viewpoints              | `cameras`                   | Lists the authored camera and exposed inspection cameras at a frame.        |
 | Compare viewpoints                           | `camera-grid`               | Renders the same scene state through several cameras.                       |
 | Check geometry through one debug view        | `inspect --camera <id>`     | Projects exposed bounds through the selected camera.                        |
@@ -103,11 +103,11 @@ final stdout JSON. Without JSON mode, the CLI prints readable progress and a sho
 
 Inspection commands support these execution flags:
 
-| Flag                | Behavior                                                                                                                                                                                                         |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--json`            | Emit the complete JSON result.                                                                                                                                                                                   |
-| `--standalone`      | Ignore any running session; build and launch an isolated hidden Electron process.                                                                                                                                |
-| `--require-session` | Fail with `SESSION_NOT_RUNNING` instead of falling back when no compatible session exists. Cannot be combined with `--standalone`.                                                                               |
+| Flag                | Behavior                                                                                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`            | Emit the complete JSON result.                                                                                                                                                                                                    |
+| `--standalone`      | Ignore any running session; build and launch an isolated hidden Electron process.                                                                                                                                                 |
+| `--require-session` | Fail with `SESSION_NOT_RUNNING` instead of falling back when no compatible session exists. Cannot be combined with `--standalone`.                                                                                                |
 | `--no-build`        | When using the standalone path, skip the Electron/Vite build and use existing `.definedmotion/build` files. Unsafe after source changes. A running session already uses Vite source freshness, so this flag is unnecessary there. |
 
 Without `--standalone` or `--require-session`, a command uses a compatible running session when available and otherwise falls back to a standalone build and process.
@@ -187,7 +187,15 @@ progress includes `completed`, `total`, `percent`, and `frame`. In JSON mode eac
 compact JSON object on stderr:
 
 ```json
-{"type":"progress","command":"render","phase":"rendering-frames","completed":241,"total":900,"percent":26.78,"frame":240}
+{
+  "type": "progress",
+  "command": "render",
+  "phase": "rendering-frames",
+  "completed": 241,
+  "total": 900,
+  "percent": 26.78,
+  "frame": 240
+}
 ```
 
 The final stdout result includes `scene`, `durationInFrames`, `outputFrameCount`, `durationMs`,
@@ -514,10 +522,7 @@ scene.addAnims(foregroundEnter)
 Import the small canonical set from `definedmotion/animation`:
 
 ```ts
-scene.addAnims(
-  fadeIn(card, { duration: 0.4 }),
-  scaleIn(card, { duration: 0.4, from: 0.8 })
-)
+scene.addAnims(fadeIn(card, { duration: 0.4 }), scaleIn(card, { duration: 0.4, from: 0.8 }))
 
 scene.addAnims(
   moveTo(card, targetPosition, { duration: 0.6, space: 'world' }),
@@ -528,6 +533,53 @@ scene.addAnims(
 The default duration is `0.5` seconds and the default easing is `ease-in-out`. `fadeIn`, `fadeOut`, `opacityTo`, `scaleIn`, `scaleOut`, `scaleTo`, `moveTo`, `rotateTo`, `matchTransform`, `wait`, and `createAnimation` all return ordinary `AnimationPlan`s. Mutable transform targets are read when the plan binds.
 
 Fades temporarily mutate the existing materials in the object's subtree. They never clone or replace materials and never modify `depthWrite`; consequently, other objects sharing those materials also show the temporary fade. Authored opacity and transparency are restored at the completed fade endpoint.
+
+### Creating text and LaTeX
+
+Construct visual text from `definedmotion/rendering` and equations from `definedmotion/latex`. Both constructors resolve only after their geometry, anchors, and local bounds are final.
+
+```ts
+const title = await createText({
+  text: 'Absorbed power',
+  fontSize: 48,
+  color: '#ffffff',
+  anchorX: 'left',
+  anchorY: 'top'
+})
+
+const equation = await createLatex({
+  latex: String.raw`P = \frac{E}{t}`,
+  fontSize: 52,
+  color: '#ffffff'
+})
+
+scene.add(title, equation)
+```
+
+Defaults are centered lines with `anchorX: 'center'`, `anchorY: 'middle'`, and white color. `textAlign` controls multiline alignment; anchors place the completed visual relative to its stable root origin. `getLocalBounds()` returns a cloned `THREE.Box2` in root-local scene units.
+
+`await title.setText(...)` and `await equation.setLatex(...)` preserve the root object and resolve with updated final bounds. `equation.part('mass')` creates a stable semantic handle for content authored with `\dmClass{mass}{...}`; the handle does not store an internal SVG child.
+
+LaTeX keeps its dedicated pedagogical effects. They use the same `AnimationPlan` scheduler as the core effects, and semantic parts are resolved when an effect begins:
+
+```ts
+const equation = await createLatex({
+  latex: String.raw`F = \dmClass{mass}{m}a`,
+  fontSize: 52
+})
+const mass = equation.part('mass')
+const solveForAcceleration = await latex.morphTo(equation, {
+  latex: String.raw`a = \frac{F}{\dmClass{mass}{m}}`,
+  duration: 0.8
+})
+
+scene.addAnims(latex.write(equation, { duration: 0.7 }))
+scene.addAnims(latex.mark(mass, { color: '#f97316' }))
+scene.addAnims(solveForAcceleration)
+scene.addAnims(latex.highlight(mass, { color: '#38bdf8' }))
+```
+
+Import `latex` beside `createLatex` from `definedmotion/latex`. `morphTo` is awaited because it prepares and measures the target during scene construction; its source expression and stored part handles remain late-bound. The stable visual root adopts the target expression only on the morph's last frame. `latex.particleTransition(from, to)` remains available when two separate `LatexVisual`s are intentional.
 
 ### Authoring named timeline beats
 
@@ -716,7 +768,7 @@ If source changes repeatedly during a request, the CLI retries revision races up
 | `BUILD_FAILED`, `BUILD_NOT_FOUND`, `ELECTRON_NOT_INSTALLED` | Standalone prerequisites are missing or invalid                        | Run `npm install` and `npm run build`; do not use `--no-build` after source changes.                              |
 | Asset errors                                                | Asset path, existence, or loading failure                              | Correct the `src/assets`-relative path or loader usage.                                                           |
 | Exposure/camera registration errors                         | Invalid, duplicate, reserved, excessive, or out-of-build registration  | Correct the scene’s semantic registration according to the rules above.                                           |
-| Collision-watch registration errors                         | Invalid ID, object, options, duplicate, or out-of-build registration   | Correct `scene.watchCollisions()` according to the rules above.                                                    |
+| Collision-watch registration errors                         | Invalid ID, object, options, duplicate, or out-of-build registration   | Correct `scene.watchCollisions()` according to the rules above.                                                   |
 
 Unexpected scene exceptions return `AUTOMATION_FAILED` with a stack when available. Ordinary
 renderer requests have a five-minute host timeout and a 17-second local socket timeout. Full video

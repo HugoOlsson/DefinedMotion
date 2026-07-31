@@ -2,14 +2,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync
-} from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -53,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 68) {
-    throw new Error(`Expected 68 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 69) {
+    throw new Error(`Expected 69 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -73,9 +66,9 @@ try {
     throw new Error('--exclude-tests did not return the 17 examples plus the playground scene')
   }
 
-  const emittedMedia = readdirSync(join(projectRoot, '.definedmotion', 'build', 'renderer', 'assets')).filter((file) =>
-    /\.(?:glb|gltf|hdr|mp3|mp4|webm|woff2?|ttf)$/i.test(file)
-  )
+  const emittedMedia = readdirSync(
+    join(projectRoot, '.definedmotion', 'build', 'renderer', 'assets')
+  ).filter((file) => /\.(?:glb|gltf|hdr|mp3|mp4|webm|woff2?|ttf)$/i.test(file))
   if (emittedMedia.length > 0) {
     throw new Error(`Scene media was eagerly emitted by Vite: ${emittedMedia.join(', ')}`)
   }
@@ -102,15 +95,7 @@ try {
   )
   const probe = spawnSync(
     'ffprobe',
-    [
-      '-v',
-      'error',
-      '-show_entries',
-      'stream=codec_type,width,height',
-      '-of',
-      'json',
-      videoOutput
-    ],
+    ['-v', 'error', '-show_entries', 'stream=codec_type,width,height', '-of', 'json', videoOutput],
     { encoding: 'utf8' }
   )
   const probeResult = probe.status === 0 ? JSON.parse(probe.stdout) : undefined
@@ -122,10 +107,7 @@ try {
     cliVideo.result.outputFrameCount !== 1 ||
     cliVideo.result.fps !== 60 ||
     !probeResult?.streams?.some(
-      (stream) =>
-        stream.codec_type === 'video' &&
-        stream.width === 320 &&
-        stream.height === 180
+      (stream) => stream.codec_type === 'video' && stream.width === 320 && stream.height === 180
     ) ||
     !progressPhases.has('preparing') ||
     !progressPhases.has('rendering-frames') ||
@@ -150,24 +132,8 @@ try {
   if (videoResult.durationInFrames !== 680) {
     throw new Error('Video scene did not derive its 680-frame duration from media metadata')
   }
-  run([
-    'still',
-    'test-video-plane',
-    '--frame',
-    '60',
-    '--output',
-    videoFrameARepeat,
-    '--no-build'
-  ])
-  run([
-    'still',
-    'test-video-plane',
-    '--frame',
-    '30',
-    '--output',
-    videoFrameB,
-    '--no-build'
-  ])
+  run(['still', 'test-video-plane', '--frame', '60', '--output', videoFrameARepeat, '--no-build'])
+  run(['still', 'test-video-plane', '--frame', '30', '--output', videoFrameB, '--no-build'])
   if (sha256(videoFrameA) !== sha256(videoFrameARepeat)) {
     throw new Error('Repeated exact video frames were not byte-identical')
   }
@@ -196,13 +162,7 @@ try {
     throw new Error('Repeated still renders were not byte-identical')
   }
 
-  const animationPlanStart = run([
-    'inspect',
-    'test-animation-plan',
-    '--frame',
-    '0',
-    '--no-build'
-  ])
+  const animationPlanStart = run(['inspect', 'test-animation-plan', '--frame', '0', '--no-build'])
   const animationPlanSecondStart = run([
     'inspect',
     'test-animation-plan',
@@ -210,13 +170,7 @@ try {
     '30',
     '--no-build'
   ])
-  const animationPlanEnd = run([
-    'inspect',
-    'test-animation-plan',
-    '--frame',
-    '59',
-    '--no-build'
-  ])
+  const animationPlanEnd = run(['inspect', 'test-animation-plan', '--frame', '59', '--no-build'])
   const animationPlanEndRepeat = run([
     'inspect',
     'test-animation-plan',
@@ -224,8 +178,7 @@ try {
     '59',
     '--no-build'
   ])
-  const planObject = (result) =>
-    result.objects.find((object) => object.id === 'animation-plan-box')
+  const planObject = (result) => result.objects.find((object) => object.id === 'animation-plan-box')
   if (
     animationPlanEnd.sceneInfo.durationInFrames !== 60 ||
     planObject(animationPlanStart)?.text !== 'x=-6.000' ||
@@ -240,11 +193,8 @@ try {
   const beatStart = run(['inspect', 'test-timeline-beats', '--frame', '20', '--no-build'])
   const beatGap = run(['inspect', 'test-timeline-beats', '--frame', '55', '--no-build'])
   const beatEnd = run(['inspect', 'test-timeline-beats', '--frame', '74', '--no-build'])
-  const beatObject = (result) =>
-    result.objects.find((object) => object.id === 'timeline-beat-box')
-  const beatPointer = beatStart.objects.find(
-    (object) => object.id === 'timeline-beat-pointer'
-  )
+  const beatObject = (result) => result.objects.find((object) => object.id === 'timeline-beat-box')
+  const beatPointer = beatStart.objects.find((object) => object.id === 'timeline-beat-pointer')
   if (
     beatStart.sceneInfo.durationInFrames !== 75 ||
     JSON.stringify(beatStart.beat) !==
@@ -284,6 +234,44 @@ try {
     effectObject(effectsMatch, 'core-reference')?.text !== 'x=10.000'
   ) {
     throw new Error('Core effect endpoints, visibility lifecycle, or runtime binding was incorrect')
+  }
+
+  const visuals = run(['inspect', 'test-visual-primitives', '--frame', '0', '--no-build'])
+  const visualEffects = run(['inspect', 'test-visual-primitives', '--frame', '9', '--no-build'])
+  const visualObject = (id) => visuals.objects.find((object) => object.id === id)
+  const leftText = visualObject('visual-text-left-top')
+  const centerText = visualObject('visual-text-centered')
+  const leftLatex = visualObject('visual-latex-left-top')
+  const centerLatex = visualObject('visual-latex-centered')
+  const invalidVisuals = visualObject('visual-invalid-inputs')
+  const latexEffects = visualEffects.objects.find((object) => object.id === 'visual-latex-effects')
+  const latexEffectsCleanup = visualEffects.objects.find(
+    (object) => object.id === 'visual-latex-effects-cleanup'
+  )
+  if (
+    visuals.sceneInfo.durationInFrames !== 10 ||
+    leftText?.text !== 'Updated title' ||
+    leftText?.metadata.data?.rootStable !== true ||
+    leftText?.localBounds?.min[0] !== 0 ||
+    leftText?.localBounds?.max[1] !== 0 ||
+    centerText?.localBounds?.size[0] !== 18 ||
+    centerText?.localBounds?.center[0] !== 0 ||
+    centerText?.localBounds?.center[1] !== 0 ||
+    leftLatex?.latex !== String.raw`a = \frac{F}{\dmClass{mass}{m}}` ||
+    leftLatex?.metadata.data?.rootStable !== true ||
+    leftLatex?.metadata.data?.partStable !== true ||
+    leftLatex?.localBounds?.min[0] !== 0 ||
+    leftLatex?.localBounds?.max[1] !== 0 ||
+    centerLatex?.localBounds?.center[0] !== 0 ||
+    centerLatex?.localBounds?.center[1] !== 0 ||
+    invalidVisuals?.text !== 'font=true;latex=true' ||
+    latexEffects?.latex !== String.raw`a = \frac{F}{\dmClass{mass}{m}}` ||
+    latexEffects?.metadata.data?.rootStable !== true ||
+    latexEffectsCleanup?.text !== 'cleanup=true'
+  ) {
+    throw new Error(
+      'Text/LaTeX readiness, stable updates, effects, anchors, or local bounds were incorrect'
+    )
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')
@@ -485,8 +473,7 @@ try {
     layoutCheckDirectory,
     '--no-build'
   ])
-  const [firstIncident, parallelGuideIncident, guideIncident, finalIncident] =
-    layoutCheck.incidents
+  const [firstIncident, parallelGuideIncident, guideIncident, finalIncident] = layoutCheck.incidents
   const layoutCheckScreenshots = readdirSync(layoutCheckDirectory).filter((file) =>
     file.endsWith('.png')
   )
