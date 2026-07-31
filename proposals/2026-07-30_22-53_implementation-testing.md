@@ -32,7 +32,7 @@ npm run test:package
 
 `test:integration` runs the additional layers declared for that proposal and should normally finish in two to four minutes. For example, the animation API may require unit and scene layers, while scene selection requires unit and viewer layers.
 
-`npm test` is the normal repository gate: type checking, all unit tests, the curated scene contracts, and documentation/reference validation. `test:full` additionally runs the complete viewer and packed-consumer suites. Run `test:full` in CI before merging or releasing, and locally only when the affected layer or requested level of confidence warrants it.
+`npm test` is the normal fast repository gate: type checking, unit tests, and documentation/reference validation. It does not launch Electron. `test:full` additionally runs exact scene automation, the viewer integration, and the packed-consumer suite. Run `test:full` in CI before merging or releasing, and locally only when the affected layer or requested level of confidence warrants it.
 
 ## Test layers
 
@@ -158,14 +158,13 @@ Tests and implementation may be reviewed separately when a contract is especiall
 
 1. TypeScript and Svelte checks.
 2. Unit tests.
-3. All unit and scene proposal acceptance checks.
-4. Curated scene contract verification.
-5. Reference catalog and documentation validation.
+3. Reference catalog and documentation validation.
 
 `npm run test:full` runs `npm test`, then:
 
-1. Viewer Electron integration.
-2. Packed consumer smoke testing.
+1. Exact scene automation and contract verification.
+2. Viewer Electron integration.
+3. Packed consumer smoke testing.
 
 Focused or skipped tests fail their applicable gate. All failures exit nonzero.
 
@@ -181,6 +180,16 @@ Audit the existing scripts and reference scenes:
 - make the current separate automation, viewport, runtime-session, positioning, audio, and packaging checks part of the appropriate gate.
 
 Do not make every historical reference scene blocking immediately. Begin with the focused contract gallery and add existing scenes only when they protect a distinct behavior.
+
+## Acceptance suite
+
+- `TEST-01`: every proposal name resolves to one fast targeted command.
+- `TEST-02`: proposal integration runs only the additional scene or viewer layer that proposal needs.
+- `TEST-03`: `npm test` remains Electron-free, while `test:full` includes scene, viewer, and packed-consumer boundaries.
+- `TEST-04`: viewer tests use stable selectors/events and exercise the real application without agent-driven navigation.
+- `TEST-05`: generated and packed consumers are validated separately from the normal development loop.
+
+Targeted command: `npm run test:proposal -- implementation-testing`.
 
 ## Non-goals
 

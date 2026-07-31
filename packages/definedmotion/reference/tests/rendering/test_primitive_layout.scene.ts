@@ -1,4 +1,4 @@
-import { AnimatedScene, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
 import { fadeIn, wait } from 'definedmotion/animation'
 import { createLatex } from 'definedmotion/latex'
 import { createText, layout } from 'definedmotion/rendering'
@@ -15,7 +15,6 @@ export function testPrimitiveLayout(): AnimatedScene {
     800,
     400,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const title = await createText({
         text: 'Predictable layout',

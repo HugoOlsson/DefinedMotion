@@ -1,4 +1,4 @@
-import { AnimatedScene, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
 import { moveTo } from 'definedmotion/animation'
 import { createRectangle } from 'definedmotion/rendering'
 import * as THREE from 'three'
@@ -15,7 +15,6 @@ export function testViewerPreview(): AnimatedScene {
     320,
     180,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       scene.timeline.defineBeats({
         setup: { start: 0, end: 2 },

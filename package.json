@@ -9,6 +9,12 @@
   "scripts": {
     "build": "npm run build --workspace definedmotion",
     "test": "npm test --workspace definedmotion",
+    "test:unit": "npm run test:unit --workspace definedmotion",
+    "test:scenes": "npm run test:scenes --workspace definedmotion",
+    "test:viewer": "npm run test:viewer --workspace definedmotion",
+    "test:proposal": "npm run test:proposal --workspace definedmotion --",
+    "test:integration": "npm run test:integration --workspace definedmotion --",
+    "test:full": "npm test && npm run test:scenes && npm run test:viewer && npm run test:package",
     "typecheck": "npm run typecheck --workspace definedmotion",
     "pack:check": "npm run pack:check --workspace definedmotion && npm run pack:check --workspace create-definedmotion",
     "test:package": "node ./tests/packed-project-smoke-test.mjs"

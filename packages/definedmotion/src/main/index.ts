@@ -31,7 +31,9 @@ const isAutomation = Boolean(automationRequestRaw && automationResultPath)
 const persistentRuntimeConfig = getPersistentRuntimeConfig()
 const isPersistentRuntime = Boolean(persistentRuntimeConfig)
 const isRuntimeMode = isAutomation || isPersistentRuntime
-const isDevelopmentSmoke = process.env['DEFINEDMOTION_DEV_SMOKE'] === '1'
+const isViewerIntegrationSmoke = process.env['DEFINEDMOTION_VIEWER_TEST'] === '1'
+const isDevelopmentSmoke =
+  process.env['DEFINEDMOTION_DEV_SMOKE'] === '1' || isViewerIntegrationSmoke
 const LONG_AUTOMATION_TIMEOUT_MS = 24 * 60 * 60 * 1000
 
 let automationRequest: AutomationRequest | undefined
@@ -56,6 +58,96 @@ let persistentRuntimeHost: PersistentRuntimeHost | undefined
 let pendingRendererFailure:
   | { sourceRevision: string; diagnostic: RuntimeSourceDiagnostic }
   | undefined
+let viewerIntegrationSmokeStarted = false
+
+const runViewerIntegrationSmoke = async (): Promise<void> => {
+  if (viewerIntegrationSmokeStarted) return
+  viewerIntegrationSmokeStarted = true
+  try {
+    const result = await mainWindow.webContents.executeJavaScript(`
+      (async () => {
+        const waitFor = (predicate, label) => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 15000
+          const poll = () => {
+            try {
+              if (predicate()) return resolve(undefined)
+              if (Date.now() >= deadline) return reject(new Error('Timed out waiting for ' + label))
+              setTimeout(poll, 25)
+            } catch (error) {
+              reject(error)
+            }
+          }
+          poll()
+        })
+        await waitFor(
+          () => document.querySelector('[data-testid="scene-selector"]') &&
+            document.querySelector('[data-viewer-active-scene]')?.dataset.viewerActiveScene,
+          'the initial viewer scene'
+        )
+
+        const selector = document.querySelector('[data-testid="scene-selector"]')
+        const references = document.querySelector('[data-testid="show-reference-scenes"]')
+        const preview = document.querySelector('[data-testid="use-preview-marker"]')
+        if (!(selector instanceof HTMLSelectElement) ||
+            !(references instanceof HTMLInputElement) ||
+            !(preview instanceof HTMLInputElement)) {
+          throw new Error('Viewer controls were not mounted')
+        }
+
+        if (!references.checked) {
+          references.checked = true
+          references.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        if (!preview.checked) {
+          preview.checked = true
+          preview.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        await waitFor(
+          () => [...selector.options].some((option) => option.value === 'test-viewer-preview'),
+          'reference scene visibility'
+        )
+
+        const select = async (id) => {
+          const ready = new Promise((resolve, reject) => {
+            const timeout = setTimeout(
+              () => reject(new Error('Timed out selecting ' + id)),
+              15000
+            )
+            const onReady = (event) => {
+              if (event.detail?.sceneId !== id) return
+              clearTimeout(timeout)
+              window.removeEventListener('definedmotion:scene-ready', onReady)
+              resolve(event.detail)
+            }
+            window.addEventListener('definedmotion:scene-ready', onReady)
+          })
+          selector.value = id
+          selector.dispatchEvent(new Event('change', { bubbles: true }))
+          await ready
+          await waitFor(
+            () => document.querySelector('[data-viewer-active-scene]')?.dataset.viewerActiveScene === id,
+            'active scene ' + id
+          )
+          const canvasCount = document.querySelectorAll('[data-viewer-active-scene] canvas').length
+          if (canvasCount !== 1) throw new Error('Expected one active canvas, received ' + canvasCount)
+        }
+
+        await select('test-asset-references')
+        await select('test-viewer-preview')
+        const frame = document.querySelector('[data-testid="current-frame"]')?.textContent
+        if (frame !== 'Frame: 2') {
+          throw new Error('Preview scene did not open at frame 2: ' + frame)
+        }
+        return { selectedScene: selector.value, frame, canvasCount: 1 }
+      })()
+    `)
+    console.log(`DEFINEDMOTION_VIEWER_TEST_OK ${JSON.stringify(result)}`)
+    app.exit(0)
+  } catch (error) {
+    console.error('DEFINEDMOTION_VIEWER_TEST_FAILED', error)
+    app.exit(1)
+  }
+}
 
 interface WindowBounds {
   width: number
@@ -127,6 +219,10 @@ function createWindow(): void {
       console.log(`[DefinedMotion renderer ${level}] ${message}`)
     })
     mainWindow.webContents.on('did-finish-load', () => {
+      if (isViewerIntegrationSmoke) {
+        void runViewerIntegrationSmoke()
+        return
+      }
       const deadline = Date.now() + 10_000
       const reportWhenMounted = (): void => {
         void mainWindow.webContents

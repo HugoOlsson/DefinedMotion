@@ -257,14 +257,41 @@ export class AnimatedScene {
   constructor(
     pixelsWidth: number,
     pixelsHeight: number,
-    spaceSetting: SpaceSetting = SpaceSetting.ThreeDim,
-    hotReloadSetting: HotReloadSetting = HotReloadSetting.TraceFromStart,
-    buildFunctionGiven: (scene: AnimatedScene) => any
+    spaceSetting: SpaceSetting,
+    buildFunction: (scene: AnimatedScene) => any
+  )
+  /** @deprecated Pass the build function as the fourth argument. */
+  constructor(
+    pixelsWidth: number,
+    pixelsHeight: number,
+    spaceSetting: SpaceSetting,
+    hotReloadSetting: HotReloadSetting,
+    buildFunction: (scene: AnimatedScene) => any
+  )
+  constructor(
+    pixelsWidth: number,
+    pixelsHeight: number,
+    spaceSetting: SpaceSetting,
+    hotReloadSettingOrBuild: HotReloadSetting | ((scene: AnimatedScene) => any),
+    legacyBuildFunction?: (scene: AnimatedScene) => any
   ) {
+    const buildFunctionGiven =
+      typeof hotReloadSettingOrBuild === 'function'
+        ? hotReloadSettingOrBuild
+        : legacyBuildFunction
+    if (!buildFunctionGiven) {
+      throw new SceneRuntimeError(
+        'MISSING_SCENE_BUILD_FUNCTION',
+        'AnimatedScene requires a scene build function'
+      )
+    }
     this.container = globalContainerRef
     this.pixelsHeight = pixelsHeight
     this.pixelsWidth = pixelsWidth
-    this.hotReloadSetting = hotReloadSetting
+    this.hotReloadSetting =
+      typeof hotReloadSettingOrBuild === 'function'
+        ? HotReloadSetting.TraceFromStart
+        : hotReloadSettingOrBuild
     this.interactive = globalInteractiveMode
     this.assetNamespace = globalAssetNamespace
 

@@ -1,4 +1,4 @@
-import { AnimatedScene, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
 import { wait } from 'definedmotion/animation'
 import { createLatex, latex } from 'definedmotion/latex'
 import { createText } from 'definedmotion/rendering'
@@ -16,7 +16,6 @@ export function testVisualPrimitives(): AnimatedScene {
     800,
     400,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const title = await createText({
         text: 'Initial',

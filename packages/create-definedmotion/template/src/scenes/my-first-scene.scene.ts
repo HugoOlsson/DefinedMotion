@@ -1,6 +1,6 @@
-import { AnimatedScene, defineScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
-import { createAnim, easeInOutQuad } from 'definedmotion/animation'
-import { createCircle } from 'definedmotion/rendering'
+import { AnimatedScene, defineScene, SpaceSetting } from 'definedmotion'
+import { fadeIn, moveTo } from 'definedmotion/animation'
+import { createText } from 'definedmotion/rendering'
 
 export default defineScene({
   id: 'my-first-scene',
@@ -10,14 +10,17 @@ export default defineScene({
       1920,
       1080,
       SpaceSetting.TwoDim,
-      HotReloadSetting.TraceFromStart,
-      (scene) => {
-        const circle = createCircle(2)
-        scene.add(circle)
+      async (scene) => {
+        const title = await createText({
+          text: 'My first scene',
+          fontSize: 72
+        })
+        title.position.x = -4
+        scene.add(title)
+
         scene.addAnims(
-          createAnim(easeInOutQuad(-5, 5, 1_000), (x) => {
-            circle.position.x = x
-          })
+          fadeIn(title, { duration: 0.5 }),
+          moveTo(title, { x: 4, y: 0, z: 0 }, { duration: 1, easing: 'ease-in-out' })
         )
       }
     )

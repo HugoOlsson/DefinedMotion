@@ -1,15 +1,19 @@
 # Working with DefinedMotion
 
-The installed DefinedMotion implementation and its matching reference corpus have the same version.
+The installed DefinedMotion implementation, documentation, and reference corpus have the same
+version.
 
 Before creating or substantially modifying a scene:
 
-1. Read `node_modules/definedmotion/reference/INDEX.md`.
-2. Find examples covering similar behavior.
-3. Read relevant executable tests for the APIs involved.
-4. Import only from the public `definedmotion` entry points used by those references.
-5. Validate the full animation with `timeline-grid`, important frames with `still`, and registered
-   object collisions with `layout-check`.
+1. Read `node_modules/definedmotion/documentation/index.md` and the task-specific canonical guide.
+2. Use curated examples from `node_modules/definedmotion/reference/examples` when helpful.
+3. Import only from documented public `definedmotion` entry points.
+4. Validate authored contracts with `verify`, progression with `timeline-grid`, semantic state with
+   `inspect`, and important frames with `still`.
+
+Frames are the scheduling source of truth; public animation durations are seconds. Preserve exact
+seek/reset determinism. Do not treat proposals or regression fixtures as supported authoring
+documentation.
 
 User scenes belong in `src/scenes`; user assets belong in `src/assets`. Do not edit files under
 `node_modules/definedmotion`; update the dependency when a newer framework and reference corpus is
@@ -20,6 +24,6 @@ Use `scene.asset()` for project media. Examples may use `referenceAsset()` for s
 with the reference corpus; when replacing that media with a project file, copy it into `src/assets`
 and switch to `scene.asset()`.
 
-Run `npm run build` before handing off source or configuration changes. Keep generated automation
-images, build output, and runtime state under `.definedmotion/`, and final videos under `renders/`;
-do not commit either directory.
+Run `npm run typecheck` and `npm run build` before handing off source or configuration changes. Keep
+generated automation images, build output, and runtime state under `.definedmotion/`, and final
+videos under `renders/`; do not commit either directory.

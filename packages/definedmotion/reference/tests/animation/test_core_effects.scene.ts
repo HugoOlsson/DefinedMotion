@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
 import {
   fadeIn,
   fadeOut,
@@ -23,7 +23,6 @@ export function testCoreEffects(): AnimatedScene {
     600,
     300,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       const fadeBox = exposedBox(scene, 'core-fade', '#38bdf8', -12, 4)
       const scaleBox = exposedBox(scene, 'core-scale', '#a78bfa', -4, 4)

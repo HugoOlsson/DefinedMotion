@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
 import type { AnimationPlan } from 'definedmotion/animation'
 import { createRectangle } from 'definedmotion/rendering'
 
@@ -15,7 +15,6 @@ export function testAnimationPlan(): AnimatedScene {
     400,
     200,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       const box = scene.expose(
         'animation-plan-box',

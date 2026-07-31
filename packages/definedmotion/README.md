@@ -1,71 +1,43 @@
 # DefinedMotion
 
-DefinedMotion contains the animation runtime, visual Studio, automation CLI, and the matching
-versioned reference corpus used by people and coding agents.
+DefinedMotion is a TypeScript animation runtime and interactive viewer built on Three.js. It ships deterministic frame-based scheduling, measured text and LaTeX, 2D/3D rendering, scene verification, and an automation CLI for people and coding agents.
 
-Consumer projects own their `definedmotion.config.ts`, `src/scenes`, and `src/assets`; updating the
-dependency does not replace them. Run the Studio with `definedmotion dev` and list all packaged and
-project scenes with `definedmotion scenes`.
+Create a project:
 
-See `reference/INDEX.md` for examples, executable visual tests, and the agent workflow.
+```bash
+npx create-definedmotion my-video
+cd my-video
+npm install
+npm run dev
+```
 
-Final video renders are written to the consumer project's `renders/` directory. Temporary frame
-and audio data stay under `.definedmotion/cache/`. Agents and scripts can export a scene with
-`definedmotion render <scene> --json`; progress is reported on stderr while the final structured
-result is written to stdout.
-
-## Collision checks
-
-`scene.watchCollisions(id, object, options)` registers any Three.js object or group for the
-general-purpose `definedmotion layout-check <scene> --json` command. The command evaluates every
-authored frame without real-time playback, compares screen-space bounds against other visible
-renderable objects, groups nearby overlaps into incidents, and saves one representative still per
-incident. Text is a common use case, but the API is not text-specific. Use `paddingPx` for visual
-clearance and `ignore` for intentional overlaps.
-
-## Relative positioning
-
-`scene.positioning()` creates one-way relationships measured from world-aligned bounding boxes. The
-object passed to `place()` is the only object that the relationship may move. Directions always use
-world axes: `rightOf` and `leftOf` use X, `above` and `below` use Y, and `positiveZOf` and
-`negativeZOf` use Z. They do not rotate with either object.
+Minimal scene:
 
 ```ts
-import { Axis } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
+import { fadeIn } from 'definedmotion/animation'
+import { createText } from 'definedmotion/rendering'
 
-const positioning = scene.positioning()
-
-positioning
-  .place(title)
-  .above(plotContent, {
-    gap: { initial: 40, range: [20, 60] }
+const create = () =>
+  new AnimatedScene(1920, 1080, SpaceSetting.TwoDim, async (scene) => {
+    const title = await createText({ text: 'Defined motion', fontSize: 72 })
+    scene.add(title)
+    scene.addAnims(fadeIn(title))
   })
-  .centerWith(plotContent, { axis: Axis.X })
+
+export default defineScene({ id: 'intro', name: 'Intro', create })
 ```
 
-The ranged gap places the title at 40 initially and then leaves it still while the measured gap is
-between 20 and 60. Use `gap: 40` for an exact gap that is restored every tick. Relationships are
-solved in dependency order, so chains such as `plotContent -> title -> badge` work independently of
-registration order.
+## Documentation
 
-Bounds include the complete Three.js subtree passed as the reference. Because they are world-aligned,
-their dimensions can change as an object rotates. Keep positioned decorations outside the content
-group whose bounds they use, so a title does not contribute to the plot bounds that position it.
-Two independently positioned objects also cannot be an ancestor and descendant of one another;
-use sibling groups as positioning dependents. Dependents must keep Three.js `matrixAutoUpdate` and
-`matrixWorldAutoUpdate` enabled. Objects with manually managed matrices can still be references as
-long as their world matrices are kept current by the caller.
+- [Documentation index](documentation/index.md)
+- [Getting started](documentation/getting-started.md)
+- [Scenes and timeline](documentation/scenes-and-timeline.md)
+- [Animation effects](documentation/animation-effects.md)
+- [Text, LaTeX, and layout](documentation/text-and-latex.md)
+- [Verification](documentation/verification.md)
+- [CLI](documentation/cli.md)
 
-Use `placeOnce()` for initial layout without a lasting relationship:
+The interactive viewer can select any project scene and optionally expose packaged examples/tests. Final videos go to the consumer project's `renders/`; temporary runtime data stays under `.definedmotion/`.
 
-```ts
-positioning
-  .placeOnce(legend)
-  .rightOf(plotContent, { gap: 24 })
-  .centerWith(plotContent, { axis: Axis.Y })
-```
-
-One-shot relationships participate in the same validation and dependency ordering as persistent
-relationships. Each constraint is removed after its first successful bounds-based placement, so
-later animation of `plotContent` does not move `legend`. A ranged gap uses its `initial` value for
-that placement; use a numeric gap when no range is needed.
+The versioned [reference index](reference/INDEX.md) contains executable examples and regression scenes. Coding agents should also read the [agent workflow](reference/agent-workflow.md).

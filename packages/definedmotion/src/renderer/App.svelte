@@ -479,7 +479,7 @@ export async function copyToClipboard(text: string): Promise<void> {
     
 
     <div class="flex ">
-    <p bind:this={frameValueElement} class="font-normal text-[0.7rem] leading-none mr-2 w-[83px]">Frame:</p>
+    <p bind:this={frameValueElement} data-testid="current-frame" class="font-normal text-[0.7rem] leading-none mr-2 w-[83px]">Frame:</p>
       <p bind:this={timeValueElement} class="font-normal text-[0.7rem] leading-none w-[93px] ">Time:</p>
       </div>
     <div class="flex gap-2">

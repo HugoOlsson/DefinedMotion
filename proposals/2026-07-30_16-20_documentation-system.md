@@ -142,3 +142,12 @@ Generated or exhaustive API reference may exist separately, but it does not repl
 The existing README and agent workflow are split by concept into `documentation/`. Duplicate explanations are removed rather than copied.
 
 Outdated examples using deprecated APIs are migrated or removed from the canonical example set. Internal regression scenes no longer appear beside authoring examples in the public index.
+
+## Acceptance suite
+
+- `DOC-01`: every core concept has one canonical, linked documentation owner.
+- `DOC-02`: README and `AGENTS.md` route to canonical files without duplicating the full API.
+- `DOC-03`: canonical documentation contains no removed authoring APIs or broken local links.
+- `DOC-04`: documentation ships in the packed library and the generated project routes authors to it.
+
+Targeted command: `npm run test:proposal -- documentation-system`.
