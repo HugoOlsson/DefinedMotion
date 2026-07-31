@@ -290,6 +290,12 @@
       "source": "tests/inspection/test_scene_inspection.scene.ts"
     },
     {
+      "id": "test-scene-verifications",
+      "name": "Scene Verification Contract",
+      "kind": "test",
+      "source": "tests/inspection/test_scene_verifications.scene.ts"
+    },
+    {
       "id": "test-super-complex-latex-to-svg",
       "name": "Super Complex LaTeX To SVG",
       "kind": "test",

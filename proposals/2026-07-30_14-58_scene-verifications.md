@@ -10,20 +10,20 @@ Verifications are registered while the scene is built:
 
 ```ts
 scene.verify(
-  "panel-padding",
+  'panel-padding',
   {
-    during: "cold-spots",
+    during: 'cold-spots',
     frames: {
       start: checkStart,
-      end: checkEnd,
-    },
+      end: checkEnd
+    }
   },
-  context => {
+  (context) => {
     const content = context.screenBounds(explanationColumn)
     const panel = context.screenBounds(backgroundPanel)
 
     if (content === null || panel === null) {
-      context.assert(false, "Content and panel must have projectable geometry")
+      context.assert(false, 'Content and panel must have projectable geometry')
       return
     }
 
@@ -32,10 +32,10 @@ scene.verify(
         content.right <= panel.right - 10 &&
         content.top >= panel.top + 10 &&
         content.bottom <= panel.bottom - 10,
-      "Content must remain at least 10px inside the panel",
-      { content, panel, requiredMargin: 10 },
+      'Content must remain at least 10px inside the panel',
+      { content, panel, requiredMargin: 10 }
     )
-  },
+  }
 )
 ```
 
@@ -60,22 +60,20 @@ Agents should derive local verification ranges from the builder pointer instead 
 ```ts
 const movementStart = scene.getTimelinePointer()
 
-scene.addAnims(
-  moveTo(label, target),
-)
+scene.addAnims(moveTo(label, target))
 
 const movementEnd = scene.getTimelinePointer()
 
 scene.verify(
-  "label-clear-while-moving",
+  'label-clear-while-moving',
   {
-    during: "cold-spots",
+    during: 'cold-spots',
     frames: {
       start: movementStart,
-      end: movementEnd,
-    },
+      end: movementEnd
+    }
   },
-  checkLabelClearance,
+  checkLabelClearance
 )
 ```
 
@@ -113,18 +111,11 @@ interface VerificationContext {
     beatProgress: number
   }
 
-  screenBounds(
-    object: THREE.Object3D,
-    camera?: THREE.Camera,
-  ): ScreenBounds | null
+  screenBounds(object: THREE.Object3D, camera?: THREE.Camera): ScreenBounds | null
   worldBounds(object: THREE.Object3D): THREE.Box3
   isVisibleInHierarchy(object: THREE.Object3D): boolean
 
-  assert(
-    condition: boolean,
-    message: string,
-    details?: Record<string, unknown>,
-  ): void
+  assert(condition: boolean, message: string, details?: Record<string, unknown>): void
 }
 ```
 
@@ -185,3 +176,16 @@ Failures report the test ID, message, details, global frame, and beat-local fram
 ## Initial scope
 
 This version intentionally excludes tags, pixel analysis, screenshots, snapshot comparison, sampling strategies, previous-frame measurements, setup hooks, and matcher libraries. Scene authors compose checks from bounds, visibility, ordinary calculations, and `assert()`.
+
+## Acceptance suite
+
+- `VERIFY-01`: world bounds include descendant geometry and current world transforms and are empty for geometry-free subtrees.
+- `VERIFY-02`: screen bounds use logical video pixels, remain unclipped, and are null only without projectable geometry in the camera depth range.
+- `VERIFY-03`: hierarchy visibility reflects only Three.js ancestor `visible` flags.
+- `VERIFY-04`: registration rejects invalid ranges, unstable IDs, and duplicate IDs.
+- `VERIFY-05`: beat and explicit frame ranges intersect with end-exclusive semantics.
+- `VERIFY-06`: selected IDs, one-frame narrowing, discovery, and unknown selections have deterministic CLI results.
+- `VERIFY-07`: all selected checks share one chronological exact trace and record only their first failure.
+- `VERIFY-08`: verification failures return structured details and make the CLI exit nonzero.
+
+Targeted command: `npm run test:verification --workspace definedmotion`. The selectable `test-scene-verifications` scene and Electron automation gate cover authored callbacks and the complete CLI protocol.

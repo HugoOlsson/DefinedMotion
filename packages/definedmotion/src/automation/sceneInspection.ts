@@ -4,7 +4,6 @@ import type {
   InspectBounds3D,
   InspectCameraResult,
   InspectObjectResult,
-  InspectScreenBounds,
   InspectTransform,
   QuaternionTuple,
   Vector3Tuple
@@ -15,6 +14,11 @@ import type {
   ExposedSceneObject,
   InspectionCamera
 } from '../runtime/scene/sceneClass'
+import {
+  isVisibleInHierarchy,
+  projectWorldBounds,
+  worldBounds as measureWorldBounds
+} from '../runtime/measurement'
 
 const MAX_INSPECT_OBJECTS = 500
 
@@ -59,9 +63,10 @@ const inspectObject = (
   object.updateWorldMatrix(true, true)
 
   const attached = isAttachedToScene(object, scene.scene)
-  const visible = attached && isEffectivelyVisible(object, scene.scene)
-  const worldBounds = getWorldBounds(object)
-  const projected = projectBounds(worldBounds, camera, scene.width, scene.height)
+  const visible = attached && isVisibleInHierarchy(object)
+  const measuredWorldBounds = measureWorldBounds(object)
+  const worldBounds = inspectWorldBounds(measuredWorldBounds)
+  const projected = projectWorldBounds(measuredWorldBounds, camera, scene.width, scene.height)
   const parentId = findExposedParentId(object, exposedIds)
 
   return {
@@ -82,6 +87,13 @@ const inspectObject = (
     worldBounds,
     ...localBounds(object),
     screenBounds: projected.bounds
+      ? {
+          x: finite(projected.bounds.left),
+          y: finite(projected.bounds.top),
+          width: finite(projected.bounds.width),
+          height: finite(projected.bounds.height)
+        }
+      : null
   }
 }
 
@@ -170,8 +182,7 @@ const worldTransform = (object: THREE.Object3D): InspectTransform => {
   }
 }
 
-const getWorldBounds = (object: THREE.Object3D): InspectBounds3D | null => {
-  const box = new THREE.Box3().setFromObject(object)
+const inspectWorldBounds = (box: THREE.Box3): InspectBounds3D | null => {
   if (box.isEmpty() || !isFiniteVector(box.min) || !isFiniteVector(box.max)) return null
   const size = box.getSize(new THREE.Vector3())
   const center = box.getCenter(new THREE.Vector3())
@@ -183,94 +194,9 @@ const getWorldBounds = (object: THREE.Object3D): InspectBounds3D | null => {
   }
 }
 
-interface ProjectedBounds {
-  bounds: InspectScreenBounds | null
-  inFrame: boolean
-  fullyInFrame: boolean
-  behindCamera: boolean
-  partiallyBehindCamera: boolean
-}
-
-const projectBounds = (
-  bounds: InspectBounds3D | null,
-  camera: THREE.Camera & { near: number },
-  width: number,
-  height: number
-): ProjectedBounds => {
-  if (!bounds) return emptyProjection(false)
-
-  const corners = boxCorners(bounds)
-  const frontCorners = corners.filter(
-    (corner) => corner.clone().applyMatrix4(camera.matrixWorldInverse).z <= -camera.near
-  )
-  if (frontCorners.length === 0) return emptyProjection(true)
-
-  const pixels = frontCorners
-    .map((corner) => corner.clone().project(camera))
-    .filter(isFiniteVector)
-    .map((point) => ({
-      x: ((point.x + 1) / 2) * width,
-      y: ((1 - point.y) / 2) * height
-    }))
-  if (pixels.length === 0) return emptyProjection(true)
-
-  const minX = Math.min(...pixels.map(({ x }) => x))
-  const maxX = Math.max(...pixels.map(({ x }) => x))
-  const minY = Math.min(...pixels.map(({ y }) => y))
-  const maxY = Math.max(...pixels.map(({ y }) => y))
-  const screenBounds = {
-    x: finite(minX),
-    y: finite(minY),
-    width: finite(maxX - minX),
-    height: finite(maxY - minY)
-  }
-  const partiallyBehindCamera = frontCorners.length !== corners.length
-  return {
-    bounds: screenBounds,
-    inFrame: maxX >= 0 && minX <= width && maxY >= 0 && minY <= height,
-    fullyInFrame:
-      !partiallyBehindCamera && minX >= 0 && maxX <= width && minY >= 0 && maxY <= height,
-    behindCamera: false,
-    partiallyBehindCamera
-  }
-}
-
-const emptyProjection = (behindCamera: boolean): ProjectedBounds => ({
-  bounds: null,
-  inFrame: false,
-  fullyInFrame: false,
-  behindCamera,
-  partiallyBehindCamera: false
-})
-
-const boxCorners = (bounds: InspectBounds3D): THREE.Vector3[] => {
-  const [minX, minY, minZ] = bounds.min
-  const [maxX, maxY, maxZ] = bounds.max
-  return [
-    new THREE.Vector3(minX, minY, minZ),
-    new THREE.Vector3(minX, minY, maxZ),
-    new THREE.Vector3(minX, maxY, minZ),
-    new THREE.Vector3(minX, maxY, maxZ),
-    new THREE.Vector3(maxX, minY, minZ),
-    new THREE.Vector3(maxX, minY, maxZ),
-    new THREE.Vector3(maxX, maxY, minZ),
-    new THREE.Vector3(maxX, maxY, maxZ)
-  ]
-}
-
 const isAttachedToScene = (object: THREE.Object3D, root: THREE.Scene): boolean => {
   let current: THREE.Object3D | null = object
   while (current) {
-    if (current === root) return true
-    current = current.parent
-  }
-  return false
-}
-
-const isEffectivelyVisible = (object: THREE.Object3D, root: THREE.Scene): boolean => {
-  let current: THREE.Object3D | null = object
-  while (current) {
-    if (!current.visible) return false
     if (current === root) return true
     current = current.parent
   }

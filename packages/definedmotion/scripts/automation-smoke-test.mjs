@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 70) {
-    throw new Error(`Expected 70 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 71) {
+    throw new Error(`Expected 71 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -291,6 +291,86 @@ try {
     layoutObject(layoutEnd, 'layout-second-appended')?.visible !== true
   ) {
     throw new Error('Primitive layout bounds, append replay, or slot animation was incorrect')
+  }
+
+  const verificationList = run([
+    'verify',
+    '--scene',
+    'test-scene-verifications',
+    '--list',
+    '--no-build'
+  ])
+  const verificationPass = run([
+    'verify',
+    '--scene',
+    'test-scene-verifications',
+    '--test',
+    'panel-padding',
+    '--no-build'
+  ])
+  const verificationFrame = run([
+    'verify',
+    '--scene',
+    'test-scene-verifications',
+    '--test',
+    'intentional-failure',
+    '--frame',
+    '5',
+    '--no-build'
+  ])
+  const verificationMultiple = run([
+    'verify',
+    '--scene',
+    'test-scene-verifications',
+    '--test',
+    'panel-padding',
+    '--test',
+    'measurement-semantics',
+    '--no-build'
+  ])
+  const verificationFailure = run(
+    [
+      'verify',
+      '--scene',
+      'test-scene-verifications',
+      '--test',
+      'intentional-failure',
+      '--no-build'
+    ],
+    false
+  )
+  const unknownVerification = run(
+    [
+      'verify',
+      '--scene',
+      'test-scene-verifications',
+      '--test',
+      'missing-verification',
+      '--no-build'
+    ],
+    false
+  )
+  if (
+    verificationList.verifications?.length !== 3 ||
+    verificationList.executedCheckCount !== 0 ||
+    verificationPass.passed !== true ||
+    verificationPass.executedCheckCount !== 3 ||
+    verificationFrame.passed !== true ||
+    verificationFrame.executedCheckCount !== 1 ||
+    verificationMultiple.passed !== true ||
+    verificationMultiple.verificationCount !== 2 ||
+    verificationMultiple.executedCheckCount !== 9 ||
+    verificationFailure.success !== true ||
+    verificationFailure.passed !== false ||
+    verificationFailure.failureCount !== 1 ||
+    verificationFailure.failures?.[0]?.testId !== 'intentional-failure' ||
+    verificationFailure.failures?.[0]?.globalFrame !== 4 ||
+    verificationFailure.failures?.[0]?.beat?.localFrame !== 1 ||
+    verificationFailure.failures?.[0]?.details?.observedFrame !== 4 ||
+    unknownVerification.success !== false ||
+    unknownVerification.error?.code !== 'UNKNOWN_VERIFICATION'
+  ) {
+    throw new Error('Scene verification registration, selection, ranges, or failure output was incorrect')
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')

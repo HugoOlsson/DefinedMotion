@@ -36,7 +36,12 @@ export type {
   ExposedCameraMetadata,
   ExposedObjectMetadata,
   ExposedSceneObject,
-  InspectionCamera
+  InspectionCamera,
+  SceneVerification,
+  VerificationCheck,
+  VerificationContext,
+  VerificationFrameRange,
+  VerificationOptions
 } from '../runtime/scene/sceneClass'
 export { Axis } from '../runtime/positioning'
 export type {
@@ -46,3 +51,4 @@ export type {
   PositionGap,
   Positioning
 } from '../runtime/positioning'
+export type { ScreenBounds } from '../runtime/measurement'

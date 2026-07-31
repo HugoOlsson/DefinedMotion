@@ -21,6 +21,7 @@ Usage:
   definedmotion camera-grid <scene> [--frame <number>] [--cameras <list|all>] [--columns <number>] [--cell-width <pixels>] [--output <file>] [--json] [--no-build] [--standalone]
   definedmotion inspect <scene> [--frame <number>] [--camera <id>] [--json] [--no-build] [--standalone]
   definedmotion layout-check <scene> [--output-dir <directory>] [--merge-gap-frames <number>] [--json] [--no-build] [--standalone]
+  definedmotion verify --scene <scene> [--test <id> ...] [--frame <number> | --list] [--json] [--no-build] [--standalone]
 
 Session-aware commands use a running persistent runtime automatically.
 Pass --standalone to force a fresh build and Electron process, or
@@ -37,6 +38,7 @@ Examples:
   npm run dm -- camera-grid vector-field --frame 600
   npm run dm -- inspect tutorial-easy-1 --frame 30 --json
   npm run dm -- layout-check tutorial-easy-1 --json
+  npm run dm -- verify --scene tutorial-easy-1 --json
   npm run dm -- session stop
 
 Agent interface guide:
@@ -56,14 +58,14 @@ export function parseArguments(values) {
 
     const equals = value.indexOf('=')
     if (equals !== -1) {
-      flags[value.slice(2, equals)] = value.slice(equals + 1)
+      assignFlag(flags, value.slice(2, equals), value.slice(equals + 1))
       continue
     }
 
     const name = value.slice(2)
     const next = values[index + 1]
     if (next !== undefined && !next.startsWith('--')) {
-      flags[name] = next
+      assignFlag(flags, name, next)
       index++
     } else {
       flags[name] = true
@@ -71,6 +73,14 @@ export function parseArguments(values) {
   }
 
   return { positionals, flags }
+}
+
+function assignFlag(flags, name, value) {
+  if (name !== 'test' || flags[name] === undefined) {
+    flags[name] = value
+    return
+  }
+  flags[name] = Array.isArray(flags[name]) ? [...flags[name], value] : [flags[name], value]
 }
 
 export function buildAutomationRequest(command, positionals, flags) {
@@ -255,6 +265,32 @@ export function buildAutomationRequest(command, positionals, flags) {
     }
   }
 
+  if (command === 'verify') {
+    const scene = typeof flags.scene === 'string' ? flags.scene : positionals[1]
+    if (!scene) {
+      throw new CliError('INVALID_ARGUMENTS', 'The verify command requires --scene <scene>')
+    }
+    if (flags.list === true && flags.frame !== undefined) {
+      throw new CliError('INVALID_ARGUMENTS', '--list and --frame cannot be combined')
+    }
+    const frame =
+      flags.frame === undefined ? undefined : parseOptionalInteger(flags.frame, undefined)
+    if (frame !== undefined && frame < 0) {
+      throw new CliError('INVALID_ARGUMENTS', '--frame must be a non-negative integer')
+    }
+    const rawTests = flags.test === undefined ? undefined : Array.isArray(flags.test) ? flags.test : [flags.test]
+    const tests = rawTests?.map((id) => {
+      if (typeof id !== 'string' || id.trim() === '') {
+        throw new CliError('INVALID_ARGUMENTS', '--test requires a non-empty verification ID')
+      }
+      return id.trim()
+    })
+    if (tests && new Set(tests).size !== tests.length) {
+      throw new CliError('INVALID_ARGUMENTS', '--test IDs must not contain duplicates')
+    }
+    return { command: 'verify', scene, tests, frame, list: flags.list === true }
+  }
+
   throw new CliError('UNKNOWN_COMMAND', `Unknown command "${command}"`)
 }
 
@@ -406,6 +442,26 @@ export function emit(result, json) {
         ? `Layout check for ${result.scene} had no registered collision watches\n`
         : `Layout check for ${result.scene} found ${incidents} collision incident${incidents === 1 ? '' : 's'} across ${result.checkedFrames ?? 0} frames (${result.renderTimeMs} ms)\n`
     )
+    return
+  }
+
+  if (result.command === 'verify') {
+    if ((result.executedCheckCount ?? 0) === 0 && (result.verifications?.length ?? 0) > 0) {
+      process.stdout.write(
+        `Verifications for ${result.scene}:\n${result.verifications
+          .map((verification) => `${verification.id}\tframes ${verification.startFrame}-${verification.endFrame - 1}${verification.during ? `\tbeat ${verification.during}` : ''}`)
+          .join('\n')}\n`
+      )
+      return
+    }
+    process.stdout.write(
+      result.passed
+        ? `Verified ${result.scene}: ${result.verificationCount ?? 0} checks passed across ${result.checkedFrames ?? 0} traced frames\n`
+        : `Verification failed for ${result.scene}: ${result.failureCount ?? 0} check${result.failureCount === 1 ? '' : 's'} failed\n`
+    )
+    for (const failure of result.failures ?? []) {
+      process.stdout.write(`${failure.testId} at frame ${failure.globalFrame}: ${failure.message}\n`)
+    }
     return
   }
 

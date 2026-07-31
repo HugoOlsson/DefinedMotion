@@ -54,6 +54,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-regular-text-latex | test | Regular Text LaTeX | `tests/svg/test_regular_text_latex.scene.ts` |
 | test-relative-positioning | test | Relative Positioning | `tests/positioning/test_relative_positioning.scene.ts` |
 | test-scene-inspection | test | Scene Inspection | `tests/inspection/test_scene_inspection.scene.ts` |
+| test-scene-verifications | test | Scene Verification Contract | `tests/inspection/test_scene_verifications.scene.ts` |
 | test-super-complex-latex-to-svg | test | Super Complex LaTeX To SVG | `tests/svg/test_super_complex_latex_to_svg.scene.ts` |
 | test-timeline-beats | test | Timeline Beats Contract | `tests/animation/test_timeline_beats.scene.ts` |
 | test-transformed-dependency-chain-positioning | test | Positioning: Transformed 3D Dependency Chain | `tests/positioning/test_transformed_dependency_chain_positioning.scene.ts` |

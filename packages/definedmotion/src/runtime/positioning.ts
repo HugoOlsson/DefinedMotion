@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { worldBounds } from './measurement'
 
 import { SceneRuntimeError } from './scene/sceneErrors'
 
@@ -578,7 +579,7 @@ export class PositioningSystem implements Positioning {
       )
     }
     if (record.frame !== this.frame) {
-      record.box.setFromObject(object)
+      record.box.copy(worldBounds(object))
       record.frame = this.frame
     }
     return record.box

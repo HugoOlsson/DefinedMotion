@@ -1,9 +1,6 @@
 import * as THREE from 'three'
-import type {
-  AnimatedScene,
-  CollisionWatch,
-  ExposedSceneObject
-} from '../runtime/scene/sceneClass'
+import { ownWorldBounds, projectWorldBounds } from '../runtime/measurement'
+import type { AnimatedScene, CollisionWatch, ExposedSceneObject } from '../runtime/scene/sceneClass'
 import type {
   InspectScreenBounds,
   LayoutCheckAutomationRequest,
@@ -95,13 +92,7 @@ const scanLayoutCollisions = async (
     }
 
     const frameCollisions = findFrameCollisions(scene, watches, exposedByObject, pathCache)
-    updateIncidents(
-      frame,
-      frameCollisions,
-      mergeGapFrames,
-      openIncidents,
-      completedIncidents
-    )
+    updateIncidents(frame, frameCollisions, mergeGapFrames, openIncidents, completedIncidents)
   })
 
   for (const incident of openIncidents.values()) {
@@ -168,11 +159,7 @@ const findFrameCollisions = (
       const overlapPixels = intersectBounds(paddedSubjectBounds, obstacle.bounds)
       if (!overlapPixels) continue
 
-      const semanticObstacle = nearestExposedObject(
-        obstacle.object,
-        watch.object,
-        exposedByObject
-      )
+      const semanticObstacle = nearestExposedObject(obstacle.object, watch.object, exposedByObject)
       const obstacleRoot = semanticObstacle?.object ?? obstacle.object
       const obstaclePath = objectPath(obstacleRoot, scene.scene, pathCache)
       const obstacleId = semanticObstacle?.id ?? obstaclePath
@@ -212,10 +199,7 @@ const updateIncidents = (
   completedIncidents: DraftIncident[]
 ): void => {
   for (const [pairKey, incident] of openIncidents) {
-    if (
-      !collisions.has(pairKey) &&
-      frame - incident.lastCollisionFrame >= mergeGapFrames
-    ) {
+    if (!collisions.has(pairKey) && frame - incident.lastCollisionFrame >= mergeGapFrames) {
       completedIncidents.push(toDraftIncident(incident))
       openIncidents.delete(pairKey)
     }
@@ -227,13 +211,9 @@ const updateIncidents = (
       openIncidents.set(collision.pairKey, {
         pairKey: collision.pairKey,
         subjectId: collision.subjectId,
-        ...(collision.subjectText !== undefined
-          ? { subjectText: collision.subjectText }
-          : {}),
+        ...(collision.subjectText !== undefined ? { subjectText: collision.subjectText } : {}),
         obstacleId: collision.obstacleId,
-        ...(collision.obstacleName !== undefined
-          ? { obstacleName: collision.obstacleName }
-          : {}),
+        ...(collision.obstacleName !== undefined ? { obstacleName: collision.obstacleName } : {}),
         obstacleType: collision.obstacleType,
         obstaclePath: collision.obstaclePath,
         startFrame: frame,
@@ -288,10 +268,7 @@ const captureIncidentStills = async (
       const png = await capturePng()
       const bytes = new Uint8Array(await png.arrayBuffer())
       const filename = `frame-${String(frame).padStart(6, '0')}.png`
-      const screenshotPath = await window.api.writeAutomationFile(
-        `${directory}/${filename}`,
-        bytes
-      )
+      const screenshotPath = await window.api.writeAutomationFile(`${directory}/${filename}`, bytes)
       for (const incident of frameIncidents) {
         incident.screenshotPath = screenshotPath
       }
@@ -324,9 +301,7 @@ const isRenderableObject = (
     isPoints?: boolean
     isSprite?: boolean
   }
-  return Boolean(
-    candidate.isMesh || candidate.isLine || candidate.isPoints || candidate.isSprite
-  )
+  return Boolean(candidate.isMesh || candidate.isLine || candidate.isPoints || candidate.isSprite)
 }
 
 const hasVisibleMaterial = (
@@ -335,84 +310,27 @@ const hasVisibleMaterial = (
   const material = object.material
   if (!material) return true
   const materials = Array.isArray(material) ? material : [material]
-  return materials.some(
-    (entry) => entry.visible && !(entry.transparent && entry.opacity <= 0.001)
-  )
+  return materials.some((entry) => entry.visible && !(entry.transparent && entry.opacity <= 0.001))
 }
 
 const screenBoundsForObject = (
   object: THREE.Object3D & { geometry?: THREE.BufferGeometry },
-  camera: THREE.Camera & { near: number; far: number },
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   width: number,
   height: number
 ): InspectScreenBounds | null => {
   const worldBounds = ownWorldBounds(object)
-  if (!worldBounds) return null
-
-  const corners = boxCorners(worldBounds)
-  const depthVisibleCorners = corners.filter(
-    (corner) => {
-      const cameraZ = corner.clone().applyMatrix4(camera.matrixWorldInverse).z
-      return cameraZ <= -camera.near && cameraZ >= -camera.far
-    }
-  )
-  if (depthVisibleCorners.length === 0) return null
-
-  const pixels = depthVisibleCorners
-    .map((corner) => corner.clone().project(camera))
-    .filter((point) =>
-      Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)
-    )
-    .map((point) => ({
-      x: ((point.x + 1) / 2) * width,
-      y: ((1 - point.y) / 2) * height
-    }))
-  if (pixels.length === 0) return null
-
-  const minX = Math.min(...pixels.map(({ x }) => x))
-  const maxX = Math.max(...pixels.map(({ x }) => x))
-  const minY = Math.min(...pixels.map(({ y }) => y))
-  const maxY = Math.max(...pixels.map(({ y }) => y))
-  const minimumWidth = Math.max(1, maxX - minX)
-  const minimumHeight = Math.max(1, maxY - minY)
+  const projected = projectWorldBounds(worldBounds, camera, width, height).bounds
+  if (!projected) return null
+  const minimumWidth = Math.max(1, projected.width)
+  const minimumHeight = Math.max(1, projected.height)
   const bounds = {
-    x: (minX + maxX - minimumWidth) / 2,
-    y: (minY + maxY - minimumHeight) / 2,
+    x: (projected.left + projected.right - minimumWidth) / 2,
+    y: (projected.top + projected.bottom - minimumHeight) / 2,
     width: minimumWidth,
     height: minimumHeight
   }
   return clipBounds(bounds, width, height)
-}
-
-const ownWorldBounds = (
-  object: THREE.Object3D & { geometry?: THREE.BufferGeometry }
-): THREE.Box3 | null => {
-  const instanced = object as THREE.InstancedMesh
-  if (instanced.isInstancedMesh) {
-    instanced.computeBoundingBox()
-    if (!instanced.boundingBox || instanced.boundingBox.isEmpty()) return null
-    return instanced.boundingBox.clone().applyMatrix4(object.matrixWorld)
-  }
-
-  const geometry = object.geometry
-  if (!geometry) return null
-  geometry.computeBoundingBox()
-  if (!geometry.boundingBox || geometry.boundingBox.isEmpty()) return null
-  return geometry.boundingBox.clone().applyMatrix4(object.matrixWorld)
-}
-
-const boxCorners = (bounds: THREE.Box3): THREE.Vector3[] => {
-  const { min, max } = bounds
-  return [
-    new THREE.Vector3(min.x, min.y, min.z),
-    new THREE.Vector3(min.x, min.y, max.z),
-    new THREE.Vector3(min.x, max.y, min.z),
-    new THREE.Vector3(min.x, max.y, max.z),
-    new THREE.Vector3(max.x, min.y, min.z),
-    new THREE.Vector3(max.x, min.y, max.z),
-    new THREE.Vector3(max.x, max.y, min.z),
-    new THREE.Vector3(max.x, max.y, max.z)
-  ]
 }
 
 const unionBounds = (bounds: InspectScreenBounds[]): InspectScreenBounds | null => {
@@ -424,10 +342,7 @@ const unionBounds = (bounds: InspectScreenBounds[]): InspectScreenBounds | null 
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 }
 
-const expandBounds = (
-  bounds: InspectScreenBounds,
-  padding: number
-): InspectScreenBounds => ({
+const expandBounds = (bounds: InspectScreenBounds, padding: number): InspectScreenBounds => ({
   x: bounds.x - padding,
   y: bounds.y - padding,
   width: bounds.width + padding * 2,

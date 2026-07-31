@@ -63,6 +63,14 @@ import {
 import { type Positioning, PositioningSystem } from '../positioning'
 import type { RenderProgress } from '../../renderProgress'
 import { resolveSceneLayouts } from '../visuals/layout'
+import {
+  SceneVerificationRegistry,
+  type SceneVerification,
+  type VerificationCheck,
+  type VerificationContext,
+  type VerificationFrameRange,
+  type VerificationOptions
+} from './sceneVerification'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -108,6 +116,13 @@ export type {
 export type { CollisionWatch, CollisionWatchOptions } from './sceneCollision'
 export { MAIN_CAMERA_ID } from './sceneCamera'
 export type { ExposedCameraMetadata, ExposedSceneCamera, InspectionCamera } from './sceneCamera'
+export type {
+  SceneVerification,
+  VerificationCheck,
+  VerificationContext,
+  VerificationFrameRange,
+  VerificationOptions
+} from './sceneVerification'
 export type {
   BeatAuthoringContext,
   BeatDefinitions,
@@ -167,6 +182,7 @@ export class AnimatedScene {
   private exposureRegistry = new SceneExposureRegistry()
   private cameraRegistry = new SceneCameraRegistry()
   private collisionRegistry = new SceneCollisionRegistry()
+  private verificationRegistry = new SceneVerificationRegistry()
   private readonly frameResources = new FrameResourceHost()
   private readonly positioningSystem = new PositioningSystem()
 
@@ -310,6 +326,7 @@ export class AnimatedScene {
     this.clearExposedObjects()
     this.clearExposedCameras()
     this.clearCollisionWatches()
+    this.clearVerifications()
     this.frameResources.dispose()
   }
 
@@ -431,6 +448,22 @@ export class AnimatedScene {
 
   get collisionWatchCount(): number {
     return this.collisionRegistry.size
+  }
+
+  /** Registers a build-scoped, side-effect-free correctness check for CLI verification. */
+  verify(id: string, options: VerificationOptions, check: VerificationCheck): void {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'VERIFICATION_OUTSIDE_BUILD',
+        'scene.verify() must be called while the scene build function is running'
+      )
+    }
+    this.verificationRegistry.register(id, options, check)
+  }
+
+  /** @internal Current-build verification registrations. */
+  getVerifications(): SceneVerification[] {
+    return this.verificationRegistry.snapshot()
   }
 
   /**
@@ -1200,6 +1233,7 @@ export class AnimatedScene {
     this.clearExposedObjects()
     this.clearExposedCameras()
     this.clearCollisionWatches()
+    this.clearVerifications()
     this.sceneRenderTick = 0
     this.totalSceneTicks = 0
     this.animationTimeline.reset()
@@ -1228,6 +1262,10 @@ export class AnimatedScene {
 
   private clearCollisionWatches(): void {
     this.collisionRegistry.clear()
+  }
+
+  private clearVerifications(): void {
+    this.verificationRegistry.clear()
   }
 
   private async withSeededRandom<T>(operation: () => Promise<T> | T): Promise<T> {

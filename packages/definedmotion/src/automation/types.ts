@@ -4,6 +4,7 @@ export type AutomationCommand =
   | 'timeline-grid'
   | 'inspect'
   | 'layout-check'
+  | 'verify'
   | 'cameras'
   | 'camera-grid'
   | 'render'
@@ -45,6 +46,14 @@ export interface LayoutCheckAutomationRequest {
   mergeGapFrames: number
 }
 
+export interface VerificationAutomationRequest {
+  command: 'verify'
+  scene: string
+  tests?: string[]
+  frame?: number
+  list?: boolean
+}
+
 export interface CamerasAutomationRequest {
   command: 'cameras'
   scene: string
@@ -73,6 +82,7 @@ export type AutomationRequest =
   | TimelineGridAutomationRequest
   | InspectAutomationRequest
   | LayoutCheckAutomationRequest
+  | VerificationAutomationRequest
   | CamerasAutomationRequest
   | CameraGridAutomationRequest
   | RenderAutomationRequest
@@ -237,6 +247,21 @@ export interface InspectBeatCoordinates {
   beatProgress: number
 }
 
+export interface VerificationDefinitionResult {
+  id: string
+  during?: string
+  startFrame: number
+  endFrame: number
+}
+
+export interface VerificationFailure {
+  testId: string
+  message: string
+  details?: Record<string, unknown>
+  globalFrame: number
+  beat?: Pick<InspectBeatCoordinates, 'name' | 'localFrame' | 'beatProgress'>
+}
+
 export interface AutomationSuccessResult {
   success: true
   command: AutomationCommand
@@ -262,6 +287,12 @@ export interface AutomationSuccessResult {
   mergeGapFrames?: number
   incidents?: LayoutCollisionIncident[]
   warnings?: LayoutCheckWarning[]
+  verificationCount?: number
+  executedCheckCount?: number
+  passed?: boolean
+  failureCount?: number
+  failures?: VerificationFailure[]
+  verifications?: VerificationDefinitionResult[]
   timeMs?: number
   durationInFrames?: number
   outputFrameCount?: number

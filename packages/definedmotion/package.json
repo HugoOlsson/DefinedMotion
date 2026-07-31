@@ -67,7 +67,7 @@
   "scripts": {
     "build": "node ./cli/index.mjs build --project ../../playground",
     "dev": "node ./cli/index.mjs dev --project ../../playground",
-    "test": "npm run test:animation-plan && npm run test:timeline-beats && npm run test:core-effects && npm run test:visual-primitives && npm run test:layout && npm run test:positioning && npm run test:audio-mixer",
+    "test": "npm run test:animation-plan && npm run test:timeline-beats && npm run test:core-effects && npm run test:visual-primitives && npm run test:layout && npm run test:verification && npm run test:positioning && npm run test:audio-mixer",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",
@@ -82,6 +82,7 @@
     "test:timeline-beats": "node ./scripts/timeline-beats-test.mjs",
     "test:visual-primitives": "node ./scripts/visual-primitives-test.mjs",
     "test:layout": "node ./scripts/layout-test.mjs",
+    "test:verification": "node ./scripts/verification-test.mjs",
     "test:audio-mixer": "node ./scripts/audio-mixer-test.mjs",
     "test:positioning": "node ./scripts/positioning-test.mjs",
     "test:viewport-scheduler": "node ./scripts/interactive-viewport-scheduler-test.mjs",

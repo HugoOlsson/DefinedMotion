@@ -9,7 +9,8 @@ import type {
   InspectSceneInfo,
   LayoutCheckAutomationRequest,
   RenderAutomationRequest,
-  TimelineGridAutomationRequest
+  TimelineGridAutomationRequest,
+  VerificationAutomationRequest
 } from './types'
 import { AutomationCommandError } from './errors'
 import { loadFonts } from '../runtime/rendering/objects2d'
@@ -28,6 +29,7 @@ import { renderTimelineGrid, validateTimelineGridRequest } from './timelineGrid'
 import { renderCameraGrid, validateCameraGridRequest } from './cameraGrid'
 import { cameraSummary, listCameraSummaries, resolveInspectionCamera } from './inspectionCamera'
 import { runLayoutCheck } from './layoutCheck'
+import { runVerifications } from './verification'
 
 /**
  * Owns the currently loaded automation scene for one renderer generation.
@@ -54,6 +56,7 @@ export class RenderSession {
       request.command !== 'timeline-grid' &&
       request.command !== 'inspect' &&
       request.command !== 'layout-check' &&
+      request.command !== 'verify' &&
       request.command !== 'cameras' &&
       request.command !== 'camera-grid' &&
       request.command !== 'render'
@@ -82,6 +85,9 @@ export class RenderSession {
     }
     if (request.command === 'layout-check') {
       this.validateLayoutCheckRequest(request)
+    }
+    if (request.command === 'verify') {
+      this.validateVerificationRequest(request)
     }
     if (request.command === 'cameras') {
       this.validateCamerasRequest(request)
@@ -136,6 +142,9 @@ export class RenderSession {
     }
     if (request.command === 'layout-check') {
       return await this.layoutCheck(request, scene, startedAt)
+    }
+    if (request.command === 'verify') {
+      return await this.verify(request, scene, startedAt)
     }
     if (request.command === 'render') {
       return await this.renderVideo(request, scene, startedAt)
@@ -243,6 +252,58 @@ export class RenderSession {
         'INVALID_ARGUMENTS',
         'The layout-check merge gap must be a non-negative integer'
       )
+    }
+  }
+
+  private validateVerificationRequest(request: VerificationAutomationRequest): void {
+    if (request.list && request.frame !== undefined) {
+      throw new AutomationCommandError(
+        'INVALID_ARGUMENTS',
+        'Verification list and frame selection cannot be combined'
+      )
+    }
+    if (request.frame !== undefined && (!Number.isInteger(request.frame) || request.frame < 0)) {
+      throw new AutomationCommandError(
+        'INVALID_FRAME',
+        'The verify frame must be a non-negative integer'
+      )
+    }
+    if (
+      request.tests &&
+      (request.tests.length === 0 ||
+        request.tests.some((id) => typeof id !== 'string' || id.trim() === '') ||
+        new Set(request.tests).size !== request.tests.length)
+    ) {
+      throw new AutomationCommandError(
+        'INVALID_ARGUMENTS',
+        'Verification IDs must be non-empty and unique'
+      )
+    }
+  }
+
+  private async verify(
+    request: VerificationAutomationRequest,
+    scene: AnimatedScene,
+    startedAt: number
+  ): Promise<AutomationResult> {
+    const result = await runVerifications(request, scene)
+    return {
+      success: true,
+      command: 'verify',
+      scene: request.scene,
+      checkedFrames: result.checkedFrames,
+      verificationCount: result.definitions.length,
+      executedCheckCount: result.executedCheckCount,
+      passed: result.failures.length === 0,
+      failureCount: result.failures.length,
+      failures: result.failures,
+      verifications: result.definitions,
+      durationInFrames: scene.totalSceneTicks,
+      fps: timelineFPS,
+      seed: project.seed,
+      width: scene.width,
+      height: scene.height,
+      renderTimeMs: Math.round(performance.now() - startedAt)
     }
   }
 

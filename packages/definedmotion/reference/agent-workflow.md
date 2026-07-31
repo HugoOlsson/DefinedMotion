@@ -26,6 +26,7 @@ Electron + Three.js runtime
     ├─ still          → one full-resolution PNG
     ├─ timeline-grid  → several frames in one labeled PNG
     ├─ inspect        → scene, camera, object, and geometry JSON
+    ├─ verify         → authored frame-level correctness checks
     ├─ layout-check   → full-timeline collision incidents and representative PNGs
     └─ camera-grid    → one frame from several viewpoints
 ```
@@ -56,16 +57,19 @@ npm run dm -- inspect my-scene --frame 240 --json
 # 5. Check registered objects for screen-space collisions across every frame.
 npm run dm -- layout-check my-scene --json
 
-# 6. Compare the audience camera with inspection views when useful.
+# 6. Run scene-specific authored correctness checks.
+npm run dm -- verify --scene my-scene --json
+
+# 7. Compare the audience camera with inspection views when useful.
 npm run dm -- cameras my-scene --frame 240 --json
 npm run dm -- camera-grid my-scene --frame 240 --json
 
-# 7. Edit source and repeat against the same session.
+# 8. Edit source and repeat against the same session.
 
-# 8. Render the approved scene to a complete video.
+# 9. Render the approved scene to a complete video.
 npm run dm -- render my-scene --json
 
-# 9. Stop the environment when finished.
+# 10. Stop the environment when finished.
 npm run dm -- session stop --json
 ```
 
@@ -83,6 +87,7 @@ Start broad with a timeline grid. Narrow the investigation with stills, inspecti
 | Check a visual detail                        | `still`                     | Produces one lossless, full-resolution frame.                               |
 | Confirm position, size, visibility, or state | `inspect`                   | Returns semantic objects, transforms, bounds, text, and in-frame data.      |
 | Find object collisions across the timeline   | `layout-check`              | Checks registered objects against visible renderable geometry every frame.  |
+| Check scene-specific authored requirements   | `verify`                    | Runs stable assertions over their declared beat and frame ranges.           |
 | Discover alternative viewpoints              | `cameras`                   | Lists the authored camera and exposed inspection cameras at a frame.        |
 | Compare viewpoints                           | `camera-grid`               | Renders the same scene state through several cameras.                       |
 | Check geometry through one debug view        | `inspect --camera <id>`     | Projects exposed bounds through the selected camera.                        |
@@ -265,6 +270,16 @@ screen bounds, overlap pixels, padding, and absolute screenshot path.
 This is a warning-oriented bounds check, not pixel-perfect occlusion analysis. Intentional
 overlaps should be declared with `ignore`, and remaining incidents should be judged from their
 representative stills.
+
+### `verify`
+
+```bash
+npm run dm -- verify --scene <scene> [--test <id> ...] [--frame <integer> | --list] --json
+```
+
+With no selection, `verify` exact-traces the scene once and runs every registered check over its declared frame range. Repeat `--test` to run exact stable IDs, use `--frame` to narrow them to one eligible global frame, or use `--list` to discover IDs and effective end-exclusive ranges. Unknown IDs and selections with no eligible frames are errors.
+
+The JSON result reports the selected definitions, traced frame count, executed check count, pass state, and the first failure for each failed check. Failures include the global frame, message, optional JSON details, and beat-local coordinates when applicable. A completed run with failed assertions returns structured JSON with `success: true` and `passed: false`, while the CLI process exits nonzero.
 
 ### `timeline-grid`
 
@@ -667,6 +682,31 @@ Expose objects that answer likely questions: the primary subject, important labe
 Metadata is copied when the object is exposed and should describe stable purpose. For dynamic semantic state, update a string `text` property on the exposed object as the animation changes; `inspect` reads its current value.
 
 `THREE.Box3.setFromObject()` underlies world bounds. For a dynamic `InstancedMesh`, call `computeBoundingBox()` and `computeBoundingSphere()` after changing instance matrices when accurate inspection bounds matter.
+
+### Authoring scene verifications
+
+Register scene-specific requirements during build with a stable ID, an optional beat or end-exclusive global frame range, and a synchronous callback:
+
+```ts
+const start = scene.getTimelinePointer()
+scene.addAnims(moveTo(label, target))
+const end = scene.getTimelinePointer()
+
+scene.verify('label-inside-panel', { during: 'diagram', frames: { start, end } }, (context) => {
+  const labelBounds = context.screenBounds(label)
+  const panelBounds = context.screenBounds(panel)
+  context.assert(
+    labelBounds !== null &&
+      panelBounds !== null &&
+      labelBounds.left >= panelBounds.left + 10 &&
+      labelBounds.right <= panelBounds.right - 10,
+    'Label must remain horizontally inside the panel',
+    { labelBounds, panelBounds, requiredMargin: 10 }
+  )
+})
+```
+
+`context.screenBounds()` returns unclipped logical-video-pixel bounds or `null` without projectable geometry. `worldBounds()` returns a Three.js box, `isVisibleInHierarchy()` checks only ancestor `visible` flags, and `viewport` contains the logical width and height. Verification callbacks run only under `verify`, after the complete frame state has resolved, and must not mutate the scene.
 
 ### Registering collision watches
 

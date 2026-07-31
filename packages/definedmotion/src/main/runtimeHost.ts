@@ -379,8 +379,8 @@ export class PersistentRuntimeHost {
     }
 
     const id = randomUUID()
-    const timeoutMs =
-      request.command === 'layout-check' ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000
+    const longRunning = request.command === 'layout-check' || request.command === 'verify'
+    const timeoutMs = longRunning ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000
     return new Promise((resolvePromise, rejectPromise) => {
       const timeout = setTimeout(
         () => {
@@ -388,8 +388,8 @@ export class PersistentRuntimeHost {
           rejectPromise(
             new RuntimeHostError(
               'AUTOMATION_TIMEOUT',
-              request.command === 'layout-check'
-                ? 'Persistent renderer did not finish the layout check within 24 hours'
+              longRunning
+                ? `Persistent renderer did not finish ${request.command} within 24 hours`
                 : 'Persistent renderer did not finish the request within 5 minutes'
             )
           )

@@ -328,15 +328,16 @@ app.whenReady().then(() => {
             new Error(
               automationRequest?.command === 'render'
                 ? 'Render timed out after 24 hours'
-                : automationRequest?.command === 'layout-check'
-                  ? 'Layout check timed out after 24 hours'
+                : automationRequest?.command === 'layout-check' || automationRequest?.command === 'verify'
+                  ? `${automationRequest.command} timed out after 24 hours`
                   : 'Automation timed out after 5 minutes'
             )
           )
         )
       },
       (automationRequest?.command === 'render' ||
-        automationRequest?.command === 'layout-check')
+        automationRequest?.command === 'layout-check' ||
+        automationRequest?.command === 'verify')
         ? LONG_AUTOMATION_TIMEOUT_MS
         : 5 * 60 * 1000
     )

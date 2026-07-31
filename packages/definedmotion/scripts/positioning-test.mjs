@@ -7,6 +7,7 @@ import * as THREE from 'three'
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url))
 const sourcePath = join(packageRoot, 'src/runtime/positioning.ts')
+const measurementSourcePath = join(packageRoot, 'src/runtime/measurement.ts')
 const sceneErrorsSourcePath = join(packageRoot, 'src/runtime/scene/sceneErrors.ts')
 const temporaryDirectory = await mkdtemp(join(packageRoot, '.positioning-test-'))
 
@@ -34,12 +35,15 @@ const compilePositioningModule = async () => {
   const sceneDirectory = join(temporaryDirectory, 'scene')
   await mkdir(sceneDirectory)
   await writeFile(join(sceneDirectory, 'sceneErrors.mjs'), await transpile(sceneErrorsSourcePath))
+  await writeFile(
+    join(temporaryDirectory, 'measurement.mjs'),
+    await transpile(measurementSourcePath)
+  )
 
   const outputPath = join(temporaryDirectory, 'positioning.mjs')
-  const positioningOutput = (await transpile(sourcePath)).replace(
-    './scene/sceneErrors',
-    './scene/sceneErrors.mjs'
-  )
+  const positioningOutput = (await transpile(sourcePath))
+    .replace('./scene/sceneErrors', './scene/sceneErrors.mjs')
+    .replace('./measurement', './measurement.mjs')
   await writeFile(outputPath, positioningOutput)
 
   const [positioningModule, sceneErrorsModule] = await Promise.all([

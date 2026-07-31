@@ -80,4 +80,4 @@ emit(result, json)
 if (!result.success && !json && result.error.code === 'UNKNOWN_COMMAND') {
   process.stderr.write(`\n${usage}`)
 }
-process.exitCode = result.success ? 0 : 1
+process.exitCode = result.success && !(result.command === 'verify' && result.passed === false) ? 0 : 1
