@@ -1,5 +1,4 @@
-import { project } from 'virtual:definedmotion-project'
-import { listProjectScenes } from '../project'
+import { createSceneById, listScenes, project } from 'virtual:definedmotion-project'
 import type {
   AutomationRequest,
   AutomationResult,
@@ -16,7 +15,6 @@ import { AutomationCommandError } from './errors'
 import { loadFonts } from '../runtime/rendering/objects2d'
 import {
   type AnimatedScene,
-  setGlobalAssetNamespace,
   setGlobalContainerRef,
   setGlobalInteractiveMode,
   renderOutputFps,
@@ -30,6 +28,7 @@ import { renderCameraGrid, validateCameraGridRequest } from './cameraGrid'
 import { cameraSummary, listCameraSummaries, resolveInspectionCamera } from './inspectionCamera'
 import { runLayoutCheck } from './layoutCheck'
 import { runVerifications } from './verification'
+import { disposeScene } from '../runtime/scene/disposeScene'
 
 /**
  * Owns the currently loaded automation scene for one renderer generation.
@@ -47,7 +46,7 @@ export class RenderSession {
       return {
         success: true,
         command: 'scenes',
-        scenes: listProjectScenes(project).filter((scene) => !request.excludeTests || !scene.isTest)
+        scenes: listScenes().filter((scene) => !request.excludeTests || !scene.isTest)
       }
     }
 
@@ -122,8 +121,7 @@ export class RenderSession {
     setGlobalContainerRef(container)
     setGlobalInteractiveMode(false)
 
-    setGlobalAssetNamespace(definition.assetNamespace ?? 'project')
-    const scene = definition.create()
+    const scene = createSceneById(request.scene)
     this.activeScene = scene
     container.style.width = `${scene.width}px`
     container.style.height = `${scene.height}px`
@@ -483,9 +481,6 @@ export class RenderSession {
     if (!scene) return
     this.activeScene = undefined
 
-    scene.onDestroy()
-    scene.renderer.dispose()
-    scene.renderer.forceContextLoss()
-    scene.renderer.domElement.remove()
+    disposeScene(scene)
   }
 }

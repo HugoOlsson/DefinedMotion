@@ -67,7 +67,7 @@
   "scripts": {
     "build": "node ./cli/index.mjs build --project ../../playground",
     "dev": "node ./cli/index.mjs dev --project ../../playground",
-    "test": "npm run test:animation-plan && npm run test:timeline-beats && npm run test:core-effects && npm run test:visual-primitives && npm run test:layout && npm run test:verification && npm run test:viewer-preview && npm run test:positioning && npm run test:audio-mixer",
+    "test": "npm run test:animation-plan && npm run test:timeline-beats && npm run test:core-effects && npm run test:visual-primitives && npm run test:layout && npm run test:verification && npm run test:viewer-preview && npm run test:viewer-selection && npm run test:positioning && npm run test:audio-mixer",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",
@@ -84,6 +84,7 @@
     "test:layout": "node ./scripts/layout-test.mjs",
     "test:verification": "node ./scripts/verification-test.mjs",
     "test:viewer-preview": "node ./scripts/viewer-preview-test.mjs",
+    "test:viewer-selection": "node ./scripts/viewer-selection-test.mjs",
     "test:audio-mixer": "node ./scripts/audio-mixer-test.mjs",
     "test:positioning": "node ./scripts/positioning-test.mjs",
     "test:viewport-scheduler": "node ./scripts/interactive-viewport-scheduler-test.mjs",

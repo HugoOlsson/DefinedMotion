@@ -130,7 +130,9 @@ function createWindow(): void {
       const deadline = Date.now() + 10_000
       const reportWhenMounted = (): void => {
         void mainWindow.webContents
-          .executeJavaScript("Boolean(document.querySelector('#app')?.childElementCount)")
+          .executeJavaScript(
+            "Boolean(document.querySelector('[data-testid=\"scene-selector\"]') && document.querySelector('[data-viewer-active-scene]')?.dataset.viewerActiveScene)"
+          )
           .then((mounted: boolean) => {
             if (mounted) console.log('DEFINEDMOTION_RENDERER_READY')
             else if (Date.now() >= deadline) console.log('DEFINEDMOTION_RENDERER_EMPTY')

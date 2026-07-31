@@ -11,7 +11,9 @@ export type {
   DefinedMotionConfig,
   DefinedMotionSceneDefinition,
   DefinedMotionSceneModule,
-  SceneFactory
+  SceneFactory,
+  ViewerSceneKind,
+  ViewerSceneSummary
 } from '../project'
 export {
   AnimatedScene,

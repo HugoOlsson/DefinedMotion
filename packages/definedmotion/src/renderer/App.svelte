@@ -1,15 +1,20 @@
 <script lang="ts">
   import './app.css'
-  import { setStateInScene, updateStateInUrl } from './sceneState'
+  import { restoredFrameForScene, updateStateInUrl } from './sceneState'
   import { onDestroy, onMount } from 'svelte'
-  import { renderOutputFps, SceneRuntimeError, screenFPS, setGlobalContainerRef, timelineFPS, type AnimatedScene, type ScenePreviewMarker } from '../runtime/scene/sceneClass'
-  import { loadFonts } from '../runtime/rendering/objects2d'
+  import { renderOutputFps, SceneRuntimeError, screenFPS, timelineFPS, type AnimatedScene, type ScenePreviewMarker } from '../runtime/scene/sceneClass'
   import { generateID } from '../runtime/id'
-  import { entryScene, renderSkip } from 'virtual:definedmotion-project'
-  import { callAllDestroyFunctions } from '../runtime/lifecycle'
+  import { listScenes, project, renderSkip } from 'virtual:definedmotion-project'
   import rotateIcon from './assets/360.svg'
   import moveIcon from './assets/move.svg'
   import { defaultViewerPreferences, type ViewerPreferences } from '../viewer/preferences'
+  import { InteractiveSceneSession } from '../viewer/interactiveSceneSession'
+  import type { ViewerSceneKind, ViewerSceneSummary } from '../project'
+  import {
+    resolveInitialScene,
+    SelectionGeneration,
+    visibleScenesFor
+  } from '../viewer/sceneSelection'
   
 
   let frameValueElement: HTMLParagraphElement
@@ -27,6 +32,12 @@
   let sceneError = $state<string>()
   let previewMarker = $state<ScenePreviewMarker>()
   let viewerPreferences = $state<ViewerPreferences>(defaultViewerPreferences())
+  let selectedSceneId = $state('')
+  let isSelecting = $state(false)
+  let selectionNotice = $state<string>()
+  const sceneSummaries = listScenes()
+  let sceneSession: InteractiveSceneSession | undefined
+  const selectionGeneration = new SelectionGeneration()
 
   let isScrubbing = false
   let wasPlayingBeforeScrub = false
@@ -55,6 +66,101 @@
 
   const maxSliderValue = 10_000
   let urlUpdaterInterval: ReturnType<typeof setInterval>
+
+  function scenesFor(kind: ViewerSceneKind): ViewerSceneSummary[] {
+    return visibleScenesFor(
+      sceneSummaries,
+      kind,
+      viewerPreferences.showExamplesAndTests,
+      selectedSceneId
+    )
+  }
+
+  async function persistViewerPreferences(): Promise<void> {
+    const snapshot: ViewerPreferences = {
+      ...(viewerPreferences.selectedSceneId
+        ? { selectedSceneId: viewerPreferences.selectedSceneId }
+        : {}),
+      showExamplesAndTests: viewerPreferences.showExamplesAndTests,
+      usePreviewMarker: viewerPreferences.usePreviewMarker
+    }
+    await window.api.setViewerPreferences(snapshot)
+  }
+
+  function connectScene(candidate: AnimatedScene): void {
+    candidate.playEffectFunction = () => {
+      if (scene !== candidate) return
+      isPlayingStateVar = candidate.isPlaying
+      maybeUpdateUI()
+    }
+    candidate.renderingEventFunction = (isStart) => {
+      if (scene !== candidate) return
+      isRendering = isStart
+      if (!isStart) {
+        isPlayingStateVar = false
+        updateUIImmediate()
+      }
+    }
+  }
+
+  async function selectViewerScene(
+    id: string,
+    requestedFrame?: number
+  ): Promise<void> {
+    if (!sceneSession || isRendering) return
+    const generation = selectionGeneration.begin()
+    selectedSceneId = id
+    isSelecting = true
+    hasInitScene = false
+    sceneError = undefined
+    previewMarker = undefined
+    pendingSliderValue = undefined
+    isPlayingStateVar = false
+
+    try {
+      const candidate = await sceneSession.selectScene(id, {
+        requestedFrame,
+        usePreviewMarker: viewerPreferences.usePreviewMarker
+      })
+      if (!selectionGeneration.isCurrent(generation) || !candidate) return
+      scene = candidate
+      connectScene(candidate)
+      previewMarker = candidate.getPreviewMarker()
+      hasInitScene = true
+      viewerPreferences = { ...viewerPreferences, selectedSceneId: id }
+      await persistViewerPreferences().catch((error) =>
+        console.error('Could not persist the selected scene:', error)
+      )
+      updateStateInUrl(id, candidate.sceneRenderTick)
+      updateUIImmediate()
+      window.dispatchEvent(
+        new CustomEvent('definedmotion:scene-ready', {
+          detail: { sceneId: id, frame: candidate.sceneRenderTick }
+        })
+      )
+    } catch (error) {
+      if (!selectionGeneration.isCurrent(generation)) return
+      scene = undefined
+      sceneError = error instanceof Error ? error.message : String(error)
+      viewerPreferences = { ...viewerPreferences, selectedSceneId: id }
+      await persistViewerPreferences().catch((preferenceError) =>
+        console.error('Could not persist the selected scene:', preferenceError)
+      )
+      window.dispatchEvent(
+        new CustomEvent('definedmotion:scene-error', {
+          detail: { sceneId: id, message: sceneError }
+        })
+      )
+      console.error(`Could not build scene ${id}:`, error)
+    } finally {
+      if (selectionGeneration.isCurrent(generation)) isSelecting = false
+    }
+  }
+
+  async function updateReferenceVisibility(enabled: boolean): Promise<void> {
+    viewerPreferences = { ...viewerPreferences, showExamplesAndTests: enabled }
+    await persistViewerPreferences()
+  }
 
   function handleSliderChange(sliderValue: number): Promise<void> {
     pendingSliderValue = sliderValue
@@ -133,20 +239,27 @@
   }
 
   async function updatePreviewPreference(enabled: boolean): Promise<void> {
-    if (!scene || scene.isPlaying || isRendering) return
+    if (scene?.isPlaying || isRendering || isSelecting) return
     viewerPreferences = { ...viewerPreferences, usePreviewMarker: enabled }
-    await window.api.setViewerPreferences(viewerPreferences)
-    scene.setViewerPreviewEnabled(enabled)
+    await persistViewerPreferences()
+    if (!scene) return
+    const candidate = scene
+    isSelecting = true
+    candidate.setViewerPreviewEnabled(enabled)
     hasInitScene = false
     sceneError = undefined
     try {
-      await scene.jumpToFrameAtIndex(scene.sceneRenderTick)
-      previewMarker = scene.getPreviewMarker()
+      await candidate.jumpToFrameAtIndex(candidate.sceneRenderTick)
+      if (scene !== candidate) return
+      previewMarker = candidate.getPreviewMarker()
       hasInitScene = true
       updateUIImmediate()
     } catch (error) {
+      if (scene !== candidate) return
       sceneError = error instanceof Error ? error.message : String(error)
-      previewMarker = scene.getPreviewMarker()
+      previewMarker = candidate.getPreviewMarker()
+    } finally {
+      if (scene === candidate) isSelecting = false
     }
   }
 
@@ -186,12 +299,9 @@ function updateUIImmediate() {
 }
 
   onMount(async () => {
-    if (!entryScene) return
     const animationWindow = document.getElementById(animationWindowID)
     
     if (!animationWindow || !sliderElement) return
-
-    setGlobalContainerRef(animationWindow)
 
     try {
       viewerPreferences = await window.api.getViewerPreferences()
@@ -199,34 +309,15 @@ function updateUIImmediate() {
       console.warn('Could not load viewer preferences:', error)
     }
 
-    scene = entryScene()
-    scene.setViewerPreviewEnabled(viewerPreferences.usePreviewMarker)
-
-    scene.playEffectFunction = () => {
-      isPlayingStateVar = scene.isPlaying
-      maybeUpdateUI();
+    sceneSession = new InteractiveSceneSession(animationWindow)
+    const storedScene = viewerPreferences.selectedSceneId
+    const initial = resolveInitialScene(sceneSummaries, project.defaultScene, storedScene)
+    if (initial.fellBack && storedScene) {
+      selectionNotice = `Scene “${storedScene}” no longer exists. Opened the configured default.`
     }
-    scene.renderingEventFunction = (isStart) => {
-      isRendering = isStart
-       if (!isStart) {
-         isPlayingStateVar = false
-        // render just finished; force UI to reflect the reset frame
-        updateUIImmediate()
-      }
-    }
-
-    try {
-      await loadFonts()
-      await setStateInScene(scene)
-      previewMarker = scene.getPreviewMarker()
-      hasInitScene = true
-    } catch (error) {
-      sceneError = error instanceof Error ? error.message : String(error)
-      previewMarker = scene.getPreviewMarker()
-      console.error('Could not build the scene:', error)
-    }
+    await selectViewerScene(initial.id, restoredFrameForScene(initial.id))
     urlUpdaterInterval = setInterval(() => {
-      updateStateInUrl(scene.sceneRenderTick)
+      if (scene && selectedSceneId) updateStateInUrl(selectedSceneId, scene.sceneRenderTick)
     }, 500)
 
   
@@ -238,7 +329,8 @@ function updateUIImmediate() {
 
   onDestroy(() => {
     clearInterval(urlUpdaterInterval)
-    callAllDestroyFunctions()
+    selectionGeneration.invalidate()
+    sceneSession?.dispose()
   })
 
   function fmt(n: number) {
@@ -270,8 +362,85 @@ export async function copyToClipboard(text: string): Promise<void> {
 </script>
 
 <div class=" flex flex-col p-2">
+  <div class="mb-2 rounded-md bg-black/[0.035] p-2 text-xs">
+    <div class="flex items-center gap-2">
+      <label for="scene-selector" class="font-semibold">Scene</label>
+      <select
+        id="scene-selector"
+        data-testid="scene-selector"
+        class="min-w-0 flex-1 rounded border border-black/10 bg-white px-2 py-1"
+        value={selectedSceneId}
+        disabled={isRendering || isSelecting}
+        onchange={(event) => {
+          void selectViewerScene((event.currentTarget as HTMLSelectElement).value)
+        }}
+      >
+        {#if scenesFor('project').length > 0}
+          <optgroup label="Project">
+            {#each scenesFor('project') as summary}
+              <option value={summary.id}>
+                {summary.name}{summary.isDefault ? ' (default)' : ''}
+              </option>
+            {/each}
+          </optgroup>
+        {/if}
+        {#if scenesFor('example').length > 0}
+          <optgroup label="Examples">
+            {#each scenesFor('example') as summary}
+              <option value={summary.id}>{summary.name}</option>
+            {/each}
+          </optgroup>
+        {/if}
+        {#if scenesFor('test').length > 0}
+          <optgroup label="Tests">
+            {#each scenesFor('test') as summary}
+              <option value={summary.id}>{summary.name}</option>
+            {/each}
+          </optgroup>
+        {/if}
+      </select>
+    </div>
+    <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[0.68rem]">
+      <label class="flex items-center gap-1.5">
+        <input
+          data-testid="show-reference-scenes"
+          type="checkbox"
+          checked={viewerPreferences.showExamplesAndTests}
+          disabled={isRendering || isSelecting}
+          onchange={(event) => {
+            void updateReferenceVisibility(
+              (event.currentTarget as HTMLInputElement).checked
+            ).catch((error) => console.error('Could not update scene visibility:', error))
+          }}
+        />
+        Show examples and tests
+      </label>
+      <label class="flex items-center gap-1.5">
+        <input
+          data-testid="use-preview-marker"
+          type="checkbox"
+          checked={viewerPreferences.usePreviewMarker}
+          disabled={isRendering || isSelecting || isPlayingStateVar}
+          onchange={(event) => {
+            void updatePreviewPreference((event.currentTarget as HTMLInputElement).checked).catch(
+              (error) => console.error('Could not update the preview preference:', error)
+            )
+          }}
+        />
+        Use scene preview marker
+      </label>
+    </div>
+    {#if selectionNotice}
+      <p class="mt-1 text-[0.65rem] text-amber-700">{selectionNotice}</p>
+    {/if}
+  </div>
   <div class="relative w-full rounded-sm overflow-clip bg-neutral-100">
-    <div id={animationWindowID} class="w-full" class:invisible={!hasInitScene}></div>
+    <div
+      id={animationWindowID}
+      data-viewer-active-scene={hasInitScene ? selectedSceneId : ''}
+      class="min-h-[200px] w-full"
+      class:invisible={!hasInitScene}
+    ></div>
     {#if sceneError}
       <div class="absolute inset-0 flex items-center justify-center bg-red-50 px-8 text-center text-xs text-red-800">
         <div>
@@ -281,7 +450,7 @@ export async function copyToClipboard(text: string): Promise<void> {
       </div>
     {:else if !hasInitScene}
       <div class="absolute inset-0 flex items-center justify-center text-xs text-black/35">
-        Building scene…
+        {isSelecting ? 'Building scene…' : 'Preparing viewer…'}
       </div>
     {/if}
   </div>
@@ -335,25 +504,12 @@ export async function copyToClipboard(text: string): Promise<void> {
     </div>
   </div>
   {#if previewMarker}
-    <div class="mt-2 flex items-center justify-between gap-3 text-[0.68rem]">
+    <div class="mt-2 text-[0.68rem]">
       <p class={viewerPreferences.usePreviewMarker ? 'font-medium text-amber-700' : 'text-black/40'}>
         {viewerPreferences.usePreviewMarker
           ? `Approximate preview · starts ${previewMarker.beat ? `at beat “${previewMarker.beat}” · ` : ''}at frame ${previewMarker.frame}`
           : `Preview marker disabled · frame ${previewMarker.frame}`}
       </p>
-      <label class="flex shrink-0 items-center gap-1.5">
-        <input
-          type="checkbox"
-          checked={viewerPreferences.usePreviewMarker}
-          disabled={!hasInitScene || isRendering || isPlayingStateVar}
-          onchange={(event) => {
-            void updatePreviewPreference((event.currentTarget as HTMLInputElement).checked).catch(
-              (error) => console.error('Could not update the preview preference:', error)
-            )
-          }}
-        />
-        Use scene preview marker
-      </label>
     </div>
   {/if}
   <div class="relative w-full px-0 mx-0" class:has-preview-boundary={previewMarker !== undefined && viewerPreferences.usePreviewMarker} style={`--preview-boundary: ${previewMarkerPercent()}%`}>

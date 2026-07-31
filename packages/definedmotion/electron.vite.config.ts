@@ -67,15 +67,17 @@ import { definedMotionConfig } from 'virtual:definedmotion-config'
 import {
   collectSceneModules,
   defineProject,
+  listProjectScenes,
   mergeSceneRegistries
 } from ${JSON.stringify(fsImport(path.join(packageRoot, 'src', 'project.ts')))}
 import { setGlobalAssetNamespace } from ${JSON.stringify(
     fsImport(path.join(packageRoot, 'src', 'runtime', 'scene', 'sceneClass.ts'))
   )}
 
-const referenceScenes = definedMotionConfig.includeReferenceScenes === false
-  ? {}
-  : collectSceneModules({${reference.entries}}, { assetNamespace: 'reference' })
+const referenceScenes = collectSceneModules(
+  {${reference.entries}},
+  { assetNamespace: 'reference' }
+)
 const userScenes = collectSceneModules({${user.entries}}, { allowEmpty: true })
 const scenes = mergeSceneRegistries(referenceScenes, userScenes)
 
@@ -87,8 +89,14 @@ export const project = defineProject({
   scenes
 })
 export const renderSkip = project.renderEveryNthFrame
-export const entryScene = () => {
-  const definition = project.scenes[project.defaultScene]
+export const listScenes = () => listProjectScenes(project)
+export const createSceneById = (id) => {
+  const definition = project.scenes[id]
+  if (!definition) {
+    throw new Error(
+      'Unknown scene "' + id + '". Available scenes: ' + Object.keys(project.scenes).join(', ')
+    )
+  }
   setGlobalAssetNamespace(definition.assetNamespace ?? 'project')
   return definition.create()
 }

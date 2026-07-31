@@ -9,7 +9,6 @@ export interface DefinedMotionConfig {
   renderEveryNthFrame: number
   seed: number | string
   defaultScene: string
-  includeReferenceScenes?: boolean
 }
 
 export interface DefinedMotionSceneDefinition {
@@ -34,6 +33,16 @@ export interface DefinedMotionProjectDefinition {
   seed: number | string
   defaultScene: string
   scenes: Record<string, DefinedMotionSceneDefinition>
+}
+
+export type ViewerSceneKind = 'project' | 'example' | 'test'
+
+export interface ViewerSceneSummary {
+  readonly id: string
+  readonly name: string
+  readonly kind: ViewerSceneKind
+  readonly isDefault: boolean
+  readonly isTest: boolean
 }
 
 export const defineScene = (
@@ -172,10 +181,11 @@ export const defineProject = (
 
 export const listProjectScenes = (
   project: DefinedMotionProjectDefinition
-): Array<{ id: string; name: string; isDefault: boolean; isTest: boolean }> =>
-  Object.values(project.scenes).map(({ id, name, isTest }) => ({
+): ViewerSceneSummary[] =>
+  Object.values(project.scenes).map(({ id, name, isTest, assetNamespace }) => ({
     id,
     name: name ?? id,
+    kind: isTest ? 'test' : assetNamespace === 'reference' ? 'example' : 'project',
     isDefault: id === project.defaultScene,
     isTest: isTest ?? false
   }))

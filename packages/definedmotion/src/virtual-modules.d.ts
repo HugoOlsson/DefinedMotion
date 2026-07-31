@@ -5,8 +5,9 @@ declare module 'virtual:definedmotion-config' {
 
 declare module 'virtual:definedmotion-project' {
   import type { AnimatedScene } from './runtime/scene/sceneClass'
-  import type { DefinedMotionProjectDefinition } from './project'
+  import type { DefinedMotionProjectDefinition, ViewerSceneSummary } from './project'
   export const project: DefinedMotionProjectDefinition
-  export const entryScene: () => AnimatedScene
+  export const listScenes: () => ViewerSceneSummary[]
+  export const createSceneById: (id: string) => AnimatedScene
   export const renderSkip: number
 }

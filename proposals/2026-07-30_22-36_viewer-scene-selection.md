@@ -138,3 +138,15 @@ Regression coverage must verify:
 ## Non-goals
 
 The first version does not add scene creation, deletion, renaming, favorites, tags, recent-scene history, per-scene remembered frames, configuration editing, lazy loading, or CLI control of the interactive viewer selection.
+
+## Acceptance suite
+
+- `SELECT-01`: the viewer and CLI receive the same stable project, example, and test scene summaries.
+- `SELECT-02`: selecting a scene disposes the prior scene and leaves exactly one active canvas and interactive resource set.
+- `SELECT-03`: only the latest rapid selection may become active or persist its ID; stale candidates are disposed.
+- `SELECT-04`: selected scene, reference visibility, and preview use persist per project and survive reload.
+- `SELECT-05`: an unavailable stored ID falls back to the configured default, while a build failure keeps the requested selection and shows its error.
+- `SELECT-06`: restored frame state is associated with its scene ID; manual selection starts at the effective preview boundary or frame `0`.
+- `SELECT-07`: project and reference asset namespaces remain correct after switching, and selection is disabled during rendering.
+
+Targeted command: `npm run test:viewer-selection --workspace definedmotion`. The integration gate launches the real viewer and switches between project and reference scenes through stable UI selectors.

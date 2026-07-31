@@ -90,6 +90,7 @@ export type AutomationRequest =
 export interface AutomationSceneSummary {
   id: string
   name: string
+  kind: 'project' | 'example' | 'test'
   isDefault: boolean
   isTest: boolean
 }

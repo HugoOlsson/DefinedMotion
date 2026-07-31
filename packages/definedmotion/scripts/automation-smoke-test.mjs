@@ -57,6 +57,13 @@ try {
   ) {
     throw new Error('Visual test scenes were not discoverable with isTest metadata')
   }
+  if (
+    scenes.scenes.find((scene) => scene.id === 'playground-smoke')?.kind !== 'project' ||
+    scenes.scenes.find((scene) => scene.id === 'fourier-series')?.kind !== 'example' ||
+    scenes.scenes.find((scene) => scene.id === 'test-viewer-preview')?.kind !== 'test'
+  ) {
+    throw new Error('Scene registry did not classify project, example, and test scenes')
+  }
 
   const scenesWithoutTests = run(['scenes', '--exclude-tests', '--no-build'])
   if (

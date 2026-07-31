@@ -31,6 +31,8 @@ Electron + Three.js runtime
     └─ camera-grid    → one frame from several viewpoints
 ```
 
+The interactive viewer selects from the same stable scene registry as the CLI. Project scenes are shown by default; enable **Show examples and tests** to inspect the packaged reference gallery. The selected scene and viewer preferences persist per project without rewriting `definedmotion.config.ts`.
+
 The interface provides two kinds of evidence:
 
 - **Visual evidence** answers whether composition, color, lighting, typography, and motion progression look right.
