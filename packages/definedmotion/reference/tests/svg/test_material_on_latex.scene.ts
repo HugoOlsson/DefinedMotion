@@ -11,7 +11,7 @@ import { addHDRI, HDRIs, loadHDRIData } from "definedmotion/rendering";
 import {  addSceneLighting,  } from "definedmotion/rendering";
 import { latexToSVG } from "definedmotion/latex";
 import { createSVGShape } from "definedmotion/latex";
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 import * as THREE from 'three';
 
 
@@ -19,7 +19,6 @@ export function test_material_on_latex(): AnimatedScene {
   return new AnimatedScene(
     1000, 1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
 

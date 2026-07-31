@@ -1,8 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import {
   AnimatedScene,
   defineScene,
-  HotReloadSetting,
   SceneRuntimeError,
   SpaceSetting
 } from 'definedmotion'
@@ -19,7 +19,6 @@ export function testCameraAttachedOverlayRebuild(): AnimatedScene {
     320,
     180,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       if (scene.camera.children.length !== 0) {
         throw new SceneRuntimeError(
@@ -35,7 +34,7 @@ export function testCameraAttachedOverlayRebuild(): AnimatedScene {
       overlay.position.set(0, 0, -10)
       scene.camera.add(overlay)
       scene.scene.add(scene.camera)
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
     }
   )
 }

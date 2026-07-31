@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { addBackgroundGradient, addSceneLighting } from 'definedmotion/rendering'
 import { loadGLB } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import type { SceneAsset } from 'definedmotion/assets'
 import * as THREE from 'three'
 import { createBumpMap } from 'definedmotion/rendering'
@@ -304,7 +305,6 @@ export function keyboardScene(): AnimatedScene {
     1080,
     2160,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const tickSound = scene.asset('audio/tick_sound.mp3')
       const keyboard1 = scene.asset('audio/keyboard1.mp3')
@@ -421,7 +421,7 @@ export function keyboardScene(): AnimatedScene {
 
       const line1 = 'Hello Instagram!'
       scene.addAnims(typeAnimation(scene, line1, text, typeSpeed, sounds))
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
       scene.addAnims(
         typeAnimation(
           scene,
@@ -432,10 +432,10 @@ export function keyboardScene(): AnimatedScene {
         )
       )
 
-      scene.addWait(300)
+      scene.addAnims(wait((300) / 1000))
       const line2 = 'I am just testing my programmatic animation library!'
       scene.addAnims(typeAnimation(scene, line2, text, typeSpeed, sounds))
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
       scene.addAnims(
         typeAnimation(
           scene,
@@ -446,10 +446,10 @@ export function keyboardScene(): AnimatedScene {
         )
       )
 
-      scene.addWait(300)
+      scene.addAnims(wait((300) / 1000))
       const line3 = `It is inspired by 3Blue1Brown's Manim and Motion Canvas. It is meant for technical and mathematical animations!`
       scene.addAnims(typeAnimation(scene, line3, text, typeSpeed, sounds))
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
       scene.addAnims(
         typeAnimation(
           scene,
@@ -460,11 +460,11 @@ export function keyboardScene(): AnimatedScene {
         )
       )
 
-      scene.addWait(300)
+      scene.addAnims(wait((300) / 1000))
       const line4 =
         'One of its features is that when you save your code, the animation updates immediately in the viewport. No need to render the video, open the file and then see the result!'
       scene.addAnims(typeAnimation(scene, line4, text, typeSpeed, sounds))
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
       scene.addAnims(
         typeAnimation(
           scene,
@@ -475,10 +475,10 @@ export function keyboardScene(): AnimatedScene {
         )
       )
 
-      scene.addWait(300)
+      scene.addAnims(wait((300) / 1000))
       const line5 = `Use the project by visiting "DefinedMotion" by Hugo Olsson on GitHub, thanks!`
       scene.addAnims(typeAnimation(scene, line5, text, typeSpeed, sounds))
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
       scene.addAnims(
         typeAnimation(
           scene,
@@ -496,7 +496,7 @@ export function keyboardScene(): AnimatedScene {
         scene.camera.zoom = initialZoom * (1.3 + Math.sin(time / 1000) / 20)
         //await barChart.updateData(frequencyMap)
       })
-      scene.addWait(3000)
+      scene.addAnims(wait((3000) / 1000))
     }
   )
 }

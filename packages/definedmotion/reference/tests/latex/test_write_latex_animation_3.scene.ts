@@ -1,6 +1,7 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
 import { createSVGShape } from 'definedmotion/latex'
 import { setOpacity } from 'definedmotion/animation'
@@ -19,7 +20,6 @@ export function test_write_latex_animation_3(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       const latex = latexToSVG(String.raw`
 Z(\beta) = \int_{\mathbb{R}^d} \exp\!\bigl(-\beta\,E(x)\bigr)\,\mathrm{d}x \quad\text{and}\quad p_\beta(x) = \frac{1}{Z(\beta)}\,\exp\!\bigl(-\beta\,E(x)\bigr)
@@ -36,7 +36,7 @@ Z(\beta) = \int_{\mathbb{R}^d} \exp\!\bigl(-\beta\,E(x)\bigr)\,\mathrm{d}x \quad
         })
       );
 
-      dm.addWait(400);
+      dm.addAnims(wait((400) / 1000));
     }
   );
 }

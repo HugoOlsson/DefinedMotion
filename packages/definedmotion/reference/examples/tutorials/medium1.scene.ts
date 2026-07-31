@@ -1,3 +1,4 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 
 // Tutorial 3 (medium1.ts)
@@ -9,7 +10,7 @@ import { defineScene } from 'definedmotion'
 
 import * as THREE from 'three'
 
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 // If your helpers live elsewhere, tweak these paths:
 import {
@@ -67,7 +68,6 @@ export function tutorial_medium1(): AnimatedScene {
     1080, // width  (vertical clip like easy1)
     1920, // height
     SpaceSetting.ThreeDim, // 3D scene
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       // ───────────────────────────────────────────────────────────────────────
       // Step 3: Lighting & background
@@ -154,7 +154,7 @@ export function tutorial_medium1(): AnimatedScene {
       // ───────────────────────────────────────────────────────────────────────
       // Step 7: Let it play for 20 seconds before finishing
       // ───────────────────────────────────────────────────────────────────────
-      scene.addWait(20_000)
+      scene.addAnims(wait((20_000) / 1000))
     }
   )
 }

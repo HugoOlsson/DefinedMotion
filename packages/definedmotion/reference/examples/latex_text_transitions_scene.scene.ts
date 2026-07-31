@@ -1,8 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SpaceSetting
 } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
@@ -21,7 +21,6 @@ export function latex_text_transitions_scene(): AnimatedScene {
     1600,
     1600,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       // 1) Five varied "flex" LaTeX expressions (all rendered in white)
       const latexExprs = [
@@ -131,7 +130,7 @@ export function latex_text_transitions_scene(): AnimatedScene {
             particleCount: baseParticles + i * 400
           })
         )
-        dm.addWait(pauseAfterEach)
+        dm.addAnims(wait((pauseAfterEach) / 1000))
       }
 
   dm.camera.position.set(
@@ -147,7 +146,7 @@ dm.camera.quaternion.set(
   0.9484901
 );
       // Extra pause at the end so the final expression lingers
-      dm.addWait(800)
+      dm.addAnims(wait((800) / 1000))
     }
   )
 }

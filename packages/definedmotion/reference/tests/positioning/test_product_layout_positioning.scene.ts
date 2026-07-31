@@ -1,5 +1,6 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
-import { AnimatedScene, Axis, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
 import { createFastText, createRectangle } from 'definedmotion/rendering'
 
 export default defineScene({
@@ -14,7 +15,6 @@ export function productLayoutPositioningScene(): AnimatedScene {
     1200,
     800,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.scene.background = new THREE.Color('#080d18')
 
@@ -123,7 +123,7 @@ export function productLayoutPositioningScene(): AnimatedScene {
 
       scene.camera.position.set(4, 4, 26)
       scene.camera.lookAt(1, 0, 0)
-      scene.addWait(5_000)
+      scene.addAnims(wait((5_000) / 1000))
     }
   )
 }

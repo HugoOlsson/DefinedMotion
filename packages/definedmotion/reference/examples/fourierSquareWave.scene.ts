@@ -1,9 +1,10 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
 import { createLine, createFastText } from 'definedmotion/rendering'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
   id: 'fourier-square-wave',
@@ -45,7 +46,6 @@ export function fourierSquareWaveScene(): AnimatedScene {
     1600,
     900,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.scene.background = new THREE.Color('#070a18')
 
@@ -247,7 +247,7 @@ export function fourierSquareWaveScene(): AnimatedScene {
         tipCamera.lookAt(center.x, center.y, 0)
       })
 
-      scene.addWait(DURATION_MS)
+      scene.addAnims(wait((DURATION_MS) / 1000))
     }
   )
 }

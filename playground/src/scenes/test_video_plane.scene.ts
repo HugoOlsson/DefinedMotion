@@ -1,6 +1,6 @@
 import { defineScene } from 'definedmotion'
 import { createVideoPlane } from 'definedmotion/media'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
   id: 'test-video-plane',
@@ -14,7 +14,6 @@ export function createVideoPlaneTest(): AnimatedScene {
     720,
     1280,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const video = createVideoPlane(
         scene,

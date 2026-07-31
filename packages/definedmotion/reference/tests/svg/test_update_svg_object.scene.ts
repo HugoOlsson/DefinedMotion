@@ -1,5 +1,6 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 
 export default defineScene({
   id: 'test-update-svg-object',
@@ -12,16 +13,16 @@ import { updateSVGShape } from "definedmotion/latex";
 
 
 export function test_update_svg_object(): AnimatedScene {
-    return new AnimatedScene(1000, 1000, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+    return new AnimatedScene(1000, 1000, SpaceSetting.ThreeDim, async (dm) => {
         const gravityTextSVG = await dm.asset('svg/gravity_text.svg').text()
         const gripSVG = await dm.asset('svg/grip_figure.svg').text()
         const svgObject = createSVGShape(gravityTextSVG, 10)
         dm.add(svgObject)
 
-        dm.addWait(500)
+        dm.addAnims(wait((500) / 1000))
         dm.do(() => {
             updateSVGShape(svgObject, gripSVG)
         })
-        dm.addWait(500)
+        dm.addAnims(wait((500) / 1000))
     })
 }

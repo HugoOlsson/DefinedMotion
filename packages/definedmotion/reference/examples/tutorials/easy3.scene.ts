@@ -1,3 +1,4 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 
 // Tutorial 3 (easy3.ts)
@@ -11,7 +12,7 @@ import * as THREE from 'three'
 import { easeLinear } from 'definedmotion/animation'
 import { createAnim } from 'definedmotion/animation'
 import { createFastText, createRectangle, updateText } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
   id: 'tutorial-easy-3',
@@ -82,7 +83,6 @@ export function tutorial_easy3(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.TwoDim,
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       const tickSound = scene.asset('audio/tick_sound.mp3')
       // ───────────────────────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ export function tutorial_easy3(): AnimatedScene {
       scene.addAnims(switcher)
 
       // Let it run a bit after the last change (nice tail for render/export)
-      scene.addWait(1_000)
+      scene.addAnims(wait((1_000) / 1000))
     }
   )
 }

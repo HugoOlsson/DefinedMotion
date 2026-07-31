@@ -17,7 +17,6 @@ export type {
 } from '../project'
 export {
   AnimatedScene,
-  HotReloadSetting,
   MAIN_CAMERA_ID,
   SceneRuntimeError,
   SpaceSetting,

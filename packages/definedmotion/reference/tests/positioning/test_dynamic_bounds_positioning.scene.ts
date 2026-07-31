@@ -1,5 +1,6 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
-import { AnimatedScene, Axis, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
 import { createFastText } from 'definedmotion/rendering'
 
 export default defineScene({
@@ -14,7 +15,6 @@ export function dynamicBoundsPositioningScene(): AnimatedScene {
     1200,
     800,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.scene.background = new THREE.Color('#07111f')
 
@@ -111,7 +111,7 @@ export function dynamicBoundsPositioningScene(): AnimatedScene {
 
       scene.camera.position.set(0, 1, 19)
       scene.camera.lookAt(0, 0, 0)
-      scene.addWait(6_000)
+      scene.addAnims(wait((6_000) / 1000))
     }
   )
 }

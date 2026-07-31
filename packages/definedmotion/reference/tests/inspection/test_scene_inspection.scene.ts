@@ -1,9 +1,9 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
 import { createRectangle } from 'definedmotion/rendering'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SceneRuntimeError,
   SpaceSetting
 } from 'definedmotion'
@@ -20,7 +20,6 @@ export function testSceneInspection(): AnimatedScene {
     400,
     200,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       const subject = scene.expose('subject', createRectangle(4, 2, { color: '#22d3ee' }), {
         description: 'Primary rectangle used by the inspection regression test',
@@ -88,7 +87,7 @@ export function testSceneInspection(): AnimatedScene {
         trackingCamera.lookAt(subject.position)
       })
 
-      scene.addWait(1000)
+      scene.addAnims(wait((1000) / 1000))
     }
   )
 }

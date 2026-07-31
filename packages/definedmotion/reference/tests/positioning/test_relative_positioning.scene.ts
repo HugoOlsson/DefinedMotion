@@ -1,5 +1,6 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
-import { AnimatedScene, Axis, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
 
 export default defineScene({
   id: 'test-relative-positioning',
@@ -13,7 +14,6 @@ export function relativePositioningScene(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const plotContent = new THREE.Mesh(
         new THREE.BoxGeometry(7, 4, 1),
@@ -61,7 +61,7 @@ export function relativePositioningScene(): AnimatedScene {
 
       scene.camera.position.set(0, 0, 20)
       scene.camera.lookAt(0, 0, 0)
-      scene.addWait(4_000)
+      scene.addAnims(wait((4_000) / 1000))
     }
   )
 }

@@ -1,5 +1,6 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 
 export default defineScene({
   id: 'test-transition-svgs',
@@ -14,16 +15,16 @@ import { latexToSVG } from "definedmotion/latex";
 
 
 export function test_transition_svgs(): AnimatedScene {
-    return new AnimatedScene(1000, 1000, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+    return new AnimatedScene(1000, 1000, SpaceSetting.ThreeDim, async (dm) => {
         const gravityTextSVG = await dm.asset('svg/gravity_text.svg').text()
         const gripSVG = await dm.asset('svg/grip_figure.svg').text()
         const svgObject = createSVGShape(gravityTextSVG, 15)
         dm.add(svgObject)
 
-        dm.addWait(500)
+        dm.addAnims(wait((500) / 1000))
         const anim = updateSVGAnim(svgObject, gripSVG, 300, 10)
         dm.addAnims(anim)
-        dm.addWait(500)
+        dm.addAnims(wait((500) / 1000))
            const raw = latexToSVG(String.raw`
         \begin{aligned}
         \hat{f}(\omega) &= \int_{-\infty}^{\infty} f(t)\,e^{-i\omega t}\,dt,\\
@@ -34,7 +35,7 @@ export function test_transition_svgs(): AnimatedScene {
         `, { display: true });
         const anim2 = updateSVGAnim(svgObject, raw, 300, 20)
         dm.addAnims(anim2)
-        dm.addWait(500)
+        dm.addAnims(wait((500) / 1000))
         const anim3 = fadeOut(svgObject, 300)
         dm.addAnims(anim3)
     })

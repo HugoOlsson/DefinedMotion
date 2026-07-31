@@ -1,7 +1,7 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SpaceSetting,
   defineScene
 } from 'definedmotion'
@@ -19,7 +19,6 @@ export function testLayoutCheck(): AnimatedScene {
     400,
     200,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       const subject = scene.expose(
         'watched-subject',
@@ -91,7 +90,7 @@ export function testLayoutCheck(): AnimatedScene {
         parallelGuide.visible = frame >= 200 && frame <= 205
       })
 
-      scene.addWait(4_500)
+      scene.addAnims(wait((4_500) / 1000))
     }
   )
 }

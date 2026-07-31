@@ -2,7 +2,7 @@ import { defineScene } from 'definedmotion'
 import { concatInterpols, easeInOutQuad, posXSigmoid } from 'definedmotion/animation'
 import { createAnim } from 'definedmotion/animation'
 import { createCircle } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 import * as THREE from 'three'
 
@@ -22,13 +22,12 @@ export function tutorial_easy1(): AnimatedScene {
   // The third argument sets if we want 3D or 2D
   // The forth allows us to say how hot reload should be handled,
   // With trace from start, at hot reload, the actions of all frames before the current, will be accounted for.
-  // If you don't have accumulative changes (or if its fine without for debug), then it's much faster to use "HotReloadSetting.BeginFromCurrent" since it will only have to calculate the current frames actions.
+  // Use scene.previewFromHere() at a clean boundary when exact replay is too expensive during editing.
 
   return new AnimatedScene(
     1080,
     1920,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       // Helper function to create a "THREE.CircleGeometry"
       // You can just use any Three.js code if you want

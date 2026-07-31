@@ -1,5 +1,6 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
-import { AnimatedScene, Axis, HotReloadSetting, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, Axis, SpaceSetting, defineScene } from 'definedmotion'
 import { createFastText, createRectangle } from 'definedmotion/rendering'
 
 export default defineScene({
@@ -30,7 +31,6 @@ export function placeOncePositioningScene(): AnimatedScene {
     1200,
     800,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.scene.background = new THREE.Color('#07111f')
 
@@ -84,7 +84,7 @@ export function placeOncePositioningScene(): AnimatedScene {
         anchor.scale.y = 0.92 + Math.cos(tick * 0.021) * 0.12
       })
 
-      scene.addWait(6_000)
+      scene.addAnims(wait((6_000) / 1000))
     }
   )
 }

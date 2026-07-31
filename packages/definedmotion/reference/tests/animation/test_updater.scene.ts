@@ -9,13 +9,13 @@ export default defineScene({
 import { easeInOutQuad } from "definedmotion/animation";
 import { createAnim } from "definedmotion/animation";
 import { createRectangle } from "definedmotion/rendering";
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 
 
 // Spec: The updater should overwrite the animation, so the square should not move.
 
 export function test_updater1(): AnimatedScene {
-    return new AnimatedScene(1000, 1000, SpaceSetting.TwoDim, HotReloadSetting.TraceFromStart, async (dm) => {
+    return new AnimatedScene(1000, 1000, SpaceSetting.TwoDim, async (dm) => {
         const square = createRectangle(4, 4)
         dm.add(square)
 

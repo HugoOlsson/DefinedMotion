@@ -1,9 +1,5 @@
 import { captureCanvasFrame, triggerEncoder } from '../animation/captureCanvas'
-import {
-  createAnim,
-  type DependencyUpdater,
-  type UserAnimation
-} from '../animation/protocols'
+import { type DependencyUpdater, type UserAnimation } from '../animation/protocols'
 import { AnimationTimeline } from '../animation/timeline'
 import { SceneTimeline } from '../animation/beats'
 import {
@@ -18,7 +14,6 @@ import { createScene } from '../rendering/setup'
 import * as THREE from 'three'
 import Alea from 'alea'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { easeConstant } from '../animation/interpolations'
 import { definedMotionConfig } from 'virtual:definedmotion-config'
 import { addDestroyFunction } from '../lifecycle'
 import { SceneRuntimeError } from './sceneErrors'
@@ -106,12 +101,6 @@ export enum SpaceSetting {
   TwoDim
 }
 
-export enum HotReloadSetting {
-  TraceFromStart,
-  BeginFromCurrent,
-  BeginFreshOnSave
-}
-
 export { SceneRuntimeError } from './sceneErrors'
 export type {
   ExposedObjectDataValue,
@@ -137,17 +126,6 @@ export type {
   BeatTick,
   BeatTickUpdater
 } from '../animation/beats'
-
-export const hotreloadNameLookup = (mode: HotReloadSetting) => {
-  switch (mode) {
-    case HotReloadSetting.TraceFromStart:
-      return "Trace from start";
-    case HotReloadSetting.BeginFromCurrent:
-      return "Begin from current frame without trace";
-    case HotReloadSetting.BeginFreshOnSave:
-      return "Go to the beginning";
-  }
-}
 
 type SceneInstruction = (tick: number) => any
 
@@ -226,9 +204,6 @@ export class AnimatedScene {
 
   private buildFunction: (scene: this) => any
 
-  /** @deprecated Retained temporarily while workspace scenes migrate to previewFromHere(). */
-  public hotReloadSetting: HotReloadSetting
-
   private interactiveViewport?: InteractiveViewportScheduler
   private animationFrameId: number | null = null
 
@@ -258,40 +233,11 @@ export class AnimatedScene {
     pixelsWidth: number,
     pixelsHeight: number,
     spaceSetting: SpaceSetting,
-    buildFunction: (scene: AnimatedScene) => any
-  )
-  /** @deprecated Pass the build function as the fourth argument. */
-  constructor(
-    pixelsWidth: number,
-    pixelsHeight: number,
-    spaceSetting: SpaceSetting,
-    hotReloadSetting: HotReloadSetting,
-    buildFunction: (scene: AnimatedScene) => any
-  )
-  constructor(
-    pixelsWidth: number,
-    pixelsHeight: number,
-    spaceSetting: SpaceSetting,
-    hotReloadSettingOrBuild: HotReloadSetting | ((scene: AnimatedScene) => any),
-    legacyBuildFunction?: (scene: AnimatedScene) => any
+    buildFunctionGiven: (scene: AnimatedScene) => any
   ) {
-    const buildFunctionGiven =
-      typeof hotReloadSettingOrBuild === 'function'
-        ? hotReloadSettingOrBuild
-        : legacyBuildFunction
-    if (!buildFunctionGiven) {
-      throw new SceneRuntimeError(
-        'MISSING_SCENE_BUILD_FUNCTION',
-        'AnimatedScene requires a scene build function'
-      )
-    }
     this.container = globalContainerRef
     this.pixelsHeight = pixelsHeight
     this.pixelsWidth = pixelsWidth
-    this.hotReloadSetting =
-      typeof hotReloadSettingOrBuild === 'function'
-        ? HotReloadSetting.TraceFromStart
-        : hotReloadSettingOrBuild
     this.interactive = globalInteractiveMode
     this.assetNamespace = globalAssetNamespace
 
@@ -377,12 +323,6 @@ export class AnimatedScene {
     const frame = this.animationTimeline.getPointer()
     this.animationTimeline.assertFrameCanBeScheduled(frame, 'scene.do()')
     this.appendInstruction(instruction, frame)
-  }
-
-  doAt(tick: number, instruction: SceneInstruction) {
-    if (tick < 0) throw new Error('doAt: tick must be ≥ 0')
-    this.animationTimeline.assertFrameCanBeScheduled(tick, 'scene.doAt()')
-    this.appendInstruction(instruction, tick)
   }
 
   getCurrentTimeMs() {
@@ -683,10 +623,6 @@ export class AnimatedScene {
     } else if (this.isPlaying && this.doNotPlayAudio === false) {
       playAudio(audioPath, volume)
     }
-  }
-
-  addWait(duration: number) {
-    this.addAnims(createAnim(easeConstant(0, duration), () => {}))
   }
 
   jumpToFrameAtIndex(index: number, notSize: boolean = false): Promise<void> {

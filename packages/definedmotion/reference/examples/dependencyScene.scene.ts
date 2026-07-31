@@ -1,3 +1,4 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 import { setOpacity } from 'definedmotion/animation'
@@ -6,7 +7,7 @@ import {
   addBackgroundGradient,
 } from 'definedmotion/rendering'
 import { createLine } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 
 
@@ -20,7 +21,6 @@ export function dependencyScene(): AnimatedScene {
     1080,
     1920,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       const hdriData = await loadHDRIData(HDRIs.photoStudio1, 2)
       //addSceneLighting(scene.scene)
@@ -114,7 +114,7 @@ export function dependencyScene(): AnimatedScene {
         scene.camera.lookAt(centerPoint)
       })
 
-      scene.addWait(20_000)
+      scene.addAnims(wait((20_000) / 1000))
     }
   )
 }

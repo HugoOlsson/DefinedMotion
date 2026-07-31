@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 // test_2d_camera_hits_markers.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { moveCameraToAnim } from 'definedmotion/animation'
 
 
@@ -18,7 +19,7 @@ const dot = (c: string) => new THREE.Mesh(
 )
 
 export function test_2d_camera_hits_markers(): AnimatedScene {
-  return new AnimatedScene(1000, 1000, SpaceSetting.TwoDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1000, 1000, SpaceSetting.TwoDim, async (dm) => {
     // Center crosshair (so we can see when a marker is exactly under the center)
     const horiz = new THREE.Mesh(new THREE.PlaneGeometry(30, 0.1), new THREE.MeshBasicMaterial({ color: '#ffffff' }))
     const vert  = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 30), new THREE.MeshBasicMaterial({ color: '#ffffff' }))
@@ -44,6 +45,6 @@ export function test_2d_camera_hits_markers(): AnimatedScene {
       moveCameraToAnim(dm.camera, { position: new THREE.Vector3( 0,  0, z) }, 700)
     )
 
-    dm.addWait(400)
+    dm.addAnims(wait((400) / 1000))
   })
 }

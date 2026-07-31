@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 // test_fly_minimal_two_poses.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { flyCameraToAnim } from 'definedmotion/animation'
 
 
@@ -43,7 +44,7 @@ const CAM_B_QUAT = new THREE.Quaternion(  -0.2497320,
 // ======================
 
 export function test_fly_minimal_two_poses(): AnimatedScene {
-  return new AnimatedScene(1200, 800, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1200, 800, SpaceSetting.ThreeDim, async (dm) => {
     // Grid floor
     dm.add(new THREE.GridHelper(60, 60))
 
@@ -75,14 +76,14 @@ export function test_fly_minimal_two_poses(): AnimatedScene {
     )
 
     // Small pause to inspect
-    dm.addWait(200)
+    dm.addAnims(wait((200) / 1000))
 
     // Leg 2: fly to CAM_B
     dm.addDeferredAnims(
       flyCameraToAnim(dm.camera, { position: CAM_B_POS, rotation: CAM_B_QUAT }, 1000)
     )
 
-    dm.addWait(200)
+    dm.addAnims(wait((200) / 1000))
 
     const from = startPos.clone()
     const target = new THREE.Vector3(0, 0, 0)

@@ -1,3 +1,4 @@
+import { wait } from 'definedmotion/animation'
 
 
 import { defineScene } from 'definedmotion'
@@ -9,13 +10,13 @@ export default defineScene({
   create: test_hdri_performance
 })
 import { addHDRI, HDRIs, loadHDRIData } from "definedmotion/rendering";
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 
 export function test_hdri_performance(): AnimatedScene {
-    return new AnimatedScene(2000, 2000, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+    return new AnimatedScene(2000, 2000, SpaceSetting.ThreeDim, async (dm) => {
          const hdriData = await loadHDRIData(HDRIs.outdoor1, 2)
          await addHDRI(dm, hdriData, 1, 1)
 
-         dm.addWait(20)
+         dm.addAnims(wait((20) / 1000))
     })
 }

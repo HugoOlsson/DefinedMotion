@@ -1,6 +1,7 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { moveCameraToAnim } from "definedmotion/animation";
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 import * as THREE from 'three'
 
 
@@ -13,7 +14,7 @@ export default defineScene({
   create: test_camera_waypoints_sequential
 })
 export function test_camera_waypoints_sequential(): AnimatedScene {
-  return new AnimatedScene(1200, 800, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1200, 800, SpaceSetting.ThreeDim, async (dm) => {
     dm.add(new THREE.GridHelper(40, 40))
 
     // Visual markers
@@ -32,6 +33,6 @@ export function test_camera_waypoints_sequential(): AnimatedScene {
     dm.addDeferredAnims(moveCameraToAnim(dm.camera, { position: new THREE.Vector3(  8, 6, 14) }, 900))
     dm.addDeferredAnims(moveCameraToAnim(dm.camera, { position: new THREE.Vector3(  0, 7, 10) }, 900))
 
-    dm.addWait(400)
+    dm.addAnims(wait((400) / 1000))
   })
 }

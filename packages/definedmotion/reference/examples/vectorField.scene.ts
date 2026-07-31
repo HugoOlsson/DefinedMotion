@@ -1,10 +1,11 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 import { linspace } from 'definedmotion/math'
 import { COLORS } from 'definedmotion/rendering'
 import { addBackgroundGradient, addSceneLighting } from 'definedmotion/rendering'
 import { createFastText } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 
 export default defineScene({
@@ -47,7 +48,6 @@ export function vectorFieldScene(): AnimatedScene {
     1080,
     2160,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       const hdriData = await loadHDRIData(HDRIs.outdoor1, 2)
       addSceneLighting(scene.scene)
@@ -240,7 +240,7 @@ export function vectorFieldScene(): AnimatedScene {
         particleFollowCamera.lookAt(followedParticle)
       })
 
-      scene.addWait(20000)
+      scene.addAnims(wait((20000) / 1000))
     }
   )
 }

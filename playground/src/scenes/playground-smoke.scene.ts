@@ -1,4 +1,4 @@
-import { AnimatedScene, defineScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, defineScene, SpaceSetting } from 'definedmotion'
 import { createAnim, easeInOutQuad } from 'definedmotion/animation'
 import { createCircle } from 'definedmotion/rendering'
 
@@ -10,7 +10,6 @@ export default defineScene({
       1280,
       720,
       SpaceSetting.TwoDim,
-      HotReloadSetting.TraceFromStart,
       (scene) => {
         const circle = createCircle(2)
         scene.add(circle)

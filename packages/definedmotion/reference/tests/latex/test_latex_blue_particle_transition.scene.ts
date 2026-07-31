@@ -1,9 +1,9 @@
+import { wait } from 'definedmotion/animation'
 // test_latex_particle_transition_blue.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SpaceSetting
 } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
@@ -23,7 +23,6 @@ export function test_latex_blue_particle_transition(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       // 1) Two related equations to morph between
       const latexA = String.raw`\nabla \cdot \vec{E} = \frac{\rho}{\varepsilon_0}`
@@ -84,7 +83,7 @@ export function test_latex_blue_particle_transition(): AnimatedScene {
       dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // Optional pause after the morph
-      dm.addWait(300)
+      dm.addAnims(wait((300) / 1000))
     }
   )
 }

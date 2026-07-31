@@ -1,8 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { AssetRuntimeError, packageAsset, type SceneAsset } from 'definedmotion/assets'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SceneRuntimeError,
   SpaceSetting
 } from 'definedmotion'
@@ -19,7 +19,6 @@ export function testAssetReferences(): AnimatedScene {
     320,
     180,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const svg = scene.asset('svg/gravity_text.svg')
       const svgText = await svg.text()
@@ -32,7 +31,7 @@ export function testAssetReferences(): AnimatedScene {
       assertInvalidPathRejected(scene)
       await assertMissingAssetRejected(scene.asset('missing-asset.svg'))
 
-      scene.addWait(1)
+      scene.addAnims(wait(1 / scene.fps))
     }
   )
 }

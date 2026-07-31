@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 // test_latex_mark_animation.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexMarkAnim } from 'definedmotion/animation'
@@ -19,7 +20,6 @@ export function test_latex_mark_animation(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       const latex = latexToSVG(String.raw`
 \dmClass{lhs}{\int_0^\infty e^{-x^2}\,\mathrm{d}x}
@@ -33,19 +33,19 @@ export function test_latex_mark_animation(): AnimatedScene {
       dm.addDeferredAnims(
         latexMarkAnim(group, 'lhs')
       )
-      dm.addWait(300)
+      dm.addAnims(wait((300) / 1000))
 
       // 2) Mark the right-hand side only
       dm.addDeferredAnims(
         latexMarkAnim(group, 'rhs')
       )
-      dm.addWait(300)
+      dm.addAnims(wait((300) / 1000))
 
       // 3) Mark both sides together using the multi-class path
       dm.addDeferredAnims(
         latexMarkAnim(group, ['lhs', 'rhs'])
       )
-      dm.addWait(400)
+      dm.addAnims(wait((400) / 1000))
     }
   )
 }

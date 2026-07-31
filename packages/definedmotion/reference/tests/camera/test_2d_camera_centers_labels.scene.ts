@@ -1,7 +1,7 @@
 // test_2d_camera_centers_labels.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { moveCameraToAnim } from 'definedmotion/animation'
 
 
@@ -20,7 +20,7 @@ function labeledSquare(text: string, color: string) {
 }
 
 export function test_2d_camera_centers_labels(): AnimatedScene {
-  return new AnimatedScene(1500, 1500, SpaceSetting.TwoDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1500, 1500, SpaceSetting.TwoDim, async (dm) => {
     // faint grid background
     for (let x = -12; x <= 12; x += 3) {
       const line = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 30), new THREE.MeshBasicMaterial({ color: '#6b7280', transparent: true, opacity: 0.7}))

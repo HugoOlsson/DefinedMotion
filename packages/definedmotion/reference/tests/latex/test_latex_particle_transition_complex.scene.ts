@@ -1,9 +1,9 @@
+import { wait } from 'definedmotion/animation'
 // test_latex_particle_transition_complex.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SpaceSetting
 } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
@@ -23,7 +23,6 @@ export function test_latex_particle_transition_complex(): AnimatedScene {
     1600,
     1600,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       // 1) Two related, more complex LaTeX expressions
       const latexA = String.raw`
@@ -67,7 +66,7 @@ export function test_latex_particle_transition_complex(): AnimatedScene {
       dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // A small pause after the morph
-      dm.addWait(400)
+      dm.addAnims(wait((400) / 1000))
     }
   )
 }

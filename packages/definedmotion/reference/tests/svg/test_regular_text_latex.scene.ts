@@ -6,7 +6,7 @@ export default defineScene({
   isTest: true,
   create: test_regular_text_latex
 })
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 import { createSVGShape } from "definedmotion/latex";
 import { latexToSVG } from "definedmotion/latex";
 
@@ -15,7 +15,6 @@ export function test_regular_text_latex(): AnimatedScene {
   return new AnimatedScene(
     1000, 1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       const svg = latexToSVG(String.raw`\text{This library is "DefinedMotion"}`);
       const g = createSVGShape(svg, 20);

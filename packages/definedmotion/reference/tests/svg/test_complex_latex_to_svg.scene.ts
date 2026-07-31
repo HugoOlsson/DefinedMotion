@@ -6,13 +6,13 @@ export default defineScene({
   isTest: true,
   create: test_complex_latex_to_svg
 })
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from "definedmotion";
+import { AnimatedScene, SpaceSetting } from "definedmotion";
 import { createSVGShape } from "definedmotion/latex";
 import { latexToSVG } from "definedmotion/latex";
 
 
 export function test_complex_latex_to_svg(): AnimatedScene {
-  return new AnimatedScene(1000, 1000, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1000, 1000, SpaceSetting.ThreeDim, async (dm) => {
     const raw = latexToSVG(String.raw`
 \begin{aligned}
 \hat{f}(\omega) &= \int_{-\infty}^{\infty} f(t)\,e^{-i\omega t}\,dt,\\

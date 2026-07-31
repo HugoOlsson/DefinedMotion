@@ -7,7 +7,7 @@ export default defineScene({
   create: test_basic_latex_query
 })
 import * as THREE from 'three';
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion';
+import { AnimatedScene, SpaceSetting } from 'definedmotion';
 import { latexToSVG } from 'definedmotion/latex';
 import { createSVGShape } from 'definedmotion/latex';
 import { queryLaTeXClass } from 'definedmotion/latex';
@@ -18,7 +18,6 @@ export function test_basic_latex_query(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       // 1) Tag the vector E in LaTeX
       const latex = String.raw`

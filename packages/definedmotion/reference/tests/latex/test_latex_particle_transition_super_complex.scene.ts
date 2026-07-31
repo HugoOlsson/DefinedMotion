@@ -1,9 +1,9 @@
+import { wait } from 'definedmotion/animation'
 // test_latex_particle_transition_super_complex.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 import {
   AnimatedScene,
-  HotReloadSetting,
   SpaceSetting
 } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
@@ -23,7 +23,6 @@ export function test_latex_particle_transition_super_complex(): AnimatedScene {
     1600,
     1600,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       // --- 1) Two super duper complex LaTeX expressions ---
 
@@ -88,7 +87,7 @@ export function test_latex_particle_transition_super_complex(): AnimatedScene {
       dm.addDeferredAnims(latexParticleTransitionAnim(groupA, groupB))
 
       // Leave a short pause when done
-      dm.addWait(400)
+      dm.addAnims(wait((400) / 1000))
     }
   )
 }

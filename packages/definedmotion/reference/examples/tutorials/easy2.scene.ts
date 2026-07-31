@@ -1,3 +1,4 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 
 // Tutorial 2 (easy2.ts)
@@ -8,7 +9,7 @@ import { defineScene } from 'definedmotion'
 
 import * as THREE from 'three'
 
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 // If your helpers live elsewhere, tweak these paths:'
 import { createFunctionSurface, updateFunctionSurface } from 'definedmotion/rendering'
@@ -52,16 +53,14 @@ const sineTimeFunction = (time: number): ((x: number, y: number) => number) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 2: Export an AnimatedScene just like in tutorial 1, but in 3D.
-// We use HotReloadSetting.BeginFromCurrent since it will be much faster during debug.
-// Since this has accumulative effects (angle += 0.005) notice that the angle is not correct at hot reload.
-// Regardless of our HotReloadSetting, the renders will always be correct
+// This scene uses cumulative effects, so place scene.previewFromHere() only at a clean boundary.
+// Exact rendering still reconstructs the complete scene from frame zero.
 // ─────────────────────────────────────────────────────────────────────────────
 export function tutorial_easy2(): AnimatedScene {
   return new AnimatedScene(
     1500, // width  (square clip)
     1500, // height
     SpaceSetting.ThreeDim, // 3D scene
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       // ───────────────────────────────────────────────────────────────────────
       // Step 3: Basic environment (background gradient)
@@ -143,7 +142,7 @@ export function tutorial_easy2(): AnimatedScene {
       // Step 8: Let the animation run for a while before finishing.
       // This adds 10 seconds of "play time" to the scene’s schedule.
       // ───────────────────────────────────────────────────────────────────────
-      scene.addWait(10_000)
+      scene.addAnims(wait((10_000) / 1000))
     }
   )
 }

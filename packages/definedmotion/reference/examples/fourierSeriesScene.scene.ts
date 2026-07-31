@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { createFastText, createLine, PaddedLine } from 'definedmotion/rendering'
 
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 import { addBackgroundGradient } from 'definedmotion/rendering'
 import { COLORS } from 'definedmotion/rendering'
@@ -242,7 +243,6 @@ export function fourierSeriesScene(): AnimatedScene {
     1080,
     2160,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const tickSound = scene.asset('audio/tick_sound.mp3')
       scene.registerAudio(tickSound)
@@ -467,7 +467,7 @@ export function fourierSeriesScene(): AnimatedScene {
         scene.camera.quaternion.slerp(targetRotation, rotLerp)
       })
 
-      scene.addWait(45000)
+      scene.addAnims(wait((45000) / 1000))
     }
   )
 }

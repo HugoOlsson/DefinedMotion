@@ -6,7 +6,7 @@ import {
   createRectangle,
   updateText
 } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 
 export default defineScene({
@@ -68,7 +68,6 @@ export function alternativesScene(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.TwoDim,
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       const tickSound = scene.asset('audio/tick_sound.mp3')
       const background = scene.expose('background', createRectangle(200, 200), {

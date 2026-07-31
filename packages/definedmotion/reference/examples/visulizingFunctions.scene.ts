@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { COLORS } from 'definedmotion/rendering'
 import { addBackgroundGradient, addSceneLighting } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
 import { linspace } from 'definedmotion/math'
@@ -101,7 +102,6 @@ export function animatedFunctionsScene(): AnimatedScene {
     1080,
     2160,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       const hdriData = await loadHDRIData(HDRIs.outdoor1, 1)
       // scene.registerAudio(fadeSound)
@@ -182,10 +182,10 @@ export function animatedFunctionsScene(): AnimatedScene {
           await updateText(textNode, functions[i + 1][0])
         })
         scene.addAnims(fadeIn(textNode, 150))
-        scene.addWait(800)
+        scene.addAnims(wait((800) / 1000))
       }
 
-      scene.addWait(1600)
+      scene.addAnims(wait((1600) / 1000))
     }
   )
 }

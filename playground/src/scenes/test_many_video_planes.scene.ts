@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
 import { createVideoPlane } from 'definedmotion/media'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 const COLUMNS = 4
 const ROWS = 3
@@ -19,7 +19,6 @@ export function createManyVideoPlanesTest(): AnimatedScene {
     1280,
     720,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.scene.background = new THREE.Color(0x111318)
       const videos = Array.from({ length: VIDEO_COUNT }, (_, index) =>

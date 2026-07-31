@@ -1,8 +1,9 @@
+import { wait } from 'definedmotion/animation'
 // tutorial_deferred_minimal.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { createRectangle } from 'definedmotion/rendering'
 import { easeInOutQuad } from 'definedmotion/animation'
 import { createAnim } from 'definedmotion/animation'
@@ -28,7 +29,6 @@ export function test_deferred_anims2(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       // A simple square (centered), easy to see
       const box = createRectangle(4, 4) as THREE.Mesh
@@ -45,7 +45,7 @@ export function test_deferred_anims2(): AnimatedScene {
       scene.addAnims(moveToCenter)
 
       // Give a short beat
-      scene.addWait(300)
+      scene.addAnims(wait((300) / 1000))
 
       // --- 2) Deferred move: from *current* x → x + 4 over 400 ticks ---
       // Captures box.position.x at runtime, not planning time.
@@ -56,7 +56,7 @@ export function test_deferred_anims2(): AnimatedScene {
         )
       )
 
-      scene.addWait(200)
+      scene.addAnims(wait((200) / 1000))
 
       // --- 3) Deferred move back: from *current* x → 0 over 400 ticks ---
       scene.addDeferredAnims(() =>
@@ -67,7 +67,7 @@ export function test_deferred_anims2(): AnimatedScene {
       )
 
       // Tail for renders
-      scene.addWait(600)
+      scene.addAnims(wait((600) / 1000))
     }
   )
 }

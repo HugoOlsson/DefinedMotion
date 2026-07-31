@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
 import { createSVGShape } from 'definedmotion/latex'
 import { setOpacity } from 'definedmotion/animation'
@@ -19,7 +20,6 @@ export function test_write_latex_animation(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
      // After you’ve built two LaTeX groups
     const latex = latexToSVG(String.raw`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`);
@@ -30,7 +30,7 @@ export function test_write_latex_animation(): AnimatedScene {
     latexWriteAnim(group)
     );
       // Optionally: leave a bit of time after the morph finishes
-      dm.addWait(300)
+      dm.addAnims(wait((300) / 1000))
     }
   )
 }

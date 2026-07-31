@@ -1,6 +1,7 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { rotateCameraToAnim } from 'definedmotion/animation'
 
 
@@ -11,7 +12,7 @@ export default defineScene({
   create: test_camera_rotate_quaternion
 })
 export function test_camera_rotate_quaternion(): AnimatedScene {
-  return new AnimatedScene(1000, 800, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1000, 800, SpaceSetting.ThreeDim, async (dm) => {
     dm.add(new THREE.AxesHelper(6))
     dm.camera.position.set(0, 4, 10)
 
@@ -21,6 +22,6 @@ export function test_camera_rotate_quaternion(): AnimatedScene {
     dm.addDeferredAnims(rotateCameraToAnim(dm.camera, { rotation: yawRight }, 800))
     dm.addDeferredAnims(rotateCameraToAnim(dm.camera, { rotation: pitchDown }, 800))
 
-    dm.addWait(300)
+    dm.addAnims(wait((300) / 1000))
   })
 }

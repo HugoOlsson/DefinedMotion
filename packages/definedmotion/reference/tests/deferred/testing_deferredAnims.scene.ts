@@ -1,8 +1,9 @@
+import { wait } from 'definedmotion/animation'
 // tutorial_deferred_closure_test.ts
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
 
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { createRectangle } from 'definedmotion/rendering'
 import { moveRotateCameraAnimation3D } from 'definedmotion/animation'
 import { easeInOutQuad } from 'definedmotion/animation'
@@ -26,7 +27,6 @@ export function test_deferred_anims(): AnimatedScene {
     1080,
     1920,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       // Visual anchors
       scene.add(new THREE.GridHelper(30, 30))
@@ -42,7 +42,7 @@ export function test_deferred_anims(): AnimatedScene {
       const rock = createAnim(easeInOutQuad(-0.3, 0.3, 180), (v) => (card.rotation.z = v))
       scene.addAnims(rock)
       scene.addAnims(rock.copy().reverse()) // 360 ticks total
-      scene.addWait(800)
+      scene.addAnims(wait((800) / 1000))
 
       // -------- Deferred camera move #1 (uses your addDeferredAnims signature) --------
       // NOTE: Builders have no args; they close over `scene` to access live camera state.
@@ -57,7 +57,7 @@ export function test_deferred_anims(): AnimatedScene {
         )
       )
 
-      scene.addWait(600)
+      scene.addAnims(wait((600) / 1000))
 
       // -------- Deferred camera move #2 (chained) --------
       // Starts from the end pose of move #1, because it’s captured at that runtime tick.
@@ -73,7 +73,7 @@ export function test_deferred_anims(): AnimatedScene {
       )
 
       // Tail for export
-      scene.addWait(1200)
+      scene.addAnims(wait((1200) / 1000))
     }
   )
 }

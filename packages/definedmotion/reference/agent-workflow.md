@@ -458,7 +458,8 @@ Branch on `success` and `error.code`; do not parse human-readable messages as a 
 Create a default-exported `*.scene.ts` module below `src/scenes`:
 
 ```ts
-import { AnimatedScene, defineScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, defineScene, SpaceSetting } from 'definedmotion'
+import { wait } from 'definedmotion/animation'
 
 export default defineScene({
   id: 'my-scene',
@@ -468,10 +469,9 @@ export default defineScene({
       1920,
       1080,
       SpaceSetting.ThreeDim,
-      HotReloadSetting.TraceFromStart,
       async (scene) => {
         // Build and schedule the scene.
-        scene.addWait(5_000)
+        scene.addAnims(wait(5))
       }
     )
 })

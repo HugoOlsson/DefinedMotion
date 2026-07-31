@@ -7,7 +7,7 @@ export default defineScene({
   create: test_latex_query_variables
 })
 import * as THREE from 'three';
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion';
+import { AnimatedScene, SpaceSetting } from 'definedmotion';
 import { latexToSVG } from 'definedmotion/latex';
 import { createSVGShape } from 'definedmotion/latex';
 import { queryLaTeXClass } from 'definedmotion/latex';
@@ -19,7 +19,6 @@ export function test_latex_query_variables(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       // 1) More complicated LaTeX expression with many variables
       // Tag every variable occurrence with \dmClass{variable}{...}

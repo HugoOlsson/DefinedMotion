@@ -1,6 +1,7 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { latexToSVG } from 'definedmotion/latex'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexHighlightAnim } from 'definedmotion/animation'
@@ -18,7 +19,6 @@ export function test_latex_highlight_animation(): AnimatedScene {
     1000,
     1000,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (dm) => {
       const latex = latexToSVG(String.raw`
 \ell(\theta)
@@ -43,7 +43,7 @@ export function test_latex_highlight_animation(): AnimatedScene {
           maxMix: 1.0
         })
       )
-      dm.addWait(250)
+      dm.addAnims(wait((250) / 1000))
 
       // 2) Highlight negative term
       dm.addDeferredAnims(
@@ -55,7 +55,7 @@ export function test_latex_highlight_animation(): AnimatedScene {
           maxMix: 1.0
         })
       )
-      dm.addWait(250)
+      dm.addAnims(wait((250) / 1000))
 
       // 3) Highlight both together with a stronger pulse
       dm.addDeferredAnims(
@@ -67,7 +67,7 @@ export function test_latex_highlight_animation(): AnimatedScene {
           maxMix: 1.0
         })
       )
-      dm.addWait(400)
+      dm.addAnims(wait((400) / 1000))
     }
   )
 }

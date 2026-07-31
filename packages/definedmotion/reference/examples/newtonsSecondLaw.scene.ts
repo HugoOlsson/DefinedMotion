@@ -1,10 +1,11 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
 import { createFastText, createLine } from 'definedmotion/rendering'
 import { setOpacity } from 'definedmotion/animation'
 import { createSVGShape } from 'definedmotion/latex'
 import { latexToSVG } from 'definedmotion/latex'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
   id: 'newtons-second-law',
@@ -82,7 +83,6 @@ export function newtonsSecondLawScene(): AnimatedScene {
     1600,
     900,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.scene.background = new THREE.Color('#080b16')
 
@@ -313,7 +313,7 @@ export function newtonsSecondLawScene(): AnimatedScene {
         cartCamera.lookAt(cartX, cart.position.y + 2, 0)
       })
 
-      scene.addWait(DURATION_MS)
+      scene.addAnims(wait((DURATION_MS) / 1000))
     }
   )
 }

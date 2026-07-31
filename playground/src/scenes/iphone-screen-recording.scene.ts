@@ -6,7 +6,7 @@ import { createAnim } from 'definedmotion/animation'
 import { addHDRI, HDRIs, loadHDRIData } from 'definedmotion/rendering'
 import { loadGLB } from 'definedmotion/rendering'
 import { createVideoPlane } from 'definedmotion/media'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 const DURATION_MS = 11_325
 const SCREEN_WIDTH = 15.55
@@ -25,7 +25,6 @@ function createIphoneScreenRecordingScene(): AnimatedScene {
     1080,
     1920,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.renderer.setClearColor(0x202738)
       scene.renderer.shadowMap.enabled = true

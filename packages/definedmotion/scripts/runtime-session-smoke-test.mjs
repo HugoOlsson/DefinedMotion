@@ -55,7 +55,8 @@ function runAsync(arguments_) {
 }
 
 function fixtureSource(color) {
-  return `import { defineScene, AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+  return `import { defineScene, AnimatedScene, SpaceSetting } from 'definedmotion'
+import { wait } from 'definedmotion/animation'
 import { createRectangle } from 'definedmotion/rendering'
 
 export default defineScene({
@@ -70,10 +71,9 @@ function runtimeFreshnessScene(): AnimatedScene {
     320,
     180,
     SpaceSetting.TwoDim,
-    HotReloadSetting.TraceFromStart,
     (scene) => {
       scene.add(createRectangle(320, 180, { color: '${color}' }))
-      scene.addWait(1)
+      scene.addAnims(wait(1 / scene.fps))
     }
   )
 }

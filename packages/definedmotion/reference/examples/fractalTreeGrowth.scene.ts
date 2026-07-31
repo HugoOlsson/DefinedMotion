@@ -1,7 +1,8 @@
+import { wait } from 'definedmotion/animation'
 import * as THREE from 'three'
 import { defineScene } from 'definedmotion'
 import { addBackgroundGradient } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
   id: 'fractal-tree-growth',
@@ -47,7 +48,6 @@ export function fractalTreeGrowthScene(): AnimatedScene {
     1600,
     900,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.TraceFromStart,
     async (scene) => {
       scene.renderer.shadowMap.enabled = true
       scene.renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -326,7 +326,7 @@ export function fractalTreeGrowthScene(): AnimatedScene {
 
       updateFrame(0)
       scene.onEachTick(updateFrame)
-      scene.addWait(DURATION_MS)
+      scene.addAnims(wait((DURATION_MS) / 1000))
     }
   )
 }

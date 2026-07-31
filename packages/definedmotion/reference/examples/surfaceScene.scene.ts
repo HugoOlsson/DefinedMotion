@@ -1,3 +1,4 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import { COLORS } from 'definedmotion/rendering'
 import { addBackgroundGradient } from 'definedmotion/rendering'
@@ -5,7 +6,7 @@ import {
   createFunctionSurface,
   updateFunctionSurface
 } from 'definedmotion/rendering'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import * as THREE from 'three'
 
 
@@ -39,7 +40,6 @@ export function surfaceScene(): AnimatedScene {
     1500,
     1500,
     SpaceSetting.ThreeDim,
-    HotReloadSetting.BeginFromCurrent,
     async (scene) => {
       const funcMinMaxes: [number, number, number, number] = [-7, 7, -7, 7]
 
@@ -89,7 +89,7 @@ export function surfaceScene(): AnimatedScene {
         scene.camera.lookAt(centerPoint)
       })
 
-      scene.addWait(10_000)
+      scene.addAnims(wait((10_000) / 1000))
     }
   )
 }

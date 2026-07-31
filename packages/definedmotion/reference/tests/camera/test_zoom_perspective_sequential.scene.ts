@@ -1,6 +1,7 @@
+import { wait } from 'definedmotion/animation'
 import { defineScene } from 'definedmotion'
 import * as THREE from 'three'
-import { AnimatedScene, HotReloadSetting, SpaceSetting } from 'definedmotion'
+import { AnimatedScene, SpaceSetting } from 'definedmotion'
 import { zoomCameraToAnim } from 'definedmotion/animation'
 
 
@@ -11,7 +12,7 @@ export default defineScene({
   create: test_zoom_perspective_sequential
 })
 export function test_zoom_perspective_sequential(): AnimatedScene {
-  return new AnimatedScene(1000, 700, SpaceSetting.ThreeDim, HotReloadSetting.TraceFromStart, async (dm) => {
+  return new AnimatedScene(1000, 700, SpaceSetting.ThreeDim, async (dm) => {
     dm.add(new THREE.GridHelper(40, 40))
     dm.camera.position.set(0, 6, 16)
     dm.camera.lookAt(0, 0, 0)
@@ -21,6 +22,6 @@ export function test_zoom_perspective_sequential(): AnimatedScene {
     dm.addDeferredAnims(zoomCameraToAnim(dm.camera, { fov: 30 }, 900))
     dm.addDeferredAnims(zoomCameraToAnim(dm.camera, { fov: initialFov }, 900))
 
-    dm.addWait(200)
+    dm.addAnims(wait((200) / 1000))
   })
 }
