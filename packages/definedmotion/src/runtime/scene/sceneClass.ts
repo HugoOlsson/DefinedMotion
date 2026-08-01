@@ -70,6 +70,7 @@ import {
   validatePreviewMarker,
   type ScenePreviewMarker
 } from './scenePreview'
+import { notifyFramePresented } from './framePresentation'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -1120,6 +1121,7 @@ export class AnimatedScene {
     camera.updateProjectionMatrix()
     camera.updateWorldMatrix(true, false)
     this.renderer.render(this.scene, camera)
+    notifyFramePresented(this, performance.now())
   }
 
   private async runPresentationOperation<T>(

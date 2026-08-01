@@ -38,6 +38,10 @@ try {
     join(temporaryDirectory, 'sceneState.mjs'),
     await transpile(join(packageRoot, 'src/renderer/sceneState.ts'))
   )
+  await writeFile(
+    join(temporaryDirectory, 'frameRateMonitor.mjs'),
+    await transpile(join(packageRoot, 'src/viewer/frameRateMonitor.ts'))
+  )
 
   const projectModule = await import(pathToFileURL(join(temporaryDirectory, 'project.mjs')).href)
   const selection = await import(
@@ -114,6 +118,17 @@ try {
   sceneState.updateStateInUrl('project-scene', 7)
   assert.equal(new URL(currentUrl).searchParams.get('scene'), 'project-scene')
   assert.equal(new URL(currentUrl).searchParams.get('frame'), '7')
+
+  // The FPS monitor counts actual presentation intervals over a bounded window.
+  const { FrameRateMonitor } = await import(
+    pathToFileURL(join(temporaryDirectory, 'frameRateMonitor.mjs')).href
+  )
+  const monitor = new FrameRateMonitor(500)
+  let measured
+  for (let frame = 0; frame <= 30; frame++) measured = monitor.record((frame * 1000) / 60)
+  assert.ok(Math.abs(measured - 60) < 1e-9)
+  monitor.reset()
+  assert.equal(monitor.record(1_000), undefined)
 
   console.log('viewer scene selection tests passed')
 } finally {

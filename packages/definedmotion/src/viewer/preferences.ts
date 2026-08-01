@@ -2,11 +2,13 @@ export interface ViewerPreferences {
   readonly selectedSceneId?: string
   readonly showExamplesAndTests: boolean
   readonly usePreviewMarker: boolean
+  readonly showFpsMonitor: boolean
 }
 
 export const defaultViewerPreferences = (): ViewerPreferences => ({
   showExamplesAndTests: false,
-  usePreviewMarker: true
+  usePreviewMarker: true,
+  showFpsMonitor: false
 })
 
 export const normalizeViewerPreferences = (value: unknown): ViewerPreferences => {
@@ -24,6 +26,10 @@ export const normalizeViewerPreferences = (value: unknown): ViewerPreferences =>
     usePreviewMarker:
       typeof candidate.usePreviewMarker === 'boolean'
         ? candidate.usePreviewMarker
-        : defaults.usePreviewMarker
+        : defaults.usePreviewMarker,
+    showFpsMonitor:
+      typeof candidate.showFpsMonitor === 'boolean'
+        ? candidate.showFpsMonitor
+        : defaults.showFpsMonitor
   }
 }

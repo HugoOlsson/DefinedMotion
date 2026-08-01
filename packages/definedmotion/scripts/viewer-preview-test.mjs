@@ -71,14 +71,20 @@ try {
   // PREVIEW-03: preferences have stable defaults and tolerate older stored values.
   assert.deepEqual(preferences.normalizeViewerPreferences(undefined), {
     showExamplesAndTests: false,
-    usePreviewMarker: true
+    usePreviewMarker: true,
+    showFpsMonitor: false
   })
   assert.deepEqual(
-    preferences.normalizeViewerPreferences({ selectedSceneId: 'demo', usePreviewMarker: false }),
+    preferences.normalizeViewerPreferences({
+      selectedSceneId: 'demo',
+      usePreviewMarker: false,
+      showFpsMonitor: true
+    }),
     {
       selectedSceneId: 'demo',
       showExamplesAndTests: false,
-      usePreviewMarker: false
+      usePreviewMarker: false,
+      showFpsMonitor: true
     }
   )
 

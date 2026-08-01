@@ -9,6 +9,8 @@
   import moveIcon from './assets/move.svg'
   import { defaultViewerPreferences, type ViewerPreferences } from '../viewer/preferences'
   import { InteractiveSceneSession } from '../viewer/interactiveSceneSession'
+  import { FrameRateMonitor } from '../viewer/frameRateMonitor'
+  import { observeFramePresentations } from '../runtime/scene/framePresentation'
   import type { ViewerSceneKind, ViewerSceneSummary } from '../project'
   import {
     resolveInitialScene,
@@ -60,12 +62,15 @@
 
   let isPlayingStateVar = $state(false)
   let isSavingFrame = $state(false)
+  let viewerFps = $state<number>()
 
   let pendingSliderValue: number | undefined
   let sliderDrain: Promise<void> | undefined
 
   const maxSliderValue = 10_000
   let urlUpdaterInterval: ReturnType<typeof setInterval>
+  const frameRateMonitor = new FrameRateMonitor()
+  let stopObservingFramePresentations: (() => void) | undefined
 
   function scenesFor(kind: ViewerSceneKind): ViewerSceneSummary[] {
     return visibleScenesFor(
@@ -82,12 +87,27 @@
         ? { selectedSceneId: viewerPreferences.selectedSceneId }
         : {}),
       showExamplesAndTests: viewerPreferences.showExamplesAndTests,
-      usePreviewMarker: viewerPreferences.usePreviewMarker
+      usePreviewMarker: viewerPreferences.usePreviewMarker,
+      showFpsMonitor: viewerPreferences.showFpsMonitor
     }
     await window.api.setViewerPreferences(snapshot)
   }
 
   function connectScene(candidate: AnimatedScene): void {
+    stopObservingFramePresentations?.()
+    resetFpsMonitor()
+    stopObservingFramePresentations = observeFramePresentations(candidate, (timestamp) => {
+      if (
+        scene !== candidate ||
+        !candidate.isPlaying ||
+        isRendering ||
+        !viewerPreferences.showFpsMonitor
+      ) {
+        return
+      }
+      const measuredFps = frameRateMonitor.record(timestamp)
+      if (measuredFps !== undefined) viewerFps = measuredFps
+    })
     candidate.playEffectFunction = () => {
       if (scene !== candidate) return
       isPlayingStateVar = candidate.isPlaying
@@ -109,6 +129,9 @@
   ): Promise<void> {
     if (!sceneSession || isRendering) return
     const generation = selectionGeneration.begin()
+    stopObservingFramePresentations?.()
+    stopObservingFramePresentations = undefined
+    resetFpsMonitor()
     selectedSceneId = id
     isSelecting = true
     hasInitScene = false
@@ -162,6 +185,17 @@
     await persistViewerPreferences()
   }
 
+  async function updateFpsMonitorVisibility(enabled: boolean): Promise<void> {
+    viewerPreferences = { ...viewerPreferences, showFpsMonitor: enabled }
+    resetFpsMonitor()
+    await persistViewerPreferences()
+  }
+
+  function resetFpsMonitor(): void {
+    frameRateMonitor.reset()
+    viewerFps = undefined
+  }
+
   function handleSliderChange(sliderValue: number): Promise<void> {
     pendingSliderValue = sliderValue
     if (!sliderDrain) {
@@ -174,10 +208,12 @@
 
   function startPlaybackFromCurrent(): void {
     if (!scene || scene.isPlaying) return
+    resetFpsMonitor()
     isPlayingStateVar = true
     void scene
       .playSequenceOfAnimation(scene.sceneRenderTick, scene.totalSceneTicks - 1)
       .catch((error) => {
+        resetFpsMonitor()
         isPlayingStateVar = false
         console.error('Could not start playback:', error)
       })
@@ -330,6 +366,7 @@ function updateUIImmediate() {
   onDestroy(() => {
     clearInterval(urlUpdaterInterval)
     selectionGeneration.invalidate()
+    stopObservingFramePresentations?.()
     sceneSession?.dispose()
   })
 
@@ -429,6 +466,19 @@ export async function copyToClipboard(text: string): Promise<void> {
         />
         Use scene preview marker
       </label>
+      <label class="flex items-center gap-1.5">
+        <input
+          data-testid="show-fps-monitor"
+          type="checkbox"
+          checked={viewerPreferences.showFpsMonitor}
+          onchange={(event) => {
+            void updateFpsMonitorVisibility(
+              (event.currentTarget as HTMLInputElement).checked
+            ).catch((error) => console.error('Could not update the FPS monitor:', error))
+          }}
+        />
+        Show FPS monitor
+      </label>
     </div>
     {#if selectionNotice}
       <p class="mt-1 text-[0.65rem] text-amber-700">{selectionNotice}</p>
@@ -441,6 +491,15 @@ export async function copyToClipboard(text: string): Promise<void> {
       class="min-h-[200px] w-full"
       class:invisible={!hasInitScene}
     ></div>
+    {#if viewerPreferences.showFpsMonitor && hasInitScene}
+      <div
+        data-testid="fps-monitor"
+        class="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/70 px-2 py-1 font-mono text-[0.62rem] leading-4 text-white shadow-sm"
+      >
+        <div>Viewer: {viewerFps === undefined ? '—' : viewerFps.toFixed(1)} FPS</div>
+        <div class="text-white/65">Timeline: {timelineFPS.toFixed(1)} FPS</div>
+      </div>
+    {/if}
     {#if sceneError}
       <div class="absolute inset-0 flex items-center justify-center bg-red-50 px-8 text-center text-xs text-red-800">
         <div>
@@ -464,11 +523,13 @@ export async function copyToClipboard(text: string): Promise<void> {
  
 
     <button
+    data-testid="playback-toggle"
     disabled={!hasInitScene || isRendering}
     class="w-[70px] text-xs cursor-pointer bg-black/5 rounded-full p-1 hover:bg-black/10 transition"
           onclick={() => {
             if (scene.isPlaying) {
               scene.pause()
+              resetFpsMonitor()
               updateUIImmediate();
               isPlayingStateVar = false
             } else {
@@ -543,6 +604,7 @@ export async function copyToClipboard(text: string): Promise<void> {
         wasPlayingBeforeScrub = scene.isPlaying
         if (scene.isPlaying) {
           scene.pause()                // silences audio and stops RAF
+          resetFpsMonitor()
           isPlayingStateVar = false
         }
       }}

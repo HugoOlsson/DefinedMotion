@@ -88,11 +88,17 @@ const runViewerIntegrationSmoke = async (): Promise<void> => {
         const selector = document.querySelector('[data-testid="scene-selector"]')
         const references = document.querySelector('[data-testid="show-reference-scenes"]')
         const preview = document.querySelector('[data-testid="use-preview-marker"]')
+        const fpsToggle = document.querySelector('[data-testid="show-fps-monitor"]')
         if (!(selector instanceof HTMLSelectElement) ||
             !(references instanceof HTMLInputElement) ||
-            !(preview instanceof HTMLInputElement)) {
+            !(preview instanceof HTMLInputElement) ||
+            !(fpsToggle instanceof HTMLInputElement)) {
           throw new Error('Viewer controls were not mounted')
         }
+        await waitFor(
+          () => !selector.disabled && !preview.disabled,
+          'the initial viewer selection to settle'
+        )
 
         if (!references.checked) {
           references.checked = true
@@ -101,6 +107,10 @@ const runViewerIntegrationSmoke = async (): Promise<void> => {
         if (!preview.checked) {
           preview.checked = true
           preview.dispatchEvent(new Event('change', { bubbles: true }))
+          await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve))
+          )
+          await waitFor(() => !preview.disabled, 'the preview preference update')
         }
         await waitFor(
           () => [...selector.options].some((option) => option.value === 'test-viewer-preview'),
@@ -138,7 +148,33 @@ const runViewerIntegrationSmoke = async (): Promise<void> => {
         if (frame !== 'Frame: 2') {
           throw new Error('Preview scene did not open at frame 2: ' + frame)
         }
-        return { selectedScene: selector.value, frame, canvasCount: 1 }
+
+        if (!fpsToggle.checked) {
+          fpsToggle.checked = true
+          fpsToggle.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        await waitFor(
+          () => document.querySelector('[data-testid="fps-monitor"]'),
+          'the FPS monitor overlay'
+        )
+        await select('test-2d-camera-hits-markers')
+        const playback = document.querySelector('[data-testid="playback-toggle"]')
+        if (!(playback instanceof HTMLButtonElement)) {
+          throw new Error('Playback control was not mounted')
+        }
+        playback.click()
+        await waitFor(
+          () => !document.querySelector('[data-testid="fps-monitor"]')?.textContent?.includes('—'),
+          'a measured viewer FPS value'
+        )
+        const fps = document.querySelector('[data-testid="fps-monitor"]')?.textContent?.trim()
+        playback.click()
+        return {
+          selectedScene: selector.value,
+          previewFrame: frame,
+          fps,
+          canvasCount: 1
+        }
       })()
     `)
     console.log(`DEFINEDMOTION_VIEWER_TEST_OK ${JSON.stringify(result)}`)
