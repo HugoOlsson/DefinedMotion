@@ -1,4 +1,9 @@
-export type FramePresentationObserver = (timestamp: number) => void
+export interface FramePresentation {
+  readonly timestamp: number
+  readonly timelineFrame: number
+}
+
+export type FramePresentationObserver = (presentation: FramePresentation) => void
 
 const observers = new WeakMap<object, Set<FramePresentationObserver>>()
 
@@ -16,8 +21,15 @@ export const observeFramePresentations = (
   }
 }
 
-export const notifyFramePresented = (owner: object, timestamp: number): void => {
+export const notifyFramePresented = (
+  owner: object,
+  timelineFrame: number
+): void => {
   const current = observers.get(owner)
   if (!current) return
-  for (const observer of current) observer(timestamp)
+  const presentation: FramePresentation = {
+    timestamp: performance.now(),
+    timelineFrame
+  }
+  for (const observer of current) observer(presentation)
 }

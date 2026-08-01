@@ -1121,7 +1121,7 @@ export class AnimatedScene {
     camera.updateProjectionMatrix()
     camera.updateWorldMatrix(true, false)
     this.renderer.render(this.scene, camera)
-    notifyFramePresented(this, performance.now())
+    notifyFramePresented(this, this.sceneRenderTick)
   }
 
   private async runPresentationOperation<T>(

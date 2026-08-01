@@ -119,16 +119,28 @@ try {
   assert.equal(new URL(currentUrl).searchParams.get('scene'), 'project-scene')
   assert.equal(new URL(currentUrl).searchParams.get('frame'), '7')
 
-  // The FPS monitor counts actual presentation intervals over a bounded window.
+  // The monitor reports presentation rate, pacing, and evaluated frames omitted from display.
   const { FrameRateMonitor } = await import(
     pathToFileURL(join(temporaryDirectory, 'frameRateMonitor.mjs')).href
   )
   const monitor = new FrameRateMonitor(500)
   let measured
-  for (let frame = 0; frame <= 30; frame++) measured = monitor.record((frame * 1000) / 60)
-  assert.ok(Math.abs(measured - 60) < 1e-9)
+  for (let frame = 0; frame <= 30; frame++) {
+    measured = monitor.record((frame * 1000) / 60, frame)
+  }
+  assert.ok(Math.abs(measured.fps - 60) < 1e-9)
+  assert.ok(Math.abs(measured.averageFrameTimeMs - 1000 / 60) < 1e-9)
+  assert.ok(Math.abs(measured.p95FrameTimeMs - 1000 / 60) < 1e-9)
+  assert.equal(measured.unpresentedTimelineFrames, 0)
+
+  const catchUpMonitor = new FrameRateMonitor(30)
+  catchUpMonitor.record(0, 10)
+  catchUpMonitor.record(16, 11)
+  const catchUpSample = catchUpMonitor.record(33, 14)
+  assert.equal(catchUpSample.unpresentedTimelineFrames, 2)
+
   monitor.reset()
-  assert.equal(monitor.record(1_000), undefined)
+  assert.equal(monitor.record(1_000, 0), undefined)
 
   console.log('viewer scene selection tests passed')
 } finally {

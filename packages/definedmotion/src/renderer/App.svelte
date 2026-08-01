@@ -9,7 +9,7 @@
   import moveIcon from './assets/move.svg'
   import { defaultViewerPreferences, type ViewerPreferences } from '../viewer/preferences'
   import { InteractiveSceneSession } from '../viewer/interactiveSceneSession'
-  import { FrameRateMonitor } from '../viewer/frameRateMonitor'
+  import { FrameRateMonitor, type FrameRateSample } from '../viewer/frameRateMonitor'
   import { observeFramePresentations } from '../runtime/scene/framePresentation'
   import type { ViewerSceneKind, ViewerSceneSummary } from '../project'
   import {
@@ -62,7 +62,7 @@
 
   let isPlayingStateVar = $state(false)
   let isSavingFrame = $state(false)
-  let viewerFps = $state<number>()
+  let viewerPerformance = $state<FrameRateSample>()
 
   let pendingSliderValue: number | undefined
   let sliderDrain: Promise<void> | undefined
@@ -93,21 +93,26 @@
     await window.api.setViewerPreferences(snapshot)
   }
 
-  function connectScene(candidate: AnimatedScene): void {
+  function connectFpsMonitor(candidate?: AnimatedScene): void {
     stopObservingFramePresentations?.()
+    stopObservingFramePresentations = undefined
     resetFpsMonitor()
-    stopObservingFramePresentations = observeFramePresentations(candidate, (timestamp) => {
-      if (
-        scene !== candidate ||
-        !candidate.isPlaying ||
-        isRendering ||
-        !viewerPreferences.showFpsMonitor
-      ) {
+    if (!candidate || !viewerPreferences.showFpsMonitor) return
+
+    stopObservingFramePresentations = observeFramePresentations(candidate, (presentation) => {
+      if (scene !== candidate || !candidate.isPlaying || isRendering) {
         return
       }
-      const measuredFps = frameRateMonitor.record(timestamp)
-      if (measuredFps !== undefined) viewerFps = measuredFps
+      const sample = frameRateMonitor.record(
+        presentation.timestamp,
+        presentation.timelineFrame
+      )
+      if (sample !== undefined) viewerPerformance = sample
     })
+  }
+
+  function connectScene(candidate: AnimatedScene): void {
+    connectFpsMonitor(candidate)
     candidate.playEffectFunction = () => {
       if (scene !== candidate) return
       isPlayingStateVar = candidate.isPlaying
@@ -187,13 +192,13 @@
 
   async function updateFpsMonitorVisibility(enabled: boolean): Promise<void> {
     viewerPreferences = { ...viewerPreferences, showFpsMonitor: enabled }
-    resetFpsMonitor()
+    connectFpsMonitor(hasInitScene ? scene : undefined)
     await persistViewerPreferences()
   }
 
   function resetFpsMonitor(): void {
     frameRateMonitor.reset()
-    viewerFps = undefined
+    viewerPerformance = undefined
   }
 
   function handleSliderChange(sliderValue: number): Promise<void> {
@@ -496,8 +501,16 @@ export async function copyToClipboard(text: string): Promise<void> {
         data-testid="fps-monitor"
         class="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/70 px-2 py-1 font-mono text-[0.62rem] leading-4 text-white shadow-sm"
       >
-        <div>Viewer: {viewerFps === undefined ? '—' : viewerFps.toFixed(1)} FPS</div>
+        <div>Viewer: {viewerPerformance === undefined ? '—' : viewerPerformance.fps.toFixed(1)} FPS</div>
         <div class="text-white/65">Timeline: {timelineFPS.toFixed(1)} FPS</div>
+        <div class="text-white/65">
+          Frame time: {viewerPerformance === undefined
+            ? '—'
+            : `${viewerPerformance.averageFrameTimeMs.toFixed(1)} ms avg / ${viewerPerformance.p95FrameTimeMs.toFixed(1)} ms p95`}
+        </div>
+        <div class="text-white/65">
+          Not presented: {viewerPerformance?.unpresentedTimelineFrames ?? 0}
+        </div>
       </div>
     {/if}
     {#if sceneError}
