@@ -30,8 +30,10 @@ const transpile = async (inputPath) => {
 const compileModules = async () => {
   const animationDirectory = join(temporaryDirectory, 'animation')
   const sceneDirectory = join(temporaryDirectory, 'scene')
+  const svgDirectory = join(temporaryDirectory, 'svg')
   await mkdir(animationDirectory)
   await mkdir(sceneDirectory)
+  await mkdir(svgDirectory)
 
   await writeFile(
     join(sceneDirectory, 'sceneErrors.mjs'),
@@ -63,13 +65,45 @@ const compileModules = async () => {
     await transpile(join(sourceRoot, 'animation/latexTransitionsAndWrite.ts'))
   )
 
-  const [effectsModule, cameraEffectsModule, latexEffectsModule, timelineModule] = await Promise.all([
+  await writeFile(
+    join(svgDirectory, 'svgRendering.mjs'),
+    await transpile(join(sourceRoot, 'svg/svgRendering.ts'))
+  )
+  await writeFile(
+    join(svgDirectory, 'latexSVGQueries.mjs'),
+    (await transpile(join(sourceRoot, 'svg/latexSVGQueries.ts'))).replace(
+      './svgRendering',
+      './svgRendering.mjs'
+    )
+  )
+  await writeFile(
+    join(animationDirectory, 'latexMarkAndHighlight.mjs'),
+    (await transpile(join(sourceRoot, 'animation/latexMarkAndHighlight.ts'))).replace(
+      '../svg/latexSVGQueries',
+      '../svg/latexSVGQueries.mjs'
+    )
+  )
+
+  const [
+    effectsModule,
+    cameraEffectsModule,
+    latexEffectsModule,
+    latexMarkModule,
+    timelineModule
+  ] = await Promise.all([
     import(pathToFileURL(join(animationDirectory, 'effects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'cameraEffects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'latexTransitionsAndWrite.mjs')).href),
+    import(pathToFileURL(join(animationDirectory, 'latexMarkAndHighlight.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'timeline.mjs')).href)
   ])
-  return { ...effectsModule, ...cameraEffectsModule, ...latexEffectsModule, ...timelineModule }
+  return {
+    ...effectsModule,
+    ...cameraEffectsModule,
+    ...latexEffectsModule,
+    ...latexMarkModule,
+    ...timelineModule
+  }
 }
 
 const approximately = (actual, expected, message) => {
@@ -81,6 +115,7 @@ try {
     AnimationTimeline,
     camera,
     createAnimation,
+    createLatexMarkController,
     createLatexParticleTransitionController,
     fadeIn,
     fadeOut,
@@ -93,6 +128,40 @@ try {
     scaleTo,
     wait
   } = await compileModules()
+
+  // EFFECT-12: LaTeX marks use root-local geometry under nested transforms.
+  {
+    const composition = new THREE.Group()
+    composition.scale.setScalar(1.9)
+    const slot = new THREE.Group()
+    slot.position.set(-4, 2, 0)
+    const root = new THREE.Group()
+    const selected = new THREE.Mesh(new THREE.PlaneGeometry(2, 4))
+    selected.userData.dmClasses = ['energy']
+    root.add(selected)
+    slot.add(root)
+    composition.add(slot)
+    composition.updateMatrixWorld(true)
+    const selectedBounds = new THREE.Box3().setFromObject(selected)
+
+    const mark = createLatexMarkController(root, 'energy', {
+      padding: 0.1,
+      pulses: 1,
+      scaleAmp: 0
+    })()
+    mark.updater(0.5, 0, false)
+
+    const helper = root.getObjectByName('DefinedMotionLatexMark')
+    assert.ok(helper)
+    assert.equal(helper.parent, root)
+    const helperSize = new THREE.Box3().setFromObject(helper).getSize(new THREE.Vector3())
+    const selectedSize = selectedBounds.getSize(new THREE.Vector3())
+    assert.ok(Math.abs(helperSize.x - selectedSize.x * 1.2) < 1e-5)
+    assert.ok(Math.abs(helperSize.y - selectedSize.y * 1.2) < 1e-5)
+
+    mark.updater(1, 1, true)
+    assert.equal(root.getObjectByName('DefinedMotionLatexMark'), undefined)
+  }
 
   // EFFECT-11: LaTeX particle transitions restore authored material state.
   {

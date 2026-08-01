@@ -236,6 +236,12 @@
       "source": "tests/positioning/test_product_layout_positioning.scene.ts"
     },
     {
+      "id": "test-production-heat-flow",
+      "name": "Production Heat Flow Explainer Contract",
+      "kind": "test",
+      "source": "tests/rendering/test_production_heat_flow.scene.ts"
+    },
+    {
       "id": "test-regular-text-latex",
       "name": "Regular Text LaTeX",
       "kind": "test",

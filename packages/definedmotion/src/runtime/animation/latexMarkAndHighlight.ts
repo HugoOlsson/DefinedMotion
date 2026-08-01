@@ -7,6 +7,40 @@ interface ProgressUpdater {
   updater(progress: number, frame?: number, isLast?: boolean): void
 }
 
+const corners = (bounds: THREE.Box3): THREE.Vector3[] => {
+  const { min, max } = bounds
+  return [
+    new THREE.Vector3(min.x, min.y, min.z),
+    new THREE.Vector3(min.x, min.y, max.z),
+    new THREE.Vector3(min.x, max.y, min.z),
+    new THREE.Vector3(min.x, max.y, max.z),
+    new THREE.Vector3(max.x, min.y, min.z),
+    new THREE.Vector3(max.x, min.y, max.z),
+    new THREE.Vector3(max.x, max.y, min.z),
+    new THREE.Vector3(max.x, max.y, max.z)
+  ]
+}
+
+const meshBoundsInRoot = (
+  root: THREE.Object3D,
+  meshes: readonly THREE.Mesh[]
+): THREE.Box3 => {
+  root.updateWorldMatrix(true, true)
+  const inverseRoot = root.matrixWorld.clone().invert()
+  const localMatrix = new THREE.Matrix4()
+  const result = new THREE.Box3()
+  for (const mesh of meshes) {
+    const geometry = mesh.geometry
+    if (!geometry.boundingBox) geometry.computeBoundingBox()
+    if (!geometry.boundingBox || geometry.boundingBox.isEmpty()) continue
+    localMatrix.multiplyMatrices(inverseRoot, mesh.matrixWorld)
+    for (const point of corners(geometry.boundingBox)) {
+      result.expandByPoint(point.applyMatrix4(localMatrix))
+    }
+  }
+  return result
+}
+
 // ---------------------------------------------------------------------------
 // LaTeX "mark" animation: pulsating brackets around a set of classes
 // ---------------------------------------------------------------------------
@@ -39,40 +73,43 @@ export function createLatexMarkController(
     let material: THREE.LineBasicMaterial | null = null;
     let parent: THREE.Object3D | null = null;
 
-    const tmpBox = new THREE.Box3();
     const tmpSize = new THREE.Vector3();
-    const tmpCenterWorld = new THREE.Vector3();
     const tmpCenterLocal = new THREE.Vector3();
 
     const buildBracketGroup = () => {
-      // Combine boxes for all requested classes
+      // Combine selected geometry directly in the stable LaTeX root's local space.
       const combinedBox = new THREE.Box3();
       let haveAny = false;
 
       for (const name of classList) {
         const res = queryLaTeXClass(root, name);
         if (!res) continue;
+        const localBounds = meshBoundsInRoot(root, res.meshes)
+        if (localBounds.isEmpty()) continue
         if (!haveAny) {
-          combinedBox.copy(res.box);
+          combinedBox.copy(localBounds);
           haveAny = true;
         } else {
-          combinedBox.union(res.box);
+          combinedBox.union(localBounds);
         }
       }
 
       // Fallback: if nothing found, mark the whole root
       if (!haveAny) {
-        tmpBox.setFromObject(root);
-        combinedBox.copy(tmpBox);
+        const meshes: THREE.Mesh[] = []
+        root.traverse((object) => {
+          const mesh = object as THREE.Mesh
+          if (mesh.isMesh) meshes.push(mesh)
+        })
+        combinedBox.copy(meshBoundsInRoot(root, meshes));
       }
 
-      combinedBox.getSize(tmpSize);
-      combinedBox.getCenter(tmpCenterWorld);
+      if (combinedBox.isEmpty()) return
 
-      // Decide parent & local center
-      parent = root.parent || root;
-      tmpCenterLocal.copy(tmpCenterWorld);
-      parent.worldToLocal(tmpCenterLocal);
+      combinedBox.getSize(tmpSize);
+      combinedBox.getCenter(tmpCenterLocal);
+
+      parent = root;
 
       const width  = tmpSize.x * (1 + 2 * padding);
       const height = tmpSize.y * (1 + 2 * padding);
@@ -121,6 +158,7 @@ export function createLatexMarkController(
 
       line = new THREE.LineSegments(geom, material);
       bracketGroup = new THREE.Group();
+      bracketGroup.name = 'DefinedMotionLatexMark'
       bracketGroup.add(line);
 
       bracketGroup.position.copy(tmpCenterLocal);

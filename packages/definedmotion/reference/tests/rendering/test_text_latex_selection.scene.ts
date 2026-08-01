@@ -229,15 +229,12 @@ const verifyVisibleMark = (
 ): void => {
   scene.verify(id, { frames: { start: frame, end: frame + 1 } }, (context) => {
     let visibleLine = false
-    for (const sibling of equation.parent?.children ?? []) {
-      if (sibling === equation) continue
-      sibling.traverse((object) => {
-        const line = object as THREE.LineSegments<THREE.BufferGeometry, THREE.Material>
-        if (!line.isLineSegments) return
-        const materials = Array.isArray(line.material) ? line.material : [line.material]
-        visibleLine ||= materials.some((material) => material.opacity > 0.8)
-      })
-    }
+    equation.traverse((object) => {
+      const line = object as THREE.LineSegments<THREE.BufferGeometry, THREE.Material>
+      if (!line.isLineSegments) return
+      const materials = Array.isArray(line.material) ? line.material : [line.material]
+      visibleLine ||= materials.some((material) => material.opacity > 0.8)
+    })
     context.assert(visibleLine, 'The semantic LaTeX mark must be visible at its midpoint', {
       frame: context.globalFrame
     })

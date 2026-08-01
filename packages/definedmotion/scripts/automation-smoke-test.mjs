@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 61) {
-    throw new Error(`Expected 61 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 62) {
+    throw new Error(`Expected 62 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -421,47 +421,85 @@ try {
     throw new Error('Text/LaTeX selection, morph, or intermediate verification was incorrect')
   }
 
-  const animatedHudStart = run([
+  const animatedCameraUiStart = run([
     'inspect',
     'test-animated-3d-camera-ui',
     '--frame',
     '0',
     '--no-build'
   ])
-  const animatedHudEnd = run([
+  const animatedCameraUiEnd = run([
     'inspect',
     'test-animated-3d-camera-ui',
     '--frame',
     '419',
     '--no-build'
   ])
-  const animatedHudVerification = run([
+  const animatedCameraUiVerification = run([
     'verify',
     '--scene',
     'test-animated-3d-camera-ui',
     '--no-build'
   ])
-  const animatedHudObject = (result, id) =>
+  const animatedCameraUiObject = (result, id) =>
     result.objects.find((object) => object.id === id)
-  const hudPanelStart = animatedHudObject(animatedHudStart, 'animated-camera-ui-panel')
-  const hudPanelEnd = animatedHudObject(animatedHudEnd, 'animated-camera-ui-panel')
+  const cameraUiPanelStart = animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-panel')
+  const cameraUiPanelEnd = animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-panel')
   if (
-    animatedHudEnd.sceneInfo.durationInFrames !== 420 ||
-    animatedHudObject(animatedHudStart, 'animated-camera-ui-world-callout')?.attached !== false ||
-    animatedHudObject(animatedHudEnd, 'animated-camera-ui-world-callout')?.attached !== true ||
-    animatedHudObject(animatedHudStart, 'animated-camera-ui-focus-note')?.attached !== false ||
-    animatedHudObject(animatedHudEnd, 'animated-camera-ui-focus-note')?.attached !== true ||
-    animatedHudObject(animatedHudEnd, 'animated-camera-ui-meter')?.localTransform.scale[0] !== 1 ||
-    !hudPanelStart?.screenBounds ||
-    !hudPanelEnd?.screenBounds ||
-    Math.abs(hudPanelStart.screenBounds.x - hudPanelEnd.screenBounds.x) >= 0.01 ||
-    Math.abs(hudPanelStart.screenBounds.y - hudPanelEnd.screenBounds.y) >= 0.01 ||
-    Math.abs(hudPanelStart.screenBounds.width - hudPanelEnd.screenBounds.width) >= 0.01 ||
-    Math.abs(hudPanelStart.screenBounds.height - hudPanelEnd.screenBounds.height) >= 0.01 ||
-    animatedHudVerification.passed !== true ||
-    animatedHudVerification.verificationCount !== 7
+    animatedCameraUiEnd.sceneInfo.durationInFrames !== 420 ||
+    animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-world-callout')?.attached !== false ||
+    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-world-callout')?.attached !== true ||
+    animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-focus-note')?.attached !== false ||
+    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-focus-note')?.attached !== true ||
+    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-meter')?.localTransform.scale[0] !== 1 ||
+    !cameraUiPanelStart?.screenBounds ||
+    !cameraUiPanelEnd?.screenBounds ||
+    Math.abs(cameraUiPanelStart.screenBounds.x - cameraUiPanelEnd.screenBounds.x) >= 0.01 ||
+    Math.abs(cameraUiPanelStart.screenBounds.y - cameraUiPanelEnd.screenBounds.y) >= 0.01 ||
+    Math.abs(cameraUiPanelStart.screenBounds.width - cameraUiPanelEnd.screenBounds.width) >= 0.01 ||
+    Math.abs(cameraUiPanelStart.screenBounds.height - cameraUiPanelEnd.screenBounds.height) >= 0.01 ||
+    animatedCameraUiVerification.passed !== true ||
+    animatedCameraUiVerification.verificationCount !== 7
   ) {
     throw new Error('Animated 3D camera-attached UI screen lock, late attachment, or verification was incorrect')
+  }
+
+  const productionHeatEnd = run([
+    'inspect',
+    'test-production-heat-flow',
+    '--frame',
+    '509',
+    '--no-build'
+  ])
+  const productionHeatVerification = run([
+    'verify',
+    '--scene',
+    'test-production-heat-flow',
+    '--no-build'
+  ])
+  const productionHeatLayoutCheck = run([
+    'layout-check',
+    'test-production-heat-flow',
+    '--output-dir',
+    join(temporaryDirectory, 'production-heat-layout-check'),
+    '--no-build'
+  ])
+  const productionHeatObject = (id) =>
+    productionHeatEnd.objects.find((object) => object.id === id)
+  if (
+    productionHeatEnd.sceneInfo.durationInFrames !== 510 ||
+    productionHeatObject('heat-flow-equation')?.latex !==
+      String.raw`\dmClass{temperature}{\Delta T}=\frac{\dmClass{energy}{Q}}{\dmClass{mass}{mc}}` ||
+    productionHeatObject('heat-flow-takeaway')?.visible !== true ||
+    productionHeatObject('heat-flow-spread-fill')?.localTransform.scale[0] !== 0.18 ||
+    productionHeatVerification.passed !== true ||
+    productionHeatVerification.verificationCount !== 7 ||
+    productionHeatLayoutCheck.checkedFrames !== 510 ||
+    productionHeatLayoutCheck.watchedObjectCount !== 6 ||
+    productionHeatLayoutCheck.clean !== true ||
+    productionHeatLayoutCheck.incidentCount !== 0
+  ) {
+    throw new Error('Production heat-flow composition, semantic morph, or verification was incorrect')
   }
 
   const previewExact = run(['inspect', 'test-viewer-preview', '--frame', '4', '--no-build'])

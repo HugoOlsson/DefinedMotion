@@ -19,7 +19,7 @@ export default defineScene({
   id: 'test-animated-3d-camera-ui',
   name: 'Animated 3D Camera-Attached UI Contract',
   isTest: true,
-  create: testAnimated3dHud
+  create: testAnimated3dCameraUi
 })
 
 const SUBJECT_POSITION = new THREE.Vector3(3.6, 0.15, 0)
@@ -30,7 +30,7 @@ const START_ROTATION = cameraRotation(START_POSITION, new THREE.Vector3(1.2, 0.2
 const ORBIT_ROTATION = cameraRotation(ORBIT_POSITION, new THREE.Vector3(1.3, 0.2, 0))
 const FOCUS_ROTATION = cameraRotation(FOCUS_POSITION, new THREE.Vector3(1.7, 0.2, 0))
 
-export function testAnimated3dHud(): AnimatedScene {
+export function testAnimated3dCameraUi(): AnimatedScene {
   return new AnimatedScene(
     1200,
     675,
@@ -254,7 +254,7 @@ const createCameraUi = async (): Promise<CameraUiVisuals> => {
   content.position.y = 0.55
 
   const root = new THREE.Group()
-  root.name = 'AnimatedCameraHud'
+  root.name = 'AnimatedCameraAttachedUi'
   const panel = createRectangle(8.8, 6.5, {
     material: new THREE.MeshBasicMaterial({
       color: '#0b1220',
