@@ -13,58 +13,84 @@ export default defineScene({
 
 export function testTextLatexSelection(): AnimatedScene {
   return new AnimatedScene(800, 400, SpaceSetting.TwoDim, async (scene) => {
+    scene.scene.background = new THREE.Color('#050505')
+
     const title = await createText({
-      text: 'SELECT SEMANTIC PARTS, NOT GLYPH INDICES',
-      fontSize: 2.5,
-      color: '#38bdf8'
+      text: 'Meaning survives the rearrangement.',
+      fontSize: 3.2,
+      color: '#f3f0e8',
+      anchorX: 'left',
+      anchorY: 'top'
     })
     const explanation = await createText({
-      text: 'The same named handles survive a rearrangement of the equation.',
-      fontSize: 1.55,
-      color: '#cbd5e1',
-      maxWidth: 56,
-      textAlign: 'center',
+      text: 'Energy, mass, and light speed keep their identity even when the equation changes form.',
+      fontSize: 1.3,
+      color: '#9c9890',
+      maxWidth: 62,
+      textAlign: 'left',
       lineHeight: 1.2
     })
     const equation = await createLatex({
       latex: String.raw`\dmClass{energy}{E} = \dmClass{mass}{m}\dmClass{light}{c^2}`,
-      fontSize: 5,
-      color: '#f8fafc'
+      fontSize: 6.2,
+      color: '#f3f0e8'
     })
     const energy = equation.part('energy')
     const mass = equation.part('mass')
     const light = equation.part('light')
     const equationId = equation.uuid
     const legendItems = await Promise.all([
-      createText({ text: 'ENERGY', fontSize: 1.25, color: '#fb923c' }),
-      createText({ text: 'MASS', fontSize: 1.25, color: '#facc15' }),
-      createText({ text: 'LIGHT SPEED', fontSize: 1.25, color: '#22d3ee' })
+      createText({ text: 'energy', fontSize: 1.05, color: '#d9825b' }),
+      createText({ text: 'mass', fontSize: 1.05, color: '#d4aa55' }),
+      createText({ text: 'light speed', fontSize: 1.05, color: '#5aa6c8' })
     ])
     const legend = layout.flex(
       {
         flexDirection: 'row',
-        width: 42,
-        gap: 3,
+        width: 38,
+        gap: 4,
         alignItems: 'center',
         justifyContent: 'space-evenly'
       },
       legendItems
     )
+    const equationStage = layout.flex(
+      {
+        flexDirection: 'column',
+        width: 64,
+        gap: 5,
+        alignItems: 'center',
+        anchorX: 'left',
+        anchorY: 'top'
+      },
+      [equation, legend]
+    )
+    const header = layout.flex(
+      {
+        flexDirection: 'column',
+        width: 64,
+        gap: 1.5,
+        alignItems: 'flex-start',
+        anchorX: 'left',
+        anchorY: 'top'
+      },
+      [title, explanation]
+    )
     const content = layout.flex(
       {
         flexDirection: 'column',
         width: 72,
-        gap: 4.5,
+        gap: 5,
         padding: 4,
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
         anchorX: 'center',
         anchorY: 'middle',
-        background: '#0f172a',
-        border: { color: '#243b5a', width: 0.12 }
+        background: '#050505'
       },
-      [title, explanation, equation, legend]
+      [header, equationStage]
     )
+    content.scale.setScalar(1.32)
 
     scene.add(content)
     scene.expose('latex-selection-content', content)
@@ -86,7 +112,7 @@ export function testTextLatexSelection(): AnimatedScene {
     scene.addAnims(
       latex.mark(energy, {
         duration: 30 / scene.fps,
-        color: '#fb923c',
+        color: '#d9825b',
         padding: 0.18,
         pulses: 1,
         scale: 0.06
@@ -98,7 +124,7 @@ export function testTextLatexSelection(): AnimatedScene {
     scene.addAnims(
       latex.highlight(mass, {
         duration: 30 / scene.fps,
-        color: '#facc15',
+        color: '#d4aa55',
         pulses: 1
       })
     )
@@ -108,7 +134,7 @@ export function testTextLatexSelection(): AnimatedScene {
     scene.addAnims(
       latex.mark(light, {
         duration: 30 / scene.fps,
-        color: '#22d3ee',
+        color: '#5aa6c8',
         padding: 0.14,
         pulses: 1,
         scale: 0.05
@@ -128,7 +154,7 @@ export function testTextLatexSelection(): AnimatedScene {
     scene.addAnims(
       latex.highlight(light, {
         duration: 30 / scene.fps,
-        color: '#4ade80',
+        color: '#78a878',
         pulses: 1
       })
     )
@@ -176,7 +202,7 @@ export function testTextLatexSelection(): AnimatedScene {
       'latex-mass-highlight-visible',
       equation,
       'mass',
-      '#facc15',
+      '#d4aa55',
       midpoint(massStart, massEnd)
     )
     verifyVisibleMark(scene, 'latex-light-mark-visible', equation, midpoint(lightStart, lightEnd))
@@ -185,10 +211,10 @@ export function testTextLatexSelection(): AnimatedScene {
       'latex-post-morph-highlight-visible',
       equation,
       'light',
-      '#4ade80',
+      '#78a878',
       midpoint(postMorphStart, postMorphEnd)
     )
-    verifyPartColor(scene, 'latex-selection-restores-color', equation, 'light', '#f8fafc', end - 1)
+    verifyPartColor(scene, 'latex-selection-restores-color', equation, 'light', '#f3f0e8', end - 1)
   })
 }
 

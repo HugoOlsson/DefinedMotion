@@ -20,7 +20,7 @@ const FOCUS_ROTATION = cameraRotation(FOCUS_POSITION, new THREE.Vector3(1.7, 0.2
 
 export function testAnimated3dCameraUi(): AnimatedScene {
   return new AnimatedScene(1200, 675, SpaceSetting.ThreeDim, async (scene) => {
-    scene.scene.background = new THREE.Color('#050813')
+    scene.scene.background = new THREE.Color('#070706')
     scene.renderer.shadowMap.enabled = true
 
     const subject = createFieldCore()
@@ -32,17 +32,14 @@ export function testAnimated3dCameraUi(): AnimatedScene {
     cameraUi.root.position.set(-8.4, 3.4, -18)
     const statusChip = await createStatusChip()
     statusChip.root.position.set(9.8, 6.25, -18)
-    const reticle = createReticle()
-    reticle.position.set(4.1, 0.35, -18)
     makeCameraOverlay(cameraUi.root)
     makeCameraOverlay(statusChip.root)
-    makeCameraOverlay(reticle)
 
     const callout = await createWorldCallout()
     callout.root.position.copy(SUBJECT_POSITION)
 
     scene.add(stage, ...lights, subject.root)
-    scene.camera.add(cameraUi.root, statusChip.root, reticle)
+    scene.camera.add(cameraUi.root, statusChip.root)
     scene.add(scene.camera)
 
     scene.camera.position.copy(START_POSITION)
@@ -175,49 +172,33 @@ interface CameraUiVisuals {
 
 const createCameraUi = async (): Promise<CameraUiVisuals> => {
   const eyebrow = await createText({
-    text: 'ORBITAL MONITOR  /  ARRAY 07',
+    text: 'Magnetic field',
     fontSize: 0.34,
-    color: '#67e8f9',
+    color: '#aaa59d',
     anchorX: 'left',
     anchorY: 'top'
   })
   const title = await createText({
-    text: 'MAGNETIC CORE',
-    fontSize: 0.78,
-    color: '#f8fafc',
+    text: '2.4 T',
+    fontSize: 1.15,
+    color: '#f1ede5',
     anchorX: 'left',
     anchorY: 'top'
   })
   const description = await createText({
-    text: 'Field geometry remains locked while the observation camera moves.',
+    text: 'The camera moves around the apparatus. This reading stays fixed to the frame.',
     fontSize: 0.3,
-    color: '#94a3b8',
+    color: '#918d86',
     maxWidth: 7.2,
     lineHeight: 1.25,
     textAlign: 'left',
     anchorX: 'left',
     anchorY: 'top'
   })
-  const metrics = layout.flex(
-    {
-      flexDirection: 'row',
-      width: 7.2,
-      gap: 0.45,
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      anchorX: 'left',
-      anchorY: 'top'
-    },
-    await Promise.all([
-      createMetric('STABILITY', '98.4%', '#67e8f9'),
-      createMetric('FIELD', '2.4 T', '#a78bfa'),
-      createMetric('LOCK', 'ACTIVE', '#4ade80')
-    ])
-  )
   const focusNote = await createText({
-    text: 'FOCUS LOCK CONFIRMED',
+    text: 'Focus acquired.',
     fontSize: 0.3,
-    color: '#4ade80',
+    color: '#d4aa55',
     anchorX: 'left',
     anchorY: 'top'
   })
@@ -225,78 +206,43 @@ const createCameraUi = async (): Promise<CameraUiVisuals> => {
     {
       flexDirection: 'column',
       width: 7.2,
-      height: 5,
+      height: 4.1,
       gap: 0.34,
       alignItems: 'flex-start',
       justifyContent: 'flex-start',
       anchorX: 'center',
       anchorY: 'middle'
     },
-    [eyebrow, title, description, metrics]
+    [eyebrow, title, description]
   )
   content.position.y = 0.3
 
   const root = new THREE.Group()
   root.name = 'AnimatedCameraAttachedUi'
-  const panel = createRectangle(8.8, 6.5, {
+  const panel = createRectangle(8.8, 5.6, {
     material: new THREE.MeshBasicMaterial({
-      color: '#0b1220',
+      color: '#090908',
       transparent: true,
-      opacity: 0.94
-    }),
-    stroke: { color: '#28415f', width: 0.08, placement: 'inside' }
+      opacity: 0.74
+    })
   })
   panel.position.z = -0.08
-  const accent = createRectangle(0.08, 5.9, { color: '#22d3ee' })
-  accent.position.set(-4.14, 0, 0.02)
   const scanLabel = await createText({
-    text: 'SCAN PROGRESS',
+    text: 'camera path',
     fontSize: 0.25,
-    color: '#64748b',
+    color: '#77736d',
     anchorX: 'left',
     anchorY: 'middle'
   })
-  scanLabel.position.set(-3.6, -2.18, 0.02)
+  scanLabel.position.set(-3.6, -1.82, 0.02)
   const meterWidth = 7.2
-  const meterTrack = createRectangle(meterWidth, 0.13, { color: '#1e293b' })
-  meterTrack.position.set(0, -2.62, 0.02)
-  const meterFill = createRectangle(meterWidth, 0.13, { color: '#22d3ee' })
-  meterFill.position.set(-meterWidth / 2, -2.62, 0.03)
+  const meterTrack = createRectangle(meterWidth, 0.08, { color: '#302e2a' })
+  meterTrack.position.set(0, -2.25, 0.02)
+  const meterFill = createRectangle(meterWidth, 0.08, { color: '#d4aa55' })
+  meterFill.position.set(-meterWidth / 2, -2.25, 0.03)
   meterFill.scale.x = 0
-  root.add(panel, accent, content, scanLabel, meterTrack, meterFill)
+  root.add(panel, content, scanLabel, meterTrack, meterFill)
   return { root, panel, content, focusNote, meterFill, meterWidth }
-}
-
-const createMetric = async (
-  labelText: string,
-  valueText: string,
-  color: THREE.ColorRepresentation
-) => {
-  const label = await createText({
-    text: labelText,
-    fontSize: 0.23,
-    color: '#64748b',
-    anchorX: 'left',
-    anchorY: 'top'
-  })
-  const value = await createText({
-    text: valueText,
-    fontSize: 0.5,
-    color,
-    anchorX: 'left',
-    anchorY: 'top'
-  })
-  return layout.flex(
-    {
-      flexDirection: 'column',
-      width: 2.1,
-      gap: 0.12,
-      alignItems: 'flex-start',
-      anchorX: 'left',
-      anchorY: 'top'
-    },
-    [label, value]
-  )
 }
 
 interface StatusChipVisuals {
@@ -306,12 +252,12 @@ interface StatusChipVisuals {
 }
 
 const createStatusChip = async (): Promise<StatusChipVisuals> => {
-  const dot = createCircle(0.11, { color: '#4ade80' })
+  const dot = createCircle(0.09, { color: '#91a779' })
   dot.position.z = 0.02
   const label = await createText({
-    text: 'LIVE  /  TRACKING',
+    text: 'tracking',
     fontSize: 0.3,
-    color: '#dbeafe',
+    color: '#d2cdc4',
     anchorX: 'left',
     anchorY: 'middle'
   })
@@ -324,8 +270,7 @@ const createStatusChip = async (): Promise<StatusChipVisuals> => {
       alignItems: 'center',
       anchorX: 'center',
       anchorY: 'middle',
-      background: '#0b1220',
-      border: { color: '#1e3a5f', width: 0.06 }
+      background: '#090908'
     },
     [dot, label]
   )
@@ -335,59 +280,58 @@ const createStatusChip = async (): Promise<StatusChipVisuals> => {
 
 const createFieldCore = () => {
   const root = new THREE.Group()
-  root.name = 'FieldCoreAssembly'
+  root.name = 'FieldApparatus'
   const body = new THREE.Group()
   const core = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.65, 4),
+    new THREE.CylinderGeometry(1.55, 1.55, 0.62, 72),
     new THREE.MeshPhysicalMaterial({
-      color: '#0891b2',
-      emissive: '#07334b',
-      emissiveIntensity: 1.7,
-      roughness: 0.18,
-      metalness: 0.35,
-      clearcoat: 1,
-      clearcoatRoughness: 0.12
+      color: '#9b6038',
+      roughness: 0.28,
+      metalness: 0.78,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.32
     })
   )
+  core.rotation.z = Math.PI / 2
   core.castShadow = true
-  const glow = new THREE.Mesh(
-    new THREE.SphereGeometry(1.28, 48, 32),
-    new THREE.MeshBasicMaterial({
-      color: '#a5f3fc',
-      transparent: true,
-      opacity: 0.2,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    })
+  core.receiveShadow = true
+
+  const axle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.16, 4.5, 28),
+    new THREE.MeshStandardMaterial({ color: '#8f918f', roughness: 0.24, metalness: 0.86 })
   )
-  body.add(core, glow)
+  axle.rotation.z = Math.PI / 2
+  axle.castShadow = true
+
+  const glow = new THREE.Mesh(
+    new THREE.TorusGeometry(1.82, 0.045, 12, 128),
+    new THREE.MeshStandardMaterial({ color: '#d5b47a', roughness: 0.3, metalness: 0.72 })
+  )
+  glow.rotation.y = Math.PI / 2
+  body.add(core, axle, glow)
 
   const rings = new THREE.Group()
-  const ringMaterial = new THREE.MeshBasicMaterial({
-    color: '#67e8f9',
-    transparent: true,
-    opacity: 0.72,
-    depthWrite: false
+  const outerRingMaterial = new THREE.MeshStandardMaterial({
+    color: '#686a68',
+    roughness: 0.34,
+    metalness: 0.82
   })
-  const ringA = new THREE.Mesh(new THREE.TorusGeometry(2.55, 0.035, 10, 160), ringMaterial)
-  const ringB = new THREE.Mesh(new THREE.TorusGeometry(2.15, 0.025, 10, 160), ringMaterial)
-  const ringC = new THREE.Mesh(new THREE.TorusGeometry(2.85, 0.02, 10, 160), ringMaterial)
+  const innerRingMaterial = new THREE.MeshStandardMaterial({
+    color: '#b57849',
+    roughness: 0.3,
+    metalness: 0.78
+  })
+  const ringA = new THREE.Mesh(new THREE.TorusGeometry(2.65, 0.085, 16, 160), outerRingMaterial)
+  const ringB = new THREE.Mesh(new THREE.TorusGeometry(2.18, 0.065, 16, 160), innerRingMaterial)
   ringA.rotation.set(Math.PI / 2.8, 0.25, 0)
   ringB.rotation.set(-Math.PI / 3.5, 0.1, Math.PI / 2.2)
-  ringC.rotation.set(Math.PI / 2, Math.PI / 5, -0.25)
-  rings.add(ringA, ringB, ringC)
-
-  const particleMaterial = new THREE.MeshBasicMaterial({ color: '#c4b5fd' })
-  for (let index = 0; index < 12; index++) {
-    const angle = (index / 12) * Math.PI * 2
-    const particle = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), particleMaterial)
-    particle.position.set(Math.cos(angle) * 2.55, Math.sin(angle) * 2.55, 0)
-    rings.add(particle)
-  }
+  ringA.castShadow = true
+  ringB.castShadow = true
+  rings.add(ringA, ringB)
 
   const collar = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.1, 2.45, 0.45, 64),
-    new THREE.MeshStandardMaterial({ color: '#172033', roughness: 0.3, metalness: 0.75 })
+    new THREE.CylinderGeometry(1.75, 2.15, 0.42, 64),
+    new THREE.MeshStandardMaterial({ color: '#242422', roughness: 0.38, metalness: 0.68 })
   )
   collar.position.y = -2.35
   collar.castShadow = true
@@ -400,38 +344,31 @@ const createStage = (): THREE.Group => {
   const root = new THREE.Group()
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(42, 28),
-    new THREE.MeshStandardMaterial({ color: '#070d18', roughness: 0.82, metalness: 0.08 })
+    new THREE.MeshStandardMaterial({ color: '#11110f', roughness: 0.76, metalness: 0.12 })
   )
   floor.rotation.x = -Math.PI / 2
   floor.position.y = -2.58
   floor.receiveShadow = true
-  const grid = new THREE.GridHelper(34, 34, '#16334d', '#0d1b2c')
-  grid.position.y = -2.56
-  const halo = new THREE.Mesh(
-    new THREE.RingGeometry(2.8, 5.2, 96),
-    new THREE.MeshBasicMaterial({
-      color: '#0e7490',
-      transparent: true,
-      opacity: 0.16,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    })
+  const plinth = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.25, 3.55, 0.32, 80),
+    new THREE.MeshStandardMaterial({ color: '#1d1d1a', roughness: 0.46, metalness: 0.48 })
   )
-  halo.rotation.x = -Math.PI / 2
-  halo.position.set(SUBJECT_POSITION.x, -2.53, SUBJECT_POSITION.z)
-  root.add(floor, grid, halo)
+  plinth.position.set(SUBJECT_POSITION.x, -2.42, SUBJECT_POSITION.z)
+  plinth.castShadow = true
+  plinth.receiveShadow = true
+  root.add(floor, plinth)
   return root
 }
 
 const createLights = (): THREE.Light[] => {
-  const ambient = new THREE.HemisphereLight('#8ec5ff', '#07101c', 1.25)
-  const key = new THREE.DirectionalLight('#dbeafe', 4.2)
+  const ambient = new THREE.HemisphereLight('#d8d2c5', '#12110e', 0.82)
+  const key = new THREE.DirectionalLight('#fff1d5', 4.1)
   key.position.set(8, 10, 12)
   key.castShadow = true
   key.shadow.mapSize.set(1024, 1024)
-  const rim = new THREE.PointLight('#22d3ee', 42, 24, 2)
+  const rim = new THREE.PointLight('#8ea3ad', 19, 24, 2)
   rim.position.set(-4, 4, -5)
-  const accent = new THREE.PointLight('#a78bfa', 28, 18, 2)
+  const accent = new THREE.PointLight('#c47742', 16, 18, 2)
   accent.position.set(7, 2, 5)
   return [ambient, key, rim, accent]
 }
@@ -445,42 +382,27 @@ const createWorldCallout = async () => {
   ])
   const leader = new THREE.Line(
     leaderGeometry,
-    new THREE.LineBasicMaterial({ color: '#67e8f9', transparent: true, opacity: 0.75 })
+    new THREE.LineBasicMaterial({ color: '#b7b0a5', transparent: true, opacity: 0.72 })
   )
   const pill = new THREE.Group()
   pill.position.set(3.25, 2.08, 0)
   const panel = createRectangle(3.9, 1.05, {
     material: new THREE.MeshBasicMaterial({
-      color: '#07111f',
+      color: '#070706',
       transparent: true,
-      opacity: 0.92,
+      opacity: 0,
       side: THREE.DoubleSide
-    }),
-    stroke: { color: '#22d3ee', width: 0.05, placement: 'inside' }
+    })
   })
   panel.position.z = -0.02
   const label = await createText({
-    text: 'FIELD CORE  /  2.4 T',
+    text: 'rotor axis',
     fontSize: 0.34,
-    color: '#cffafe'
+    color: '#d4cec4'
   })
   pill.add(panel, label)
   root.add(leader, pill)
   return { root, pill }
-}
-
-const createReticle = (): THREE.LineSegments => {
-  const points = [
-    -1.1, 0.7, 0, -0.7, 0.7, 0, -1.1, 0.7, 0, -1.1, 0.3, 0, 1.1, 0.7, 0, 0.7, 0.7, 0, 1.1, 0.7, 0,
-    1.1, 0.3, 0, -1.1, -0.7, 0, -0.7, -0.7, 0, -1.1, -0.7, 0, -1.1, -0.3, 0, 1.1, -0.7, 0, 0.7,
-    -0.7, 0, 1.1, -0.7, 0, 1.1, -0.3, 0
-  ]
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3))
-  return new THREE.LineSegments(
-    geometry,
-    new THREE.LineBasicMaterial({ color: '#67e8f9', transparent: true, opacity: 0.55 })
-  )
 }
 
 const makeCameraOverlay = (root: THREE.Object3D): void => {
@@ -581,9 +503,9 @@ const registerVerifications = (
           Math.abs(centerX - 229.2) <= 2 &&
           Math.abs(centerY - 187.4) <= 2 &&
           Math.abs(bounds.width - 388.8) <= 3 &&
-          Math.abs(bounds.height - 287) <= 3,
+          Math.abs(bounds.height - 247.2) <= 3,
         'Camera movement must not move or resize camera-attached UI in screen space',
-        { bounds, expectedCenter: [229.2, 187.4], expectedSize: [388.8, 287] }
+        { bounds, expectedCenter: [229.2, 187.4], expectedSize: [388.8, 247.2] }
       )
     }
   )

@@ -19,32 +19,29 @@ interface HeatSpot {
   readonly initialTemperature: number
 }
 
-const COLD = new THREE.Color('#38bdf8')
-const HOT = new THREE.Color('#fb7185')
-const EVEN = new THREE.Color('#fbbf24')
-const EVEN_LIGHT = new THREE.Color('#fde68a')
+const COLD = new THREE.Color('#5aa6c8')
+const HOT = new THREE.Color('#d97968')
+const EVEN = new THREE.Color('#d4aa55')
+const EVEN_LIGHT = new THREE.Color('#ead697')
 
 export function testProductionHeatFlow(): AnimatedScene {
   return new AnimatedScene(1200, 675, SpaceSetting.TwoDim, async (scene) => {
-    scene.scene.background = new THREE.Color('#050816')
-
-    const rightPanel = createRectangle(24.5, 25.5, {
-      color: '#0c1424',
-      stroke: { color: '#243b5a', width: 0.08, placement: 'inside' }
-    })
-    rightPanel.position.set(12.65, 0, -3)
+    scene.scene.background = new THREE.Color('#050505')
 
     const title = await createText({
-      text: 'WHY STIRRING WORKS',
-      fontSize: 1.55,
-      color: '#f8fafc',
+      text: 'Cold spots survive\nconstant power.',
+      fontSize: 2.15,
+      color: '#f3f0e8',
+      maxWidth: 22,
+      lineHeight: 0.96,
+      textAlign: 'left',
       anchorX: 'left',
       anchorY: 'top'
     })
     const subtitle = await createText({
-      text: 'Cold spots are a distribution problem—not a power problem.',
-      fontSize: 0.83,
-      color: '#7dd3fc',
+      text: 'A turntable changes where energy lands, not how much enters.',
+      fontSize: 0.78,
+      color: '#a6a29a',
       maxWidth: 21,
       lineHeight: 1.25,
       textAlign: 'left',
@@ -53,15 +50,15 @@ export function testProductionHeatFlow(): AnimatedScene {
     })
     const equation = await createLatex({
       latex: String.raw`\dmClass{energy}{Q}=\dmClass{mass}{mc}\dmClass{temperature}{\Delta T}`,
-      fontSize: 3.25,
-      color: '#f8fafc',
+      fontSize: 3.45,
+      color: '#f3f0e8',
       anchorX: 'left',
       anchorY: 'top'
     })
     const explanation = await createText({
-      text: 'The same absorbed energy can still leave neighboring regions at very different temperatures.',
-      fontSize: 0.88,
-      color: '#cbd5e1',
+      text: 'Equal absorbed energy does not guarantee an equal temperature field.',
+      fontSize: 0.82,
+      color: '#a6a29a',
       maxWidth: 21,
       lineHeight: 1.3,
       textAlign: 'left',
@@ -69,9 +66,9 @@ export function testProductionHeatFlow(): AnimatedScene {
       anchorY: 'top'
     })
     const takeaway = await createText({
-      text: 'STIR + REST  →  LOWER TEMPERATURE SPREAD',
-      fontSize: 0.9,
-      color: '#fbbf24',
+      text: 'Stirring redistributes the energy.',
+      fontSize: 1.08,
+      color: '#e7ba52',
       maxWidth: 21,
       lineHeight: 1.2,
       textAlign: 'left',
@@ -83,64 +80,50 @@ export function testProductionHeatFlow(): AnimatedScene {
     const leftColumn = layout.flex(
       {
         flexDirection: 'column',
-        width: 21.5,
-        gap: 1,
+        width: 22,
+        gap: 1.15,
         alignItems: 'flex-start',
         anchorX: 'left',
         anchorY: 'top'
       },
       [title, subtitle, equation, explanation, takeaway]
     )
-    const leftPanel = layout.flex(
-      {
-        flexDirection: 'column',
-        width: 25.5,
-        height: 25.5,
-        padding: 2,
-        alignItems: 'flex-start',
-        anchorX: 'left',
-        anchorY: 'top',
-        background: '#0b1220',
-        border: { color: '#1e3a5f', width: 0.08 }
-      },
-      [leftColumn]
-    )
-    leftPanel.position.set(-26.1, 12.75, 0)
+    leftColumn.position.set(-26.1, 12.35, 0)
 
     const diagramTitle = await createText({
-      text: 'TEMPERATURE FIELD',
-      fontSize: 1.05,
-      color: '#94a3b8',
+      text: 'Temperature across one turn',
+      fontSize: 0.84,
+      color: '#a6a29a',
       anchorX: 'center',
       anchorY: 'middle'
     })
-    diagramTitle.position.set(12.65, 9.8, 0)
+    diagramTitle.position.set(12.65, 10.4, 0)
 
     const diagram = createHeatDiagram()
-    diagram.root.position.set(12.65, 0.4, 0)
+    diagram.root.position.set(12.65, 0.2, 0)
 
     const unevenStatus = await createText({
-      text: 'HIGH SPREAD  /  COLD SPOTS REMAIN',
+      text: 'uneven temperature',
       fontSize: 0.72,
-      color: '#fb7185',
+      color: '#d97968',
       anchorX: 'center',
       anchorY: 'middle'
     })
-    unevenStatus.position.set(12.65, -9.8, 0)
+    unevenStatus.position.set(12.65, -10.15, 0)
     unevenStatus.visible = false
     const mixingStatus = await createText({
-      text: 'REDISTRIBUTING ABSORBED ENERGY',
+      text: 'redistributing absorbed energy',
       fontSize: 0.72,
-      color: '#7dd3fc',
+      color: '#b8b4ac',
       anchorX: 'center',
       anchorY: 'middle'
     })
     mixingStatus.position.copy(unevenStatus.position)
     mixingStatus.visible = false
     const uniformStatus = await createText({
-      text: 'LOW SPREAD  /  HEAT IS EVEN',
+      text: 'temperature spread reduced',
       fontSize: 0.72,
-      color: '#fbbf24',
+      color: '#e7ba52',
       anchorX: 'center',
       anchorY: 'middle'
     })
@@ -148,11 +131,12 @@ export function testProductionHeatFlow(): AnimatedScene {
     uniformStatus.visible = false
 
     equation.visible = false
+    const narrativeRegion = new THREE.Group()
+    narrativeRegion.add(leftColumn)
     const composition = new THREE.Group()
     composition.scale.setScalar(1.9)
     composition.add(
-      leftPanel,
-      rightPanel,
+      narrativeRegion,
       diagramTitle,
       diagram.root,
       unevenStatus,
@@ -161,7 +145,7 @@ export function testProductionHeatFlow(): AnimatedScene {
     )
     scene.add(composition)
 
-    scene.expose('heat-flow-left-panel', leftPanel)
+    scene.expose('heat-flow-left-panel', narrativeRegion)
     scene.expose('heat-flow-left-content', leftColumn)
     scene.expose('heat-flow-equation', equation, { data: { semanticParts: true } })
     scene.expose('heat-flow-diagram', diagram.root)
@@ -173,9 +157,7 @@ export function testProductionHeatFlow(): AnimatedScene {
     scene.watchCollisions('heat-flow-equation', equation, {})
     scene.watchCollisions('heat-flow-explanation', explanation, {})
     scene.watchCollisions('heat-flow-takeaway', takeaway, {})
-    scene.watchCollisions('heat-flow-diagram-title', diagramTitle, {
-      ignore: [rightPanel]
-    })
+    scene.watchCollisions('heat-flow-diagram-title', diagramTitle, {})
 
     const frames = {
       intro: 0,
@@ -204,8 +186,8 @@ export function testProductionHeatFlow(): AnimatedScene {
         fadeIn(diagramTitle, { duration: 0.45, easing: 'ease-out' }),
         fadeIn(diagram.root, { duration: 0.6, easing: 'ease-out' }),
         fadeIn(unevenStatus, { duration: 0.45, easing: 'ease-out' }),
-        moveTo(diagram.root, new THREE.Vector3(12.65, 0.4, 0), {
-          from: new THREE.Vector3(14.65, 0.4, 0),
+        moveTo(diagram.root, new THREE.Vector3(12.65, 0.2, 0), {
+          from: new THREE.Vector3(14.65, 0.2, 0),
           duration: 0.8,
           easing: 'ease-out'
         })
@@ -273,8 +255,6 @@ export function testProductionHeatFlow(): AnimatedScene {
 
     registerVerifications(scene, {
       frames,
-      leftPanel,
-      rightPanel,
       leftColumn,
       diagram,
       diagramTitle,
@@ -294,8 +274,8 @@ const createHeatDiagram = (): {
 } => {
   const root = new THREE.Group()
   const vessel = createCircle(6.7, {
-    color: '#111d31',
-    stroke: { color: '#315078', width: 0.12, placement: 'inside' }
+    color: '#11100e',
+    stroke: { color: '#615d55', width: 0.08, placement: 'inside' }
   })
   vessel.scale.y = 0.72
   vessel.position.y = 0.9
@@ -346,10 +326,10 @@ const createHeatDiagram = (): {
   })
   root.add(...spots.map((spot) => spot.root))
 
-  const spreadTrack = createRectangle(9.2, 0.46, { color: '#26364d' })
+  const spreadTrack = createRectangle(9.2, 0.16, { color: '#393631' })
   spreadTrack.position.set(0, -5.65, 0)
   const spreadWidth = 8.8
-  const spreadFill = createRectangle(spreadWidth, 0.28, { color: '#fb7185' })
+  const spreadFill = createRectangle(spreadWidth, 0.16, { color: '#d97968' })
   spreadFill.position.set(0, -5.65, 0.1)
   root.add(spreadTrack, spreadFill)
 
@@ -407,18 +387,6 @@ const temperatureSpread = (spots: readonly HeatSpot[]): number => {
   return Math.max(...temperatures) - Math.min(...temperatures)
 }
 
-const containsWithMargin = (
-  outer: ScreenBounds | null,
-  inner: ScreenBounds | null,
-  margin: number
-): boolean =>
-  outer !== null &&
-  inner !== null &&
-  inner.left >= outer.left + margin &&
-  inner.right <= outer.right - margin &&
-  inner.top >= outer.top + margin &&
-  inner.bottom <= outer.bottom - margin
-
 const separated = (left: ScreenBounds | null, right: ScreenBounds | null): boolean =>
   left !== null && right !== null && left.right <= right.left
 
@@ -436,8 +404,6 @@ const registerVerifications = (
   scene: AnimatedScene,
   visuals: {
     frames: { intro: number; diagnose: number; mix: number; resolve: number; end: number }
-    leftPanel: THREE.Object3D
-    rightPanel: THREE.Object3D
     leftColumn: THREE.Object3D
     diagram: ReturnType<typeof createHeatDiagram>
     diagramTitle: THREE.Object3D
@@ -451,12 +417,11 @@ const registerVerifications = (
     'production-heat-left-contained',
     { frames: { start: 0, end: visuals.frames.end } },
     (context) => {
-      const panelBounds = context.screenBounds(visuals.leftPanel)
       const contentBounds = context.screenBounds(visuals.leftColumn)
       context.assert(
-        containsWithMargin(panelBounds, contentBounds, 24),
-        'The complete narrative column must remain inside its panel',
-        { panelBounds, contentBounds, requiredMargin: 24 }
+        insideViewport(contentBounds, context.viewport),
+        'The complete narrative column must remain inside the viewport',
+        { contentBounds, viewport: context.viewport }
       )
     }
   )
@@ -465,11 +430,11 @@ const registerVerifications = (
     'production-heat-panels-separated',
     { frames: { start: 0, end: visuals.frames.end } },
     (context) => {
-      const leftBounds = context.screenBounds(visuals.leftPanel)
-      const rightBounds = context.screenBounds(visuals.rightPanel)
+      const leftBounds = context.screenBounds(visuals.leftColumn)
+      const rightBounds = context.screenBounds(visuals.diagram.root)
       context.assert(
         separated(leftBounds, rightBounds),
-        'The narrative and diagram panels overlap',
+        'The narrative and temperature field overlap',
         {
           leftBounds,
           rightBounds
@@ -482,12 +447,12 @@ const registerVerifications = (
     'production-heat-panels-in-viewport',
     { frames: { start: 0, end: visuals.frames.end } },
     (context) => {
-      const leftBounds = context.screenBounds(visuals.leftPanel)
-      const rightBounds = context.screenBounds(visuals.rightPanel)
+      const leftBounds = context.screenBounds(visuals.leftColumn)
+      const rightBounds = context.screenBounds(visuals.diagram.root)
       context.assert(
         insideViewport(leftBounds, context.viewport) &&
           insideViewport(rightBounds, context.viewport),
-        'The production composition must remain inside the video viewport',
+        'The editorial composition must remain inside the video viewport',
         { leftBounds, rightBounds, viewport: context.viewport }
       )
     }
@@ -497,14 +462,13 @@ const registerVerifications = (
     'production-heat-diagram-contained',
     { frames: { start: 0, end: visuals.frames.end } },
     (context) => {
-      const panelBounds = context.screenBounds(visuals.rightPanel)
       const diagramBounds = context.screenBounds(visuals.diagram.root)
       const titleBounds = context.screenBounds(visuals.diagramTitle)
       context.assert(
-        containsWithMargin(panelBounds, diagramBounds, 20) &&
-          containsWithMargin(panelBounds, titleBounds, 20),
-        'The animated temperature field must remain inside its panel',
-        { panelBounds, diagramBounds, titleBounds, requiredMargin: 20 }
+        insideViewport(diagramBounds, context.viewport) &&
+          insideViewport(titleBounds, context.viewport),
+        'The animated temperature field and its label must remain inside the viewport',
+        { diagramBounds, titleBounds, viewport: context.viewport }
       )
     }
   )

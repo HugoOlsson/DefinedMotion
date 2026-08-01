@@ -13,38 +13,40 @@ export default defineScene({
 
 export function testLayoutAnimation(): AnimatedScene {
   return new AnimatedScene(800, 400, SpaceSetting.TwoDim, async (scene) => {
+    scene.scene.background = new THREE.Color('#050505')
+
     const heading = await createText({
-      text: 'NESTED LAYOUT + RUNTIME APPEND',
-      fontSize: 2.6,
-      color: '#38bdf8',
+      text: 'A list should make room for itself.',
+      fontSize: 3.4,
+      color: '#f3f0e8',
       anchorX: 'left',
       anchorY: 'top'
     })
     const listHeading = await createText({
-      text: 'Heating checklist',
-      fontSize: 2,
-      color: '#f8fafc',
+      text: 'For more even heating',
+      fontSize: 1.75,
+      color: '#f3f0e8',
       anchorX: 'left',
       anchorY: 'top'
     })
     const footer = await createText({
-      text: 'Footer follows the growing list',
-      fontSize: 1.35,
-      color: '#94a3b8',
+      text: 'This note moves down as the list grows.',
+      fontSize: 1.15,
+      color: '#8f8b84',
       anchorX: 'left',
       anchorY: 'top'
     })
     const firstItem = await createText({
-      text: '1. Rotate the food',
-      fontSize: 1.65,
-      color: '#fbbf24',
+      text: '01   Rotate the food',
+      fontSize: 1.55,
+      color: '#d4aa55',
       anchorX: 'left',
       anchorY: 'top'
     })
     const secondItem = await createText({
-      text: '2. Let heat spread',
-      fontSize: 1.65,
-      color: '#fb923c',
+      text: '02   Let heat spread',
+      fontSize: 1.55,
+      color: '#d9825b',
       anchorX: 'left',
       anchorY: 'top'
     })
@@ -52,9 +54,9 @@ export function testLayoutAnimation(): AnimatedScene {
     const dynamicList = layout.flex(
       {
         flexDirection: 'column',
-        width: 27,
-        gap: 1.2,
-        padding: 1.5,
+        width: 29,
+        gap: 1.35,
+        padding: 1.2,
         alignItems: 'flex-start',
         anchorX: 'left',
         anchorY: 'top'
@@ -73,10 +75,10 @@ export function testLayoutAnimation(): AnimatedScene {
     )
 
     const cells = await Promise.all([
-      createCell('POWER', String.raw`P = \frac{E}{t}`, '#4ade80'),
-      createCell('ENERGY', String.raw`E = Pt`, '#a78bfa'),
-      createCell('TIME', String.raw`t = \frac{E}{P}`, '#f472b6'),
-      createCell('AVERAGE', String.raw`\bar{P}`, '#22d3ee')
+      createCell('power', String.raw`P = \frac{E}{t}`, '#f3f0e8'),
+      createCell('energy', String.raw`E = Pt`, '#f3f0e8'),
+      createCell('time', String.raw`t = \frac{E}{P}`, '#f3f0e8'),
+      createCell('average', String.raw`\bar{P}`, '#d4aa55')
     ])
     const formulaGrid = layout.grid(
       {
@@ -97,7 +99,7 @@ export function testLayoutAnimation(): AnimatedScene {
       {
         flexDirection: 'row',
         width: 64,
-        gap: 5,
+        gap: 3,
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         anchorX: 'left',
@@ -108,18 +110,18 @@ export function testLayoutAnimation(): AnimatedScene {
     const page = layout.flex(
       {
         flexDirection: 'column',
-        width: 68,
-        height: 30,
+        width: 70,
+        height: 32,
         gap: 2.5,
         padding: 2,
         alignItems: 'flex-start',
         anchorX: 'center',
         anchorY: 'middle',
-        background: '#111827',
-        border: { color: '#334155', width: 0.12 }
+        background: '#050505'
       },
       [heading, body]
     )
+    page.scale.setScalar(1.42)
 
     scene.add(page)
     scene.expose('layout-animation-page', page)
@@ -207,7 +209,7 @@ const createCell = async (
   const label = await createText({
     text: labelText,
     fontSize: 1.1,
-    color: '#94a3b8'
+    color: '#8f8b84'
   })
   const value = await createLatex({ latex: latexText, fontSize: 2.4, color })
   return layout.flex(
