@@ -25,11 +25,11 @@ export interface LatexOptions {
   anchorY?: AnchorY
 }
 
-export type MeasurableVisual = THREE.Group & {
+export type MeasurableVisual<Visual extends THREE.Object3D = THREE.Object3D> = Visual & {
   getLocalBounds(): THREE.Box2
 }
 
-export type TextVisual = MeasurableVisual & {
+export type TextVisual = MeasurableVisual<THREE.Group> & {
   readonly text: string
   setText(text: string): Promise<void>
 }
@@ -39,7 +39,7 @@ export interface LatexPart {
   readonly id: string
 }
 
-export type LatexVisual = MeasurableVisual & {
+export type LatexVisual = MeasurableVisual<THREE.Group> & {
   readonly latex: string
   setLatex(latex: string): Promise<void>
   part(id: string): LatexPart

@@ -28,11 +28,6 @@ export function testProductionHeatFlow(): AnimatedScene {
   return new AnimatedScene(1200, 675, SpaceSetting.TwoDim, async (scene) => {
     scene.scene.background = new THREE.Color('#050816')
 
-    const leftPanel = createRectangle(25.5, 25.5, {
-      color: '#0b1220',
-      stroke: { color: '#1e3a5f', width: 0.08, placement: 'inside' }
-    })
-    leftPanel.position.set(-13.35, 0, -3)
     const rightPanel = createRectangle(24.5, 25.5, {
       color: '#0c1424',
       stroke: { color: '#243b5a', width: 0.08, placement: 'inside' }
@@ -96,7 +91,21 @@ export function testProductionHeatFlow(): AnimatedScene {
       },
       [title, subtitle, equation, explanation, takeaway]
     )
-    leftColumn.position.set(-23.6, 10.1, 0)
+    const leftPanel = layout.flex(
+      {
+        flexDirection: 'column',
+        width: 25.5,
+        height: 25.5,
+        padding: 2,
+        alignItems: 'flex-start',
+        anchorX: 'left',
+        anchorY: 'top',
+        background: '#0b1220',
+        border: { color: '#1e3a5f', width: 0.08 }
+      },
+      [leftColumn]
+    )
+    leftPanel.position.set(-26.1, 12.75, 0)
 
     const diagramTitle = await createText({
       text: 'TEMPERATURE FIELD',
@@ -144,7 +153,6 @@ export function testProductionHeatFlow(): AnimatedScene {
     composition.add(
       leftPanel,
       rightPanel,
-      leftColumn,
       diagramTitle,
       diagram.root,
       unevenStatus,
@@ -160,13 +168,11 @@ export function testProductionHeatFlow(): AnimatedScene {
     scene.expose('heat-flow-spread-fill', diagram.spreadFill)
     scene.expose('heat-flow-takeaway', takeaway)
 
-    scene.watchCollisions('heat-flow-title', title, { ignore: [leftPanel] })
-    scene.watchCollisions('heat-flow-subtitle', subtitle, { ignore: [leftPanel] })
-    scene.watchCollisions('heat-flow-equation', equation, { ignore: [leftPanel] })
-    scene.watchCollisions('heat-flow-explanation', explanation, {
-      ignore: [leftPanel]
-    })
-    scene.watchCollisions('heat-flow-takeaway', takeaway, { ignore: [leftPanel] })
+    scene.watchCollisions('heat-flow-title', title, {})
+    scene.watchCollisions('heat-flow-subtitle', subtitle, {})
+    scene.watchCollisions('heat-flow-equation', equation, {})
+    scene.watchCollisions('heat-flow-explanation', explanation, {})
+    scene.watchCollisions('heat-flow-takeaway', takeaway, {})
     scene.watchCollisions('heat-flow-diagram-title', diagramTitle, {
       ignore: [rightPanel]
     })

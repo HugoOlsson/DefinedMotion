@@ -11,6 +11,7 @@ export type {
   FlexOptions,
   GridOptions,
   LayoutAlignment,
+  LayoutBorderOptions,
   LayoutJustification,
   LayoutVisual
 } from '../runtime/visuals/layout'

@@ -3,6 +3,7 @@ import { COLORS } from './helpers'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { createAssetReference } from '../assets'
+import type { MeasurableVisual } from '../visuals/types'
 
 import { preloadFont, configureTextBuilder } from 'troika-three-text'
 import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
@@ -43,6 +44,20 @@ interface MeshWithColorMaterial extends THREE.Mesh {
   } & THREE.Material
 }
 
+export type MeasurableMesh = MeasurableVisual<MeshWithColorMaterial>
+
+const makeMeasurable = (
+  mesh: MeshWithColorMaterial,
+  bounds: THREE.Box2,
+  kind: 'rectangle' | 'circle'
+): MeasurableMesh => {
+  const stableBounds = bounds.clone()
+  const measurable = mesh as MeasurableMesh
+  measurable.userData.definedMotionVisual = kind
+  measurable.getLocalBounds = () => stableBounds.clone()
+  return measurable
+}
+
 const createMesh = (
   geometry: THREE.BufferGeometry,
   options?: ObjectOptions
@@ -71,7 +86,7 @@ export const createRectangle = (
   width: number = 10,
   height: number = 10,
   options?: RectangleOptions
-) => {
+): MeasurableMesh => {
   const geometry = new THREE.PlaneGeometry(width, height)
   const mesh = createMesh(geometry, options)
 
@@ -150,7 +165,14 @@ export const createRectangle = (
     ;(mesh as any).stroke = stroke
   }
 
-  return mesh
+  return makeMeasurable(
+    mesh,
+    new THREE.Box2(
+      new THREE.Vector2(-width / 2, -height / 2),
+      new THREE.Vector2(width / 2, height / 2)
+    ),
+    'rectangle'
+  )
 }
 
 // Define interface extending Line with your custom method
@@ -279,7 +301,7 @@ interface CircleOptions extends ObjectOptions {
   }
 }
 
-export const createCircle = (radius: number = 10, options?: CircleOptions) => {
+export const createCircle = (radius: number = 10, options?: CircleOptions): MeasurableMesh => {
   const geometry = new THREE.CircleGeometry(radius, 100)
   const mesh = createMesh(geometry, options)
 
@@ -331,5 +353,9 @@ export const createCircle = (radius: number = 10, options?: CircleOptions) => {
     ;(mesh as any).stroke = stroke
   }
 
-  return mesh
+  return makeMeasurable(
+    mesh,
+    new THREE.Box2(new THREE.Vector2(-radius, -radius), new THREE.Vector2(radius, radius)),
+    'circle'
+  )
 }

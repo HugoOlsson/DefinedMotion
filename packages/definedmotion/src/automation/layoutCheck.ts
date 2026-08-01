@@ -392,7 +392,26 @@ const rounded = (value: number): number => {
 }
 
 const objectsAreRelated = (left: THREE.Object3D, right: THREE.Object3D): boolean =>
-  left === right || isDescendantOf(left, right) || isDescendantOf(right, left)
+  left === right ||
+  isDescendantOf(left, right) ||
+  isDescendantOf(right, left) ||
+  belongsToOwnedSurface(left, right) ||
+  belongsToOwnedSurface(right, left)
+
+const belongsToOwnedSurface = (
+  content: THREE.Object3D,
+  possibleSurfacePart: THREE.Object3D
+): boolean => {
+  let current: THREE.Object3D | null = possibleSurfacePart
+  while (current) {
+    if (current.userData.definedMotionLayoutSurface === true) {
+      const owner = current.parent
+      return owner !== null && (content === owner || isDescendantOf(content, owner))
+    }
+    current = current.parent
+  }
+  return false
+}
 
 const isDescendantOf = (object: THREE.Object3D, ancestor: THREE.Object3D): boolean => {
   let parent = object.parent

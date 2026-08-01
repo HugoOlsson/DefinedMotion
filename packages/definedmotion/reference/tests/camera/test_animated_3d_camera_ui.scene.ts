@@ -1,18 +1,6 @@
-import {
-  AnimatedScene,
-  SpaceSetting,
-  defineScene,
-  type ScreenBounds
-} from 'definedmotion'
-import {
-  camera,
-  fadeIn,
-  rotateTo,
-  scaleIn,
-  scaleTo,
-  wait
-} from 'definedmotion/animation'
-import { createRectangle, createText, layout } from 'definedmotion/rendering'
+import { AnimatedScene, SpaceSetting, defineScene, type ScreenBounds } from 'definedmotion'
+import { camera, fadeIn, rotateTo, scaleIn, scaleTo, wait } from 'definedmotion/animation'
+import { createCircle, createRectangle, createText, layout } from 'definedmotion/rendering'
 import * as THREE from 'three'
 
 export default defineScene({
@@ -31,154 +19,149 @@ const ORBIT_ROTATION = cameraRotation(ORBIT_POSITION, new THREE.Vector3(1.3, 0.2
 const FOCUS_ROTATION = cameraRotation(FOCUS_POSITION, new THREE.Vector3(1.7, 0.2, 0))
 
 export function testAnimated3dCameraUi(): AnimatedScene {
-  return new AnimatedScene(
-    1200,
-    675,
-    SpaceSetting.ThreeDim,
-    async (scene) => {
-      scene.scene.background = new THREE.Color('#050813')
-      scene.renderer.shadowMap.enabled = true
+  return new AnimatedScene(1200, 675, SpaceSetting.ThreeDim, async (scene) => {
+    scene.scene.background = new THREE.Color('#050813')
+    scene.renderer.shadowMap.enabled = true
 
-      const subject = createFieldCore()
-      subject.root.position.copy(SUBJECT_POSITION)
-      const stage = createStage()
-      const lights = createLights()
+    const subject = createFieldCore()
+    subject.root.position.copy(SUBJECT_POSITION)
+    const stage = createStage()
+    const lights = createLights()
 
-      const cameraUi = await createCameraUi()
-      cameraUi.root.position.set(-8.4, 3.4, -18)
-      const statusChip = await createStatusChip()
-      statusChip.position.set(9.8, 6.25, -18)
-      const reticle = createReticle()
-      reticle.position.set(4.1, 0.35, -18)
-      makeCameraOverlay(cameraUi.root)
-      makeCameraOverlay(statusChip)
-      makeCameraOverlay(reticle)
+    const cameraUi = await createCameraUi()
+    cameraUi.root.position.set(-8.4, 3.4, -18)
+    const statusChip = await createStatusChip()
+    statusChip.root.position.set(9.8, 6.25, -18)
+    const reticle = createReticle()
+    reticle.position.set(4.1, 0.35, -18)
+    makeCameraOverlay(cameraUi.root)
+    makeCameraOverlay(statusChip.root)
+    makeCameraOverlay(reticle)
 
-      const callout = await createWorldCallout()
-      callout.root.position.copy(SUBJECT_POSITION)
+    const callout = await createWorldCallout()
+    callout.root.position.copy(SUBJECT_POSITION)
 
-      scene.add(stage, ...lights, subject.root)
-      scene.camera.add(cameraUi.root, statusChip, reticle)
-      scene.add(scene.camera)
+    scene.add(stage, ...lights, subject.root)
+    scene.camera.add(cameraUi.root, statusChip.root, reticle)
+    scene.add(scene.camera)
 
-      scene.camera.position.copy(START_POSITION)
-      scene.camera.quaternion.copy(START_ROTATION)
-      if (scene.camera instanceof THREE.PerspectiveCamera) {
-        scene.camera.fov = 46
-        scene.camera.updateProjectionMatrix()
-      }
-
-      scene.expose('animated-camera-ui-panel', cameraUi.panel)
-      scene.expose('animated-camera-ui-content', cameraUi.content)
-      scene.expose('animated-camera-ui-meter', cameraUi.meterFill)
-      scene.expose('animated-camera-ui-focus-note', cameraUi.focusNote)
-      scene.expose('animated-camera-ui-status-chip', statusChip)
-      scene.expose('animated-camera-ui-subject', subject.root)
-      scene.expose('animated-camera-ui-world-callout', callout.pill)
-
-      const beatFrames = {
-        start: 0,
-        orbit: scene.secondsToFrames(1.5),
-        focus: scene.secondsToFrames(4.5),
-        hold: scene.secondsToFrames(6.5),
-        end: scene.secondsToFrames(7)
-      }
-
-      scene.timeline.defineBeats({
-        establish: { start: beatFrames.start, end: beatFrames.orbit },
-        orbit: { start: beatFrames.orbit, end: beatFrames.focus },
-        focus: { start: beatFrames.focus, end: beatFrames.hold },
-        hold: { start: beatFrames.hold, end: beatFrames.end }
-      })
-
-      scene.timeline.beat('establish', (beat) => {
-        scene.addAnims(
-          fadeIn(cameraUi.root, { duration: 0.55, easing: 'ease-out' }),
-          fadeIn(statusChip, { duration: 0.4, easing: 'ease-out' }),
-          scaleIn(subject.root, { duration: 1.15, from: 0.82, easing: 'ease-out' })
-        )
-        scene.addAnims(wait(0.35))
-
-        beat.onEachTick(({ beatProgress }) => {
-          subject.rings.rotation.y = beatProgress * 0.45
-          subject.rings.rotation.z = beatProgress * 0.12
-          setMeterProgress(cameraUi, THREE.MathUtils.lerp(0.12, 0.36, beatProgress))
-        })
-      })
-
-      scene.timeline.beat('orbit', (beat) => {
-        scene.do(() => scene.add(callout.root))
-        scene.addAnims(
-          camera.moveToPose(
-            scene.camera,
-            { position: ORBIT_POSITION, rotation: ORBIT_ROTATION },
-            { duration: 2.6, easing: 'ease-in-out', space: 'world' }
-          ),
-          rotateTo(subject.body, new THREE.Euler(0.14, Math.PI * 0.7, -0.05), {
-            duration: 2.6,
-            easing: 'ease-in-out'
-          }),
-          fadeIn(callout.root, { duration: 0.55, easing: 'ease-out' })
-        )
-        scene.addAnims(wait(0.4))
-
-        beat.onEachTick(({ beatProgress }) => {
-          subject.rings.rotation.y = THREE.MathUtils.lerp(0.45, 2.55, beatProgress)
-          subject.rings.rotation.z = THREE.MathUtils.lerp(0.12, 0.48, beatProgress)
-          setMeterProgress(cameraUi, THREE.MathUtils.lerp(0.36, 0.78, beatProgress))
-        })
-      })
-
-      scene.timeline.beat('focus', (beat) => {
-        scene.do(() => {
-          cameraUi.content.append(cameraUi.focusNote)
-          makeCameraOverlay(cameraUi.focusNote)
-        })
-        scene.addAnims(
-          camera.moveToPose(
-            scene.camera,
-            { position: FOCUS_POSITION, rotation: FOCUS_ROTATION },
-            { duration: 1.6, easing: 'ease-in-out', space: 'world' }
-          ),
-          scaleTo(subject.glow, 1.16, { duration: 1.2, easing: 'ease-out' }),
-          fadeIn(cameraUi.focusNote, { duration: 0.4, easing: 'ease-out' })
-        )
-        scene.addAnims(wait(0.4))
-
-        beat.onEachTick(({ beatProgress }) => {
-          subject.rings.rotation.y = THREE.MathUtils.lerp(2.55, 3.25, beatProgress)
-          subject.rings.rotation.z = THREE.MathUtils.lerp(0.48, 0.62, beatProgress)
-          setMeterProgress(cameraUi, THREE.MathUtils.lerp(0.78, 1, beatProgress))
-        })
-      })
-
-      scene.timeline.beat('hold', (beat) => {
-        scene.addAnims(wait(0.5))
-        beat.onEachTick(({ beatProgress }) => {
-          subject.rings.rotation.y = THREE.MathUtils.lerp(3.25, 3.42, beatProgress)
-          subject.rings.rotation.z = THREE.MathUtils.lerp(0.62, 0.66, beatProgress)
-          setMeterProgress(cameraUi, 1)
-        })
-      })
-
-      const cameraWorldRotation = new THREE.Quaternion()
-      scene.onEachTick(() => {
-        scene.camera.getWorldQuaternion(cameraWorldRotation)
-        callout.pill.quaternion.copy(cameraWorldRotation)
-      })
-
-      registerVerifications(
-        scene,
-        {
-          cameraUi,
-          statusChip,
-          subject: subject.root,
-          callout: callout.pill
-        },
-        beatFrames
-      )
+    scene.camera.position.copy(START_POSITION)
+    scene.camera.quaternion.copy(START_ROTATION)
+    if (scene.camera instanceof THREE.PerspectiveCamera) {
+      scene.camera.fov = 46
+      scene.camera.updateProjectionMatrix()
     }
-  )
+
+    scene.expose('animated-camera-ui-panel', cameraUi.panel)
+    scene.expose('animated-camera-ui-content', cameraUi.content)
+    scene.expose('animated-camera-ui-meter', cameraUi.meterFill)
+    scene.expose('animated-camera-ui-focus-note', cameraUi.focusNote)
+    scene.expose('animated-camera-ui-status-chip', statusChip.root)
+    scene.expose('animated-camera-ui-subject', subject.root)
+    scene.expose('animated-camera-ui-world-callout', callout.pill)
+
+    const beatFrames = {
+      start: 0,
+      orbit: scene.secondsToFrames(1.5),
+      focus: scene.secondsToFrames(4.5),
+      hold: scene.secondsToFrames(6.5),
+      end: scene.secondsToFrames(7)
+    }
+
+    scene.timeline.defineBeats({
+      establish: { start: beatFrames.start, end: beatFrames.orbit },
+      orbit: { start: beatFrames.orbit, end: beatFrames.focus },
+      focus: { start: beatFrames.focus, end: beatFrames.hold },
+      hold: { start: beatFrames.hold, end: beatFrames.end }
+    })
+
+    scene.timeline.beat('establish', (beat) => {
+      scene.addAnims(
+        fadeIn(cameraUi.root, { duration: 0.55, easing: 'ease-out' }),
+        fadeIn(statusChip.root, { duration: 0.4, easing: 'ease-out' }),
+        scaleIn(subject.root, { duration: 1.15, from: 0.82, easing: 'ease-out' })
+      )
+      scene.addAnims(wait(0.35))
+
+      beat.onEachTick(({ beatProgress }) => {
+        subject.rings.rotation.y = beatProgress * 0.45
+        subject.rings.rotation.z = beatProgress * 0.12
+        setMeterProgress(cameraUi, THREE.MathUtils.lerp(0.12, 0.36, beatProgress))
+      })
+    })
+
+    scene.timeline.beat('orbit', (beat) => {
+      scene.do(() => scene.add(callout.root))
+      scene.addAnims(
+        camera.moveToPose(
+          scene.camera,
+          { position: ORBIT_POSITION, rotation: ORBIT_ROTATION },
+          { duration: 2.6, easing: 'ease-in-out', space: 'world' }
+        ),
+        rotateTo(subject.body, new THREE.Euler(0.14, Math.PI * 0.7, -0.05), {
+          duration: 2.6,
+          easing: 'ease-in-out'
+        }),
+        fadeIn(callout.root, { duration: 0.55, easing: 'ease-out' })
+      )
+      scene.addAnims(wait(0.4))
+
+      beat.onEachTick(({ beatProgress }) => {
+        subject.rings.rotation.y = THREE.MathUtils.lerp(0.45, 2.55, beatProgress)
+        subject.rings.rotation.z = THREE.MathUtils.lerp(0.12, 0.48, beatProgress)
+        setMeterProgress(cameraUi, THREE.MathUtils.lerp(0.36, 0.78, beatProgress))
+      })
+    })
+
+    scene.timeline.beat('focus', (beat) => {
+      scene.do(() => {
+        cameraUi.content.append(cameraUi.focusNote)
+        makeCameraOverlay(cameraUi.focusNote)
+      })
+      scene.addAnims(
+        camera.moveToPose(
+          scene.camera,
+          { position: FOCUS_POSITION, rotation: FOCUS_ROTATION },
+          { duration: 1.6, easing: 'ease-in-out', space: 'world' }
+        ),
+        scaleTo(subject.glow, 1.16, { duration: 1.2, easing: 'ease-out' }),
+        fadeIn(cameraUi.focusNote, { duration: 0.4, easing: 'ease-out' })
+      )
+      scene.addAnims(wait(0.4))
+
+      beat.onEachTick(({ beatProgress }) => {
+        subject.rings.rotation.y = THREE.MathUtils.lerp(2.55, 3.25, beatProgress)
+        subject.rings.rotation.z = THREE.MathUtils.lerp(0.48, 0.62, beatProgress)
+        setMeterProgress(cameraUi, THREE.MathUtils.lerp(0.78, 1, beatProgress))
+      })
+    })
+
+    scene.timeline.beat('hold', (beat) => {
+      scene.addAnims(wait(0.5))
+      beat.onEachTick(({ beatProgress }) => {
+        subject.rings.rotation.y = THREE.MathUtils.lerp(3.25, 3.42, beatProgress)
+        subject.rings.rotation.z = THREE.MathUtils.lerp(0.62, 0.66, beatProgress)
+        setMeterProgress(cameraUi, 1)
+      })
+    })
+
+    const cameraWorldRotation = new THREE.Quaternion()
+    scene.onEachTick(() => {
+      scene.camera.getWorldQuaternion(cameraWorldRotation)
+      callout.pill.quaternion.copy(cameraWorldRotation)
+    })
+
+    registerVerifications(
+      scene,
+      {
+        cameraUi,
+        statusChip,
+        subject: subject.root,
+        callout: callout.pill
+      },
+      beatFrames
+    )
+  })
 }
 
 interface CameraUiVisuals {
@@ -242,7 +225,7 @@ const createCameraUi = async (): Promise<CameraUiVisuals> => {
     {
       flexDirection: 'column',
       width: 7.2,
-      height: 4.4,
+      height: 5,
       gap: 0.34,
       alignItems: 'flex-start',
       justifyContent: 'flex-start',
@@ -251,7 +234,7 @@ const createCameraUi = async (): Promise<CameraUiVisuals> => {
     },
     [eyebrow, title, description, metrics]
   )
-  content.position.y = 0.55
+  content.position.y = 0.3
 
   const root = new THREE.Group()
   root.name = 'AnimatedCameraAttachedUi'
@@ -316,23 +299,15 @@ const createMetric = async (
   )
 }
 
-const createStatusChip = async (): Promise<THREE.Group> => {
-  const root = new THREE.Group()
-  root.name = 'CameraStatusChip'
-  const panel = createRectangle(3.2, 1, {
-    material: new THREE.MeshBasicMaterial({
-      color: '#0b1220',
-      transparent: true,
-      opacity: 0.9
-    }),
-    stroke: { color: '#1e3a5f', width: 0.06, placement: 'inside' }
-  })
-  panel.position.z = -0.04
-  const dot = new THREE.Mesh(
-    new THREE.CircleGeometry(0.11, 20),
-    new THREE.MeshBasicMaterial({ color: '#4ade80' })
-  )
-  dot.position.set(-1.18, 0, 0.02)
+interface StatusChipVisuals {
+  root: ReturnType<typeof layout.flex>
+  dot: ReturnType<typeof createCircle>
+  label: Awaited<ReturnType<typeof createText>>
+}
+
+const createStatusChip = async (): Promise<StatusChipVisuals> => {
+  const dot = createCircle(0.11, { color: '#4ade80' })
+  dot.position.z = 0.02
   const label = await createText({
     text: 'LIVE  /  TRACKING',
     fontSize: 0.3,
@@ -340,9 +315,22 @@ const createStatusChip = async (): Promise<THREE.Group> => {
     anchorX: 'left',
     anchorY: 'middle'
   })
-  label.position.set(-0.9, 0, 0.02)
-  root.add(panel, dot, label)
-  return root
+  label.position.z = 0.02
+  const root = layout.flex(
+    {
+      flexDirection: 'row',
+      gap: 0.22,
+      padding: 0.28,
+      alignItems: 'center',
+      anchorX: 'center',
+      anchorY: 'middle',
+      background: '#0b1220',
+      border: { color: '#1e3a5f', width: 0.06 }
+    },
+    [dot, label]
+  )
+  root.name = 'CameraStatusChip'
+  return { root, dot, label }
 }
 
 const createFieldCore = () => {
@@ -483,14 +471,9 @@ const createWorldCallout = async () => {
 
 const createReticle = (): THREE.LineSegments => {
   const points = [
-    -1.1, 0.7, 0, -0.7, 0.7, 0,
-    -1.1, 0.7, 0, -1.1, 0.3, 0,
-    1.1, 0.7, 0, 0.7, 0.7, 0,
-    1.1, 0.7, 0, 1.1, 0.3, 0,
-    -1.1, -0.7, 0, -0.7, -0.7, 0,
-    -1.1, -0.7, 0, -1.1, -0.3, 0,
-    1.1, -0.7, 0, 0.7, -0.7, 0,
-    1.1, -0.7, 0, 1.1, -0.3, 0
+    -1.1, 0.7, 0, -0.7, 0.7, 0, -1.1, 0.7, 0, -1.1, 0.3, 0, 1.1, 0.7, 0, 0.7, 0.7, 0, 1.1, 0.7, 0,
+    1.1, 0.3, 0, -1.1, -0.7, 0, -0.7, -0.7, 0, -1.1, -0.7, 0, -1.1, -0.3, 0, 1.1, -0.7, 0, 0.7,
+    -0.7, 0, 1.1, -0.7, 0, 1.1, -0.3, 0
   ]
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3))
@@ -534,7 +517,7 @@ const registerVerifications = (
   scene: AnimatedScene,
   visuals: {
     cameraUi: CameraUiVisuals
-    statusChip: THREE.Object3D
+    statusChip: StatusChipVisuals
     subject: THREE.Object3D
     callout: THREE.Object3D
   },
@@ -545,7 +528,7 @@ const registerVerifications = (
     { frames: { start: frames.start, end: frames.end } },
     (context) => {
       const panelBounds = context.screenBounds(visuals.cameraUi.panel)
-      const statusBounds = context.screenBounds(visuals.statusChip)
+      const statusBounds = context.screenBounds(visuals.statusChip.root)
       context.assert(
         insideViewport(panelBounds, context.viewport.width, context.viewport.height, 24),
         'The primary camera-attached panel must remain inside the viewport',
@@ -555,6 +538,21 @@ const registerVerifications = (
         insideViewport(statusBounds, context.viewport.width, context.viewport.height, 24),
         'The camera-attached status chip must remain inside the viewport',
         { statusBounds }
+      )
+    }
+  )
+  scene.verify(
+    'animated-camera-ui-status-chip-contained',
+    { frames: { start: frames.start, end: frames.end } },
+    (context) => {
+      const chipBounds = context.screenBounds(visuals.statusChip.root)
+      const dotBounds = context.screenBounds(visuals.statusChip.dot)
+      const labelBounds = context.screenBounds(visuals.statusChip.label)
+      context.assert(
+        containsWithMargin(chipBounds, dotBounds, 4) &&
+          containsWithMargin(chipBounds, labelBounds, 4),
+        'The layout-owned camera-attached status surface must contain its content',
+        { chipBounds, dotBounds, labelBounds, requiredMargin: 4 }
       )
     }
   )
@@ -597,12 +595,16 @@ const registerVerifications = (
       const subjectBounds = context.screenBounds(visuals.subject)
       const calloutBounds = context.screenBounds(visuals.callout)
       context.assert(
-        panelBounds !== null && subjectBounds !== null && panelBounds.right + 18 <= subjectBounds.left,
+        panelBounds !== null &&
+          subjectBounds !== null &&
+          panelBounds.right + 18 <= subjectBounds.left,
         'The 3D subject must remain visually separated from the camera-attached UI panel',
         { panelBounds, subjectBounds }
       )
       context.assert(
-        panelBounds !== null && calloutBounds !== null && panelBounds.right + 18 <= calloutBounds.left,
+        panelBounds !== null &&
+          calloutBounds !== null &&
+          panelBounds.right + 18 <= calloutBounds.left,
         'The world-space label must remain visually separated from the camera-attached UI panel',
         { panelBounds, calloutBounds }
       )
@@ -624,8 +626,20 @@ const registerVerifications = (
       )
     }
   )
-  verifyCameraPose(scene, 'animated-camera-ui-orbit-pose', frames.focus - 1, ORBIT_POSITION, ORBIT_ROTATION)
-  verifyCameraPose(scene, 'animated-camera-ui-focus-pose', frames.hold - 1, FOCUS_POSITION, FOCUS_ROTATION)
+  verifyCameraPose(
+    scene,
+    'animated-camera-ui-orbit-pose',
+    frames.focus - 1,
+    ORBIT_POSITION,
+    ORBIT_ROTATION
+  )
+  verifyCameraPose(
+    scene,
+    'animated-camera-ui-focus-pose',
+    frames.hold - 1,
+    FOCUS_POSITION,
+    FOCUS_ROTATION
+  )
 }
 
 const verifyCameraPose = (

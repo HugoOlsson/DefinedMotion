@@ -245,12 +245,7 @@ try {
 
   const visuals = run(['inspect', 'test-visual-primitives', '--frame', '0', '--no-build'])
   const visualEffects = run(['inspect', 'test-visual-primitives', '--frame', '11', '--no-build'])
-  const visualVerification = run([
-    'verify',
-    '--scene',
-    'test-visual-primitives',
-    '--no-build'
-  ])
+  const visualVerification = run(['verify', '--scene', 'test-visual-primitives', '--no-build'])
   const visualObject = (id) => visuals.objects.find((object) => object.id === id)
   const leftText = visualObject('visual-text-left-top')
   const centerText = visualObject('visual-text-centered')
@@ -321,21 +316,14 @@ try {
     '0',
     '--no-build'
   ])
-  const animatedLayoutEnd = run([
-    'inspect',
-    'test-layout-animation',
-    '--frame',
-    '89',
-    '--no-build'
-  ])
+  const animatedLayoutEnd = run(['inspect', 'test-layout-animation', '--frame', '89', '--no-build'])
   const animatedLayoutVerification = run([
     'verify',
     '--scene',
     'test-layout-animation',
     '--no-build'
   ])
-  const animatedLayoutObject = (result, id) =>
-    result.objects.find((object) => object.id === id)
+  const animatedLayoutObject = (result, id) => result.objects.find((object) => object.id === id)
   if (
     animatedLayoutEnd.sceneInfo.durationInFrames !== 90 ||
     animatedLayoutObject(animatedLayoutStart, 'layout-animation-first-item')?.attached !== false ||
@@ -409,9 +397,8 @@ try {
     !equationAtCommit ||
     !legendBeforeCommit ||
     !legendAtCommit ||
-    Math.abs(
-      equationAtCommit.localBounds.size[1] - equationBeforeCommit.localBounds.size[1]
-    ) >= 0.1 ||
+    Math.abs(equationAtCommit.localBounds.size[1] - equationBeforeCommit.localBounds.size[1]) >=
+      0.1 ||
     Math.abs(
       legendAtCommit.worldTransform.position[1] - legendBeforeCommit.worldTransform.position[1]
     ) >= 0.1 ||
@@ -441,27 +428,37 @@ try {
     'test-animated-3d-camera-ui',
     '--no-build'
   ])
-  const animatedCameraUiObject = (result, id) =>
-    result.objects.find((object) => object.id === id)
-  const cameraUiPanelStart = animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-panel')
+  const animatedCameraUiObject = (result, id) => result.objects.find((object) => object.id === id)
+  const cameraUiPanelStart = animatedCameraUiObject(
+    animatedCameraUiStart,
+    'animated-camera-ui-panel'
+  )
   const cameraUiPanelEnd = animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-panel')
   if (
     animatedCameraUiEnd.sceneInfo.durationInFrames !== 420 ||
-    animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-world-callout')?.attached !== false ||
-    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-world-callout')?.attached !== true ||
-    animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-focus-note')?.attached !== false ||
-    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-focus-note')?.attached !== true ||
-    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-meter')?.localTransform.scale[0] !== 1 ||
+    animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-world-callout')?.attached !==
+      false ||
+    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-world-callout')?.attached !==
+      true ||
+    animatedCameraUiObject(animatedCameraUiStart, 'animated-camera-ui-focus-note')?.attached !==
+      false ||
+    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-focus-note')?.attached !==
+      true ||
+    animatedCameraUiObject(animatedCameraUiEnd, 'animated-camera-ui-meter')?.localTransform
+      .scale[0] !== 1 ||
     !cameraUiPanelStart?.screenBounds ||
     !cameraUiPanelEnd?.screenBounds ||
     Math.abs(cameraUiPanelStart.screenBounds.x - cameraUiPanelEnd.screenBounds.x) >= 0.01 ||
     Math.abs(cameraUiPanelStart.screenBounds.y - cameraUiPanelEnd.screenBounds.y) >= 0.01 ||
     Math.abs(cameraUiPanelStart.screenBounds.width - cameraUiPanelEnd.screenBounds.width) >= 0.01 ||
-    Math.abs(cameraUiPanelStart.screenBounds.height - cameraUiPanelEnd.screenBounds.height) >= 0.01 ||
+    Math.abs(cameraUiPanelStart.screenBounds.height - cameraUiPanelEnd.screenBounds.height) >=
+      0.01 ||
     animatedCameraUiVerification.passed !== true ||
-    animatedCameraUiVerification.verificationCount !== 7
+    animatedCameraUiVerification.verificationCount !== 8
   ) {
-    throw new Error('Animated 3D camera-attached UI screen lock, late attachment, or verification was incorrect')
+    throw new Error(
+      'Animated 3D camera-attached UI screen lock, late attachment, or verification was incorrect'
+    )
   }
 
   const productionHeatEnd = run([
@@ -484,8 +481,7 @@ try {
     join(temporaryDirectory, 'production-heat-layout-check'),
     '--no-build'
   ])
-  const productionHeatObject = (id) =>
-    productionHeatEnd.objects.find((object) => object.id === id)
+  const productionHeatObject = (id) => productionHeatEnd.objects.find((object) => object.id === id)
   if (
     productionHeatEnd.sceneInfo.durationInFrames !== 510 ||
     productionHeatObject('heat-flow-equation')?.latex !==
@@ -499,7 +495,9 @@ try {
     productionHeatLayoutCheck.clean !== true ||
     productionHeatLayoutCheck.incidentCount !== 0
   ) {
-    throw new Error('Production heat-flow composition, semantic morph, or verification was incorrect')
+    throw new Error(
+      'Production heat-flow composition, semantic morph, or verification was incorrect'
+    )
   }
 
   const previewExact = run(['inspect', 'test-viewer-preview', '--frame', '4', '--no-build'])
@@ -588,7 +586,9 @@ try {
     unknownVerification.success !== false ||
     unknownVerification.error?.code !== 'UNKNOWN_VERIFICATION'
   ) {
-    throw new Error('Scene verification registration, selection, ranges, or failure output was incorrect')
+    throw new Error(
+      'Scene verification registration, selection, ranges, or failure output was incorrect'
+    )
   }
 
   const cameraOverlayGrid = join(temporaryDirectory, 'camera-attached-overlay-rebuild.png')

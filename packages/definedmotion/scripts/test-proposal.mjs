@@ -14,6 +14,7 @@ const scripts = {
   'core-animation-effects': 'test:core-effects',
   'text-and-latex': 'test:visual-primitives',
   'primitive-layout': 'test:layout',
+  'layout-owned-backgrounds': 'test:layout',
   'scene-verifications': 'test:verification',
   'viewer-preview': 'test:viewer-preview',
   'viewer-scene-selection': 'test:viewer-selection',
