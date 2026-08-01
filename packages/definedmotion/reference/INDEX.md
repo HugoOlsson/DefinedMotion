@@ -20,6 +20,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | surface | example | Surface | `examples/surfaceScene.scene.ts` |
 | test-2d-camera-centers-labels | test | 2D Camera Centers Labels | `tests/camera/test_2d_camera_centers_labels.scene.ts` |
 | test-2d-camera-hits-markers | test | 2D Camera Hits Markers | `tests/camera/test_2d_camera_hits_markers.scene.ts` |
+| test-animated-3d-camera-ui | test | Animated 3D Camera-Attached UI Contract | `tests/camera/test_animated_3d_camera_ui.scene.ts` |
 | test-animation-plan | test | Animation Plan Contract | `tests/animation/test_animation_plan.scene.ts` |
 | test-asset-references | test | Asset References | `tests/assets/test_asset_references.scene.ts` |
 | test-basic-latex-query | test | Basic LaTeX Query | `tests/svg/test_basic_latex_query.scene.ts` |
@@ -36,6 +37,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-hdri-performance | test | HDRI Performance | `tests/environment/test_hdri_performance.scene.ts` |
 | test-latex-query-variables | test | LaTeX Query Variables | `tests/svg/test_query_latex_variables.scene.ts` |
 | test-latex-to-svg | test | LaTeX To SVG | `tests/svg/test_latex_to_svg.scene.ts` |
+| test-layout-animation | test | Layout Animation and Reflow Contract | `tests/rendering/test_layout_animation.scene.ts` |
 | test-layout-check | test | Layout Check | `tests/inspection/test_layout_check.scene.ts` |
 | test-long-audio | test | Long Audio | `tests/audio/test_long_audio.scene.ts` |
 | test-many-short-sounds | test | Many Short Sounds | `tests/audio/test_many_short_sounds.scene.ts` |
@@ -48,6 +50,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | test-scene-inspection | test | Scene Inspection | `tests/inspection/test_scene_inspection.scene.ts` |
 | test-scene-verifications | test | Scene Verification Contract | `tests/inspection/test_scene_verifications.scene.ts` |
 | test-super-complex-latex-to-svg | test | Super Complex LaTeX To SVG | `tests/svg/test_super_complex_latex_to_svg.scene.ts` |
+| test-text-latex-selection | test | Text and LaTeX Selection Contract | `tests/rendering/test_text_latex_selection.scene.ts` |
 | test-timeline-beats | test | Timeline Beats Contract | `tests/animation/test_timeline_beats.scene.ts` |
 | test-transformed-dependency-chain-positioning | test | Positioning: Transformed 3D Dependency Chain | `tests/positioning/test_transformed_dependency_chain_positioning.scene.ts` |
 | test-update-svg-object | test | Update SVG Object | `tests/svg/test_update_svg_object.scene.ts` |

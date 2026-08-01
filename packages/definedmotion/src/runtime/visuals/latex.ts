@@ -188,6 +188,10 @@ export const createLatex = async (options: LatexOptions): Promise<LatexVisual> =
       return activeContent
     },
     stage,
+    setTransitionBounds(bounds) {
+      localBounds.copy(bounds)
+      root.userData.boundsVersion = (root.userData.boundsVersion ?? 0) + 1
+    },
     complete,
     discard(prepared) {
       if (prepared.content === activeContent) {

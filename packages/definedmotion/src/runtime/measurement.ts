@@ -34,6 +34,47 @@ const corners = (bounds: THREE.Box3): THREE.Vector3[] => {
   ]
 }
 
+const projectPoints = (
+  allPoints: readonly THREE.Vector3[],
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  viewportWidth: number,
+  viewportHeight: number
+): ScreenProjection => {
+  if (allPoints.length === 0) return emptyProjection(false)
+  camera.updateProjectionMatrix()
+  camera.updateWorldMatrix(true, false)
+  const projectable = allPoints.filter((point) => {
+    const cameraZ = point.clone().applyMatrix4(camera.matrixWorldInverse).z
+    return cameraZ <= -camera.near && cameraZ >= -camera.far
+  })
+  if (projectable.length === 0) return emptyProjection(true)
+  const pixels = projectable
+    .map((point) => point.clone().project(camera))
+    .filter(finiteVector)
+    .map((point) => ({
+      x: ((point.x + 1) / 2) * viewportWidth,
+      y: ((1 - point.y) / 2) * viewportHeight
+    }))
+  if (pixels.length === 0) return emptyProjection(true)
+  const left = Math.min(...pixels.map(({ x }) => x))
+  const right = Math.max(...pixels.map(({ x }) => x))
+  const top = Math.min(...pixels.map(({ y }) => y))
+  const bottom = Math.max(...pixels.map(({ y }) => y))
+  const partiallyBehindCamera = projectable.length !== allPoints.length
+  return {
+    bounds: { left, right, top, bottom, width: right - left, height: bottom - top },
+    inFrame: right >= 0 && left <= viewportWidth && bottom >= 0 && top <= viewportHeight,
+    fullyInFrame:
+      !partiallyBehindCamera &&
+      left >= 0 &&
+      right <= viewportWidth &&
+      top >= 0 &&
+      bottom <= viewportHeight,
+    behindCamera: false,
+    partiallyBehindCamera
+  }
+}
+
 export const worldBounds = (object: THREE.Object3D): THREE.Box3 => {
   object.updateWorldMatrix(true, true)
   const bounds = new THREE.Box3().setFromObject(object)
@@ -70,39 +111,42 @@ export const projectWorldBounds = (
   viewportHeight: number
 ): ScreenProjection => {
   if (bounds.isEmpty()) return emptyProjection(false)
-  camera.updateProjectionMatrix()
-  camera.updateWorldMatrix(true, false)
-  const allCorners = corners(bounds)
-  const projectable = allCorners.filter((corner) => {
-    const cameraZ = corner.clone().applyMatrix4(camera.matrixWorldInverse).z
-    return cameraZ <= -camera.near && cameraZ >= -camera.far
-  })
-  if (projectable.length === 0) return emptyProjection(true)
-  const pixels = projectable
-    .map((corner) => corner.clone().project(camera))
-    .filter(finiteVector)
-    .map((point) => ({
-      x: ((point.x + 1) / 2) * viewportWidth,
-      y: ((1 - point.y) / 2) * viewportHeight
-    }))
-  if (pixels.length === 0) return emptyProjection(true)
-  const left = Math.min(...pixels.map(({ x }) => x))
-  const right = Math.max(...pixels.map(({ x }) => x))
-  const top = Math.min(...pixels.map(({ y }) => y))
-  const bottom = Math.max(...pixels.map(({ y }) => y))
-  const partiallyBehindCamera = projectable.length !== allCorners.length
-  return {
-    bounds: { left, right, top, bottom, width: right - left, height: bottom - top },
-    inFrame: right >= 0 && left <= viewportWidth && bottom >= 0 && top <= viewportHeight,
-    fullyInFrame:
-      !partiallyBehindCamera &&
-      left >= 0 &&
-      right <= viewportWidth &&
-      top >= 0 &&
-      bottom <= viewportHeight,
-    behindCamera: false,
-    partiallyBehindCamera
+  return projectPoints(corners(bounds), camera, viewportWidth, viewportHeight)
+}
+
+const localGeometryBounds = (
+  object: THREE.Object3D & { geometry?: THREE.BufferGeometry }
+): THREE.Box3 | undefined => {
+  const instanced = object as THREE.InstancedMesh
+  if (instanced.isInstancedMesh) {
+    instanced.computeBoundingBox()
+    return instanced.boundingBox ?? undefined
   }
+  const geometry = object.geometry
+  if (!geometry) return undefined
+  if (!geometry.boundingBox) geometry.computeBoundingBox()
+  return geometry.boundingBox ?? undefined
+}
+
+/** Projects each renderable's transformed local bounds without first axis-aligning the group in world space. */
+export const projectObjectBounds = (
+  object: THREE.Object3D,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  viewportWidth: number,
+  viewportHeight: number
+): ScreenProjection => {
+  object.updateWorldMatrix(true, true)
+  const worldPoints: THREE.Vector3[] = []
+  object.traverse((descendant) => {
+    const bounds = localGeometryBounds(
+      descendant as THREE.Object3D & { geometry?: THREE.BufferGeometry }
+    )
+    if (!bounds || bounds.isEmpty()) return
+    for (const point of corners(bounds)) {
+      worldPoints.push(point.applyMatrix4(descendant.matrixWorld))
+    }
+  })
+  return projectPoints(worldPoints, camera, viewportWidth, viewportHeight)
 }
 
 export const screenBounds = (
@@ -111,7 +155,7 @@ export const screenBounds = (
   viewportWidth: number,
   viewportHeight: number
 ): ScreenBounds | null =>
-  projectWorldBounds(worldBounds(object), camera, viewportWidth, viewportHeight).bounds
+  projectObjectBounds(object, camera, viewportWidth, viewportHeight).bounds
 
 export const isVisibleInHierarchy = (object: THREE.Object3D): boolean => {
   let current: THREE.Object3D | null = object

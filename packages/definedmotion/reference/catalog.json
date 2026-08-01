@@ -86,6 +86,12 @@
       "source": "tests/camera/test_2d_camera_hits_markers.scene.ts"
     },
     {
+      "id": "test-animated-3d-camera-ui",
+      "name": "Animated 3D Camera-Attached UI Contract",
+      "kind": "test",
+      "source": "tests/camera/test_animated_3d_camera_ui.scene.ts"
+    },
+    {
       "id": "test-animation-plan",
       "name": "Animation Plan Contract",
       "kind": "test",
@@ -182,6 +188,12 @@
       "source": "tests/svg/test_latex_to_svg.scene.ts"
     },
     {
+      "id": "test-layout-animation",
+      "name": "Layout Animation and Reflow Contract",
+      "kind": "test",
+      "source": "tests/rendering/test_layout_animation.scene.ts"
+    },
+    {
       "id": "test-layout-check",
       "name": "Layout Check",
       "kind": "test",
@@ -252,6 +264,12 @@
       "name": "Super Complex LaTeX To SVG",
       "kind": "test",
       "source": "tests/svg/test_super_complex_latex_to_svg.scene.ts"
+    },
+    {
+      "id": "test-text-latex-selection",
+      "name": "Text and LaTeX Selection Contract",
+      "kind": "test",
+      "source": "tests/rendering/test_text_latex_selection.scene.ts"
     },
     {
       "id": "test-timeline-beats",

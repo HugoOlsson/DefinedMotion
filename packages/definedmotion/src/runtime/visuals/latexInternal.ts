@@ -11,6 +11,7 @@ export interface LatexVisualController {
   prepare(latex: string): PreparedLatex
   currentContent(): THREE.Group
   stage(prepared: PreparedLatex): void
+  setTransitionBounds(bounds: THREE.Box2): void
   complete(prepared: PreparedLatex): void
   discard(prepared: PreparedLatex): void
 }

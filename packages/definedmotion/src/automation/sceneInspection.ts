@@ -16,7 +16,7 @@ import type {
 } from '../runtime/scene/sceneClass'
 import {
   isVisibleInHierarchy,
-  projectWorldBounds,
+  projectObjectBounds,
   worldBounds as measureWorldBounds
 } from '../runtime/measurement'
 
@@ -66,7 +66,7 @@ const inspectObject = (
   const visible = attached && isVisibleInHierarchy(object)
   const measuredWorldBounds = measureWorldBounds(object)
   const worldBounds = inspectWorldBounds(measuredWorldBounds)
-  const projected = projectWorldBounds(measuredWorldBounds, camera, scene.width, scene.height)
+  const projected = projectObjectBounds(object, camera, scene.width, scene.height)
   const parentId = findExposedParentId(object, exposedIds)
 
   return {

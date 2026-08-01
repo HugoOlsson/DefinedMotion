@@ -305,6 +305,9 @@ export const morphTo = async (
     easing: options.easing ?? 'ease-in-out',
     bind() {
       const source = controller.currentContent()
+      const sourceBounds = visual.getLocalBounds()
+      const targetBounds = prepared.bounds.clone()
+      const transitionBounds = new THREE.Box2()
       const sourceMaterials = materialStates(source)
       const inheritedAppearance = sourceMaterials[0]
       if (inheritedAppearance) {
@@ -341,6 +344,9 @@ export const morphTo = async (
       return {
         update({ easedProgress, isLastFrame }) {
           const progress = THREE.MathUtils.clamp(easedProgress, 0, 1)
+          transitionBounds.min.lerpVectors(sourceBounds.min, targetBounds.min, progress)
+          transitionBounds.max.lerpVectors(sourceBounds.max, targetBounds.max, progress)
+          controller.setTransitionBounds(transitionBounds)
           if (canUseParticles) {
             const positions = geometry.getAttribute('position') as THREE.BufferAttribute
             const values = positions.array as Float32Array
@@ -353,12 +359,12 @@ export const morphTo = async (
               setMaterialProgress(sourceMaterials, 1 - phase)
               setMaterialProgress(targetMaterials, 0)
               particleMaterial.opacity = phase
-            } else if (progress < 0.85) {
+            } else if (progress < 0.95) {
               setMaterialProgress(sourceMaterials, 0)
               setMaterialProgress(targetMaterials, 0)
               particleMaterial.opacity = 1
             } else {
-              const phase = (progress - 0.85) / 0.15
+              const phase = (progress - 0.95) / 0.05
               setMaterialProgress(sourceMaterials, 0)
               setMaterialProgress(targetMaterials, phase)
               particleMaterial.opacity = 1 - phase

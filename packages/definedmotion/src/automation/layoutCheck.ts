@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { ownWorldBounds, projectWorldBounds } from '../runtime/measurement'
+import { projectObjectBounds } from '../runtime/measurement'
 import type { AnimatedScene, CollisionWatch, ExposedSceneObject } from '../runtime/scene/sceneClass'
 import type {
   InspectScreenBounds,
@@ -319,8 +319,7 @@ const screenBoundsForObject = (
   width: number,
   height: number
 ): InspectScreenBounds | null => {
-  const worldBounds = ownWorldBounds(object)
-  const projected = projectWorldBounds(worldBounds, camera, width, height).bounds
+  const projected = projectObjectBounds(object, camera, width, height).bounds
   if (!projected) return null
   const minimumWidth = Math.max(1, projected.width)
   const minimumHeight = Math.max(1, projected.height)

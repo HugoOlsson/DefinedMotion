@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 58) {
-    throw new Error(`Expected 58 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 61) {
+    throw new Error(`Expected 61 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -245,12 +245,19 @@ try {
 
   const visuals = run(['inspect', 'test-visual-primitives', '--frame', '0', '--no-build'])
   const visualEffects = run(['inspect', 'test-visual-primitives', '--frame', '11', '--no-build'])
+  const visualVerification = run([
+    'verify',
+    '--scene',
+    'test-visual-primitives',
+    '--no-build'
+  ])
   const visualObject = (id) => visuals.objects.find((object) => object.id === id)
   const leftText = visualObject('visual-text-left-top')
   const centerText = visualObject('visual-text-centered')
   const leftLatex = visualObject('visual-latex-left-top')
   const centerLatex = visualObject('visual-latex-centered')
   const invalidVisuals = visualObject('visual-invalid-inputs')
+  const earlyParticleTarget = visualObject('visual-latex-particle-target')
   const latexEffects = visualEffects.objects.find((object) => object.id === 'visual-latex-effects')
   const latexEffectsCleanup = visualEffects.objects.find(
     (object) => object.id === 'visual-latex-effects-cleanup'
@@ -275,10 +282,13 @@ try {
     centerLatex?.localBounds?.center[0] !== 0 ||
     centerLatex?.localBounds?.center[1] !== 0 ||
     invalidVisuals?.text !== 'font=true;latex=true' ||
+    earlyParticleTarget?.attached !== false ||
     latexEffects?.latex !== String.raw`a = \frac{F}{\dmClass{mass}{m}}` ||
     latexEffects?.metadata.data?.rootStable !== true ||
     latexEffectsCleanup?.text !== 'cleanup=true' ||
-    latexParticleTarget?.visible !== true
+    latexParticleTarget?.visible !== true ||
+    visualVerification.passed !== true ||
+    visualVerification.verificationCount !== 1
   ) {
     throw new Error(
       'Text/LaTeX readiness, stable updates, effects, anchors, or local bounds were incorrect'
@@ -302,6 +312,156 @@ try {
     layoutObject(layoutEnd, 'layout-second-appended')?.visible !== true
   ) {
     throw new Error('Primitive layout bounds, append replay, or slot animation was incorrect')
+  }
+
+  const animatedLayoutStart = run([
+    'inspect',
+    'test-layout-animation',
+    '--frame',
+    '0',
+    '--no-build'
+  ])
+  const animatedLayoutEnd = run([
+    'inspect',
+    'test-layout-animation',
+    '--frame',
+    '89',
+    '--no-build'
+  ])
+  const animatedLayoutVerification = run([
+    'verify',
+    '--scene',
+    'test-layout-animation',
+    '--no-build'
+  ])
+  const animatedLayoutObject = (result, id) =>
+    result.objects.find((object) => object.id === id)
+  if (
+    animatedLayoutEnd.sceneInfo.durationInFrames !== 90 ||
+    animatedLayoutObject(animatedLayoutStart, 'layout-animation-first-item')?.attached !== false ||
+    animatedLayoutObject(animatedLayoutStart, 'layout-animation-second-item')?.attached !== false ||
+    animatedLayoutObject(animatedLayoutEnd, 'layout-animation-first-item')?.attached !== true ||
+    animatedLayoutObject(animatedLayoutEnd, 'layout-animation-second-item')?.attached !== true ||
+    !(
+      animatedLayoutObject(animatedLayoutEnd, 'layout-animation-list')?.localBounds?.size[1] >
+      animatedLayoutObject(animatedLayoutStart, 'layout-animation-list')?.localBounds?.size[1]
+    ) ||
+    !(
+      animatedLayoutObject(animatedLayoutEnd, 'layout-animation-footer')?.worldTransform
+        ?.position[1] <
+      animatedLayoutObject(animatedLayoutStart, 'layout-animation-footer')?.worldTransform
+        ?.position[1]
+    ) ||
+    animatedLayoutVerification.passed !== true ||
+    animatedLayoutVerification.verificationCount !== 3
+  ) {
+    throw new Error('Nested layout animation, append reflow, or verification was incorrect')
+  }
+
+  const latexSelectionEnd = run([
+    'inspect',
+    'test-text-latex-selection',
+    '--frame',
+    '203',
+    '--no-build'
+  ])
+  const latexSelectionBeforeCommit = run([
+    'inspect',
+    'test-text-latex-selection',
+    '--frame',
+    '160',
+    '--no-build'
+  ])
+  const latexSelectionCommit = run([
+    'inspect',
+    'test-text-latex-selection',
+    '--frame',
+    '161',
+    '--no-build'
+  ])
+  const latexSelectionVerification = run([
+    'verify',
+    '--scene',
+    'test-text-latex-selection',
+    '--no-build'
+  ])
+  const selectedEquation = latexSelectionEnd.objects.find(
+    (object) => object.id === 'latex-selection-equation'
+  )
+  const equationBeforeCommit = latexSelectionBeforeCommit.objects.find(
+    (object) => object.id === 'latex-selection-equation'
+  )
+  const equationAtCommit = latexSelectionCommit.objects.find(
+    (object) => object.id === 'latex-selection-equation'
+  )
+  const legendBeforeCommit = latexSelectionBeforeCommit.objects.find(
+    (object) => object.id === 'latex-selection-legend'
+  )
+  const legendAtCommit = latexSelectionCommit.objects.find(
+    (object) => object.id === 'latex-selection-legend'
+  )
+  if (
+    latexSelectionEnd.sceneInfo.durationInFrames !== 204 ||
+    selectedEquation?.latex !==
+      String.raw`\frac{\dmClass{energy}{E}}{\dmClass{mass}{m}} = \dmClass{light}{c^2}` ||
+    selectedEquation?.metadata.data?.rootStable !== true ||
+    !equationBeforeCommit ||
+    !equationAtCommit ||
+    !legendBeforeCommit ||
+    !legendAtCommit ||
+    Math.abs(
+      equationAtCommit.localBounds.size[1] - equationBeforeCommit.localBounds.size[1]
+    ) >= 0.1 ||
+    Math.abs(
+      legendAtCommit.worldTransform.position[1] - legendBeforeCommit.worldTransform.position[1]
+    ) >= 0.1 ||
+    latexSelectionVerification.passed !== true ||
+    latexSelectionVerification.verificationCount !== 8
+  ) {
+    throw new Error('Text/LaTeX selection, morph, or intermediate verification was incorrect')
+  }
+
+  const animatedHudStart = run([
+    'inspect',
+    'test-animated-3d-camera-ui',
+    '--frame',
+    '0',
+    '--no-build'
+  ])
+  const animatedHudEnd = run([
+    'inspect',
+    'test-animated-3d-camera-ui',
+    '--frame',
+    '419',
+    '--no-build'
+  ])
+  const animatedHudVerification = run([
+    'verify',
+    '--scene',
+    'test-animated-3d-camera-ui',
+    '--no-build'
+  ])
+  const animatedHudObject = (result, id) =>
+    result.objects.find((object) => object.id === id)
+  const hudPanelStart = animatedHudObject(animatedHudStart, 'animated-camera-ui-panel')
+  const hudPanelEnd = animatedHudObject(animatedHudEnd, 'animated-camera-ui-panel')
+  if (
+    animatedHudEnd.sceneInfo.durationInFrames !== 420 ||
+    animatedHudObject(animatedHudStart, 'animated-camera-ui-world-callout')?.attached !== false ||
+    animatedHudObject(animatedHudEnd, 'animated-camera-ui-world-callout')?.attached !== true ||
+    animatedHudObject(animatedHudStart, 'animated-camera-ui-focus-note')?.attached !== false ||
+    animatedHudObject(animatedHudEnd, 'animated-camera-ui-focus-note')?.attached !== true ||
+    animatedHudObject(animatedHudEnd, 'animated-camera-ui-meter')?.localTransform.scale[0] !== 1 ||
+    !hudPanelStart?.screenBounds ||
+    !hudPanelEnd?.screenBounds ||
+    Math.abs(hudPanelStart.screenBounds.x - hudPanelEnd.screenBounds.x) >= 0.01 ||
+    Math.abs(hudPanelStart.screenBounds.y - hudPanelEnd.screenBounds.y) >= 0.01 ||
+    Math.abs(hudPanelStart.screenBounds.width - hudPanelEnd.screenBounds.width) >= 0.01 ||
+    Math.abs(hudPanelStart.screenBounds.height - hudPanelEnd.screenBounds.height) >= 0.01 ||
+    animatedHudVerification.passed !== true ||
+    animatedHudVerification.verificationCount !== 7
+  ) {
+    throw new Error('Animated 3D camera-attached UI screen lock, late attachment, or verification was incorrect')
   }
 
   const previewExact = run(['inspect', 'test-viewer-preview', '--frame', '4', '--no-build'])

@@ -1,4 +1,4 @@
-import { AnimatedScene, SpaceSetting, defineScene } from 'definedmotion'
+import { AnimatedScene, SpaceSetting, defineScene, type ScreenBounds } from 'definedmotion'
 import { wait } from 'definedmotion/animation'
 import { createLatex, latex } from 'definedmotion/latex'
 import { createText } from 'definedmotion/rendering'
@@ -83,7 +83,7 @@ export function testVisualPrimitives(): AnimatedScene {
         duration: 3 / scene.fps,
         particleCount: 120
       })
-      animatedEquation.position.set(15, 5, 0)
+      animatedEquation.position.set(26, 6, 0)
       scene.add(animatedEquation)
       scene.expose('visual-latex-effects', animatedEquation, {
         data: { rootStable: animatedEquation.uuid === animatedEquationId }
@@ -127,8 +127,8 @@ export function testVisualPrimitives(): AnimatedScene {
         color: '#f97316'
       })
       transitionTarget.position.copy(animatedEquation.position)
-      scene.add(transitionTarget)
       scene.expose('visual-latex-particle-target', transitionTarget)
+      scene.do(() => scene.add(transitionTarget))
       scene.addAnims(
         latex.particleTransition(animatedEquation, transitionTarget, {
           duration: 2 / scene.fps,
@@ -139,6 +139,48 @@ export function testVisualPrimitives(): AnimatedScene {
         effectsMarker.text = `cleanup=${animatedEquation.getObjectByName('DefinedMotionLatexMorphParticles') === undefined}`
       })
       scene.addAnims(wait(1 / scene.fps))
+      const end = scene.getTimelinePointer()
+
+      scene.verify(
+        'visual-primitives-separated',
+        { frames: { start: 0, end } },
+        (context) => {
+          const effectBounds = unionBounds([
+            context.screenBounds(animatedEquation),
+            ...(transitionTarget.parent ? [context.screenBounds(transitionTarget)] : [])
+          ])
+          const zones = [
+            context.screenBounds(title),
+            context.screenBounds(wrapped),
+            context.screenBounds(equation),
+            context.screenBounds(centeredEquation),
+            effectBounds
+          ]
+          const separated = zones.every((bounds, index) => {
+            if (bounds === null) return false
+            return zones.slice(index + 1).every((other) => {
+              if (other === null) return false
+              return (
+                bounds.right + 4 <= other.left ||
+                other.right + 4 <= bounds.left ||
+                bounds.bottom + 4 <= other.top ||
+                other.bottom + 4 <= bounds.top
+              )
+            })
+          })
+          context.assert(separated, 'Text and LaTeX demonstrations must not overlap', { zones })
+        }
+      )
     }
   )
+}
+
+const unionBounds = (bounds: Array<ScreenBounds | null>): ScreenBounds | null => {
+  const present = bounds.filter((value): value is ScreenBounds => value !== null)
+  if (present.length === 0) return null
+  const left = Math.min(...present.map((value) => value.left))
+  const right = Math.max(...present.map((value) => value.right))
+  const top = Math.min(...present.map((value) => value.top))
+  const bottom = Math.max(...present.map((value) => value.bottom))
+  return { left, right, top, bottom, width: right - left, height: bottom - top }
 }

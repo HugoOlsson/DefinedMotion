@@ -75,6 +75,34 @@ try {
   root.position.set(0, 0, 30)
   assert.equal(measurement.screenBounds(root, camera, 200, 100), null)
 
+  // VERIFY-02b: camera-attached geometry retains exact screen bounds while the camera moves.
+  const perspective = new THREE.PerspectiveCamera(46, 16 / 9, 0.1, 1000)
+  const overlay = new THREE.Mesh(new THREE.PlaneGeometry(8.8, 6.5))
+  overlay.position.set(-8.4, 3.4, -18)
+  perspective.add(overlay)
+  const perspectiveScene = new THREE.Scene()
+  perspectiveScene.add(perspective)
+  const lookAt = (position, target) =>
+    new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().lookAt(position, target, new THREE.Vector3(0, 1, 0))
+    )
+  perspective.position.set(10.5, 6.4, 18)
+  perspective.quaternion.copy(lookAt(perspective.position, new THREE.Vector3(1.2, 0.2, 0)))
+  perspectiveScene.updateMatrixWorld(true)
+  const attachedStart = measurement.screenBounds(overlay, perspective, 1200, 675)
+  perspective.position.set(-5.5, 5.2, 18.5)
+  perspective.quaternion.copy(lookAt(perspective.position, new THREE.Vector3(1.3, 0.2, 0)))
+  perspectiveScene.updateMatrixWorld(true)
+  const attachedEnd = measurement.screenBounds(overlay, perspective, 1200, 675)
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(attachedStart).map(([key, value]) => [key, Math.round(value * 1e6) / 1e6])
+    ),
+    Object.fromEntries(
+      Object.entries(attachedEnd).map(([key, value]) => [key, Math.round(value * 1e6) / 1e6])
+    )
+  )
+
   // VERIFY-03: hierarchy visibility is intentionally narrower than pixel visibility.
   const parent = new THREE.Group()
   const child = new THREE.Group()
