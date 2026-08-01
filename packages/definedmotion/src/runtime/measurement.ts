@@ -34,22 +34,64 @@ const corners = (bounds: THREE.Box3): THREE.Vector3[] => {
   ]
 }
 
-const projectPoints = (
-  allPoints: readonly THREE.Vector3[],
+const boxEdges: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [0, 2],
+  [0, 4],
+  [1, 3],
+  [1, 5],
+  [2, 3],
+  [2, 6],
+  [3, 7],
+  [4, 5],
+  [4, 6],
+  [5, 7],
+  [6, 7]
+]
+
+const projectBoxes = (
+  worldBoxes: readonly (readonly THREE.Vector3[])[],
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   viewportWidth: number,
   viewportHeight: number
 ): ScreenProjection => {
-  if (allPoints.length === 0) return emptyProjection(false)
+  if (worldBoxes.length === 0) return emptyProjection(false)
   camera.updateProjectionMatrix()
   camera.updateWorldMatrix(true, false)
-  const projectable = allPoints.filter((point) => {
-    const cameraZ = point.clone().applyMatrix4(camera.matrixWorldInverse).z
-    return cameraZ <= -camera.near && cameraZ >= -camera.far
-  })
+  const farZ = -camera.far
+  const nearZ = -camera.near
+  const projectable: THREE.Vector3[] = []
+  let cornerCount = 0
+  let projectableCornerCount = 0
+
+  for (const worldCorners of worldBoxes) {
+    const cameraCorners = worldCorners.map((point) =>
+      point.clone().applyMatrix4(camera.matrixWorldInverse)
+    )
+    cornerCount += cameraCorners.length
+    for (const point of cameraCorners) {
+      if (point.z >= farZ && point.z <= nearZ) {
+        projectable.push(point)
+        projectableCornerCount += 1
+      }
+    }
+    for (const [fromIndex, toIndex] of boxEdges) {
+      const from = cameraCorners[fromIndex]
+      const to = cameraCorners[toIndex]
+      const deltaZ = to.z - from.z
+      if (deltaZ === 0) continue
+      for (const planeZ of [farZ, nearZ]) {
+        const amount = (planeZ - from.z) / deltaZ
+        if (amount > 0 && amount < 1) {
+          projectable.push(from.clone().lerp(to, amount))
+        }
+      }
+    }
+  }
+
   if (projectable.length === 0) return emptyProjection(true)
   const pixels = projectable
-    .map((point) => point.clone().project(camera))
+    .map((point) => point.clone().applyMatrix4(camera.projectionMatrix))
     .filter(finiteVector)
     .map((point) => ({
       x: ((point.x + 1) / 2) * viewportWidth,
@@ -60,7 +102,7 @@ const projectPoints = (
   const right = Math.max(...pixels.map(({ x }) => x))
   const top = Math.min(...pixels.map(({ y }) => y))
   const bottom = Math.max(...pixels.map(({ y }) => y))
-  const partiallyBehindCamera = projectable.length !== allPoints.length
+  const partiallyBehindCamera = projectableCornerCount !== cornerCount
   return {
     bounds: { left, right, top, bottom, width: right - left, height: bottom - top },
     inFrame: right >= 0 && left <= viewportWidth && bottom >= 0 && top <= viewportHeight,
@@ -111,7 +153,7 @@ export const projectWorldBounds = (
   viewportHeight: number
 ): ScreenProjection => {
   if (bounds.isEmpty()) return emptyProjection(false)
-  return projectPoints(corners(bounds), camera, viewportWidth, viewportHeight)
+  return projectBoxes([corners(bounds)], camera, viewportWidth, viewportHeight)
 }
 
 const localGeometryBounds = (
@@ -136,17 +178,15 @@ export const projectObjectBounds = (
   viewportHeight: number
 ): ScreenProjection => {
   object.updateWorldMatrix(true, true)
-  const worldPoints: THREE.Vector3[] = []
+  const worldBoxes: THREE.Vector3[][] = []
   object.traverse((descendant) => {
     const bounds = localGeometryBounds(
       descendant as THREE.Object3D & { geometry?: THREE.BufferGeometry }
     )
     if (!bounds || bounds.isEmpty()) return
-    for (const point of corners(bounds)) {
-      worldPoints.push(point.applyMatrix4(descendant.matrixWorld))
-    }
+    worldBoxes.push(corners(bounds).map((point) => point.applyMatrix4(descendant.matrixWorld)))
   })
-  return projectPoints(worldPoints, camera, viewportWidth, viewportHeight)
+  return projectBoxes(worldBoxes, camera, viewportWidth, viewportHeight)
 }
 
 export const screenBounds = (

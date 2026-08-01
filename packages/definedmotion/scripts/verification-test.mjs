@@ -75,6 +75,28 @@ try {
   root.position.set(0, 0, 30)
   assert.equal(measurement.screenBounds(root, camera, 200, 100), null)
 
+  // VERIFY-02: geometry crossing both camera clipping planes remains projectable.
+  {
+    const clippingCamera = new THREE.PerspectiveCamera(60, 1, 1, 10)
+    clippingCamera.updateProjectionMatrix()
+    clippingCamera.updateMatrixWorld(true)
+    const spanningMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 19.5))
+    spanningMesh.position.z = -10.25
+    const spanningProjection = measurement.projectObjectBounds(
+      spanningMesh,
+      clippingCamera,
+      200,
+      200
+    )
+    assert.notEqual(
+      spanningProjection.bounds,
+      null,
+      'geometry intersecting the visible camera depth must remain projectable'
+    )
+    assert.equal(spanningProjection.behindCamera, false)
+    assert.equal(spanningProjection.partiallyBehindCamera, true)
+  }
+
   // VERIFY-02b: camera-attached geometry retains exact screen bounds while the camera moves.
   const perspective = new THREE.PerspectiveCamera(46, 16 / 9, 0.1, 1000)
   const overlay = new THREE.Mesh(new THREE.PlaneGeometry(8.8, 6.5))

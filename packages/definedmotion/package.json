@@ -76,7 +76,7 @@
     "test:proposal": "node ./scripts/test-proposal.mjs",
     "test:integration": "node ./scripts/test-integration.mjs",
     "test:testing-system": "node ./scripts/testing-system-test.mjs",
-    "test:legacy-deletion": "node ./scripts/legacy-deletion-test.mjs",
+    "test:legacy-deletion": "npm run types:generate && node ./scripts/legacy-deletion-test.mjs",
     "test:full": "npm test && npm run test:scenes && npm run test:viewer",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",

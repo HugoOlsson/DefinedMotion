@@ -51,6 +51,7 @@ interface MeasuredItem extends ItemRecord {
 
 interface LayoutController {
   resolve(force?: boolean): void
+  reset(): void
 }
 
 const LAYOUT_CONTROLLER = Symbol('DefinedMotionLayoutController')
@@ -171,6 +172,7 @@ const createLayout = (
   root.name = 'DefinedMotionLayout'
   root.userData.definedMotionVisual = 'layout'
   const records: ItemRecord[] = []
+  let initialRecordCount = 0
   let localBounds = new THREE.Box2(new THREE.Vector2(), new THREE.Vector2())
   let dirty = true
 
@@ -208,6 +210,16 @@ const createLayout = (
     root.userData.boundsVersion = (root.userData.boundsVersion ?? 0) + 1
   }
 
+  const reset = (): void => {
+    const appended = records.splice(initialRecordCount)
+    for (const record of appended) {
+      record.slot.remove(record.visual)
+      root.remove(record.slot)
+    }
+    dirty = true
+    resolve(true)
+  }
+
   Object.defineProperty(root, 'items', {
     enumerable: true,
     get: () => Object.freeze(records.map(({ visual }) => visual))
@@ -220,9 +232,10 @@ const createLayout = (
     addRecord(visual)
     resolve(true)
   }
-  root[LAYOUT_CONTROLLER] = { resolve }
+  root[LAYOUT_CONTROLLER] = { resolve, reset }
 
   for (const item of initialItems) addRecord(item)
+  initialRecordCount = records.length
   resolve(true)
   return root
 }
@@ -343,6 +356,15 @@ export const resolveSceneLayouts = (scene: THREE.Object3D): void => {
     for (const child of object.children) visit(child)
     const controller = (object as Partial<InternalLayoutVisual>)[LAYOUT_CONTROLLER]
     controller?.resolve()
+  }
+  visit(scene)
+}
+
+export const resetSceneLayouts = (scene: THREE.Object3D): void => {
+  const visit = (object: THREE.Object3D): void => {
+    for (const child of [...object.children]) visit(child)
+    const controller = (object as Partial<InternalLayoutVisual>)[LAYOUT_CONTROLLER]
+    controller?.reset()
   }
   visit(scene)
 }

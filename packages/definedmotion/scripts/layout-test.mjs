@@ -51,7 +51,7 @@ try {
     join(visualsDirectory, 'layout.mjs'),
     await transpile(join(sourceRoot, 'layout.ts'), [["'./measurement'", "'./measurement.mjs'"]])
   )
-  const { layout, resolveSceneLayouts } = await import(
+  const { layout, resetSceneLayouts, resolveSceneLayouts } = await import(
     pathToFileURL(join(visualsDirectory, 'layout.mjs')).href
   )
 
@@ -166,6 +166,27 @@ try {
     )
     assert.deepEqual(roundedBounds(fixed.getLocalBounds()), [-3, -2, 3, 2])
     assert.equal(item.parent.position.x, 2)
+  }
+
+  // LAYOUT-08: reset restores initial membership and detaches runtime appends.
+  {
+    const initial = visual(0, -2, 4, 0)
+    const appended = visual(0, -3, 8, 0)
+    const list = layout.flex(
+      { flexDirection: 'column', gap: 1, anchorX: 'left', anchorY: 'top' },
+      [initial]
+    )
+    const scene = new THREE.Scene()
+    scene.add(list)
+    list.append(appended)
+    assert.deepEqual(list.items, [initial, appended])
+
+    resetSceneLayouts(scene)
+
+    assert.deepEqual(list.items, [initial])
+    assert.equal(appended.parent, null)
+    assert.deepEqual(roundedBounds(list.getLocalBounds()), [0, -2, 4, 0])
+    assert.doesNotThrow(() => list.append(appended))
   }
 
   console.log('primitive layout tests passed')

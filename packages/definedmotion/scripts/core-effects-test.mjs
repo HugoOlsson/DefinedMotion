@@ -58,12 +58,18 @@ const compileModules = async () => {
     .replace('../scene/sceneErrors', '../scene/sceneErrors.mjs')
   await writeFile(join(animationDirectory, 'cameraEffects.mjs'), cameraEffectsOutput)
 
-  const [effectsModule, cameraEffectsModule, timelineModule] = await Promise.all([
+  await writeFile(
+    join(animationDirectory, 'latexTransitionsAndWrite.mjs'),
+    await transpile(join(sourceRoot, 'animation/latexTransitionsAndWrite.ts'))
+  )
+
+  const [effectsModule, cameraEffectsModule, latexEffectsModule, timelineModule] = await Promise.all([
     import(pathToFileURL(join(animationDirectory, 'effects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'cameraEffects.mjs')).href),
+    import(pathToFileURL(join(animationDirectory, 'latexTransitionsAndWrite.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'timeline.mjs')).href)
   ])
-  return { ...effectsModule, ...cameraEffectsModule, ...timelineModule }
+  return { ...effectsModule, ...cameraEffectsModule, ...latexEffectsModule, ...timelineModule }
 }
 
 const approximately = (actual, expected, message) => {
@@ -75,6 +81,7 @@ try {
     AnimationTimeline,
     camera,
     createAnimation,
+    createLatexParticleTransitionController,
     fadeIn,
     fadeOut,
     matchTransform,
@@ -86,6 +93,35 @@ try {
     scaleTo,
     wait
   } = await compileModules()
+
+  // EFFECT-11: LaTeX particle transitions restore authored material state.
+  {
+    const parent = new THREE.Group()
+    const fromMaterial = new THREE.MeshBasicMaterial({ opacity: 0.6, transparent: false })
+    fromMaterial.depthWrite = true
+    const toMaterial = new THREE.MeshBasicMaterial({ opacity: 0.35, transparent: false })
+    toMaterial.depthWrite = false
+    const from = new THREE.Group()
+    const to = new THREE.Group()
+    from.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 1), fromMaterial))
+    to.add(new THREE.Mesh(new THREE.PlaneGeometry(1, 2), toMaterial))
+    parent.add(from, to)
+
+    const transition = createLatexParticleTransitionController(from, to, {
+      particleCount: 20
+    })()
+    transition.updater(0, 0, false)
+    transition.updater(1, 1, true)
+
+    assert.equal(from.visible, false)
+    assert.equal(to.visible, true)
+    assert.equal(fromMaterial.opacity, 0.6)
+    assert.equal(fromMaterial.transparent, false)
+    assert.equal(fromMaterial.depthWrite, true)
+    assert.equal(toMaterial.opacity, 0.35)
+    assert.equal(toMaterial.transparent, false)
+    assert.equal(toMaterial.depthWrite, false)
+  }
 
   // EFFECT-10: camera plans share late binding and update projection-specific zoom.
   {

@@ -4,6 +4,54 @@ interface ProgressUpdater {
   updater(progress: number, frame?: number, isLast?: boolean): void
 }
 
+interface ParticleMaterialState {
+  readonly material: THREE.Material
+  readonly opacity: number
+  readonly transparent: boolean
+  readonly depthWrite: boolean
+}
+
+const captureParticleMaterials = (root: THREE.Object3D): ParticleMaterialState[] => {
+  const states: ParticleMaterialState[] = []
+  const seen = new Set<THREE.Material>()
+  root.traverse((child) => {
+    const material = (
+      child as THREE.Object3D & { material?: THREE.Material | THREE.Material[] }
+    ).material
+    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
+      if (seen.has(current)) continue
+      seen.add(current)
+      states.push({
+        material: current,
+        opacity: current.opacity,
+        transparent: current.transparent,
+        depthWrite: current.depthWrite
+      })
+    }
+  })
+  return states
+}
+
+const setParticleTransitionProgress = (
+  root: THREE.Object3D,
+  states: readonly ParticleMaterialState[],
+  progress: number
+): void => {
+  root.visible = progress > 0.001
+  for (const state of states) {
+    state.material.transparent = true
+    state.material.opacity = state.opacity * progress
+  }
+}
+
+const restoreParticleMaterials = (states: readonly ParticleMaterialState[]): void => {
+  for (const state of states) {
+    state.material.opacity = state.opacity
+    state.material.transparent = state.transparent
+    state.material.depthWrite = state.depthWrite
+  }
+}
+
 const setOpacity = (object: THREE.Object3D, opacity: number): void => {
   const visible = opacity > 0.001
   object.visible = visible
@@ -273,6 +321,9 @@ export function createLatexParticleTransitionController(
   const { particleCount = 2500 } = cfg
 
   return () => {
+    const fromMaterials = captureParticleMaterials(fromGroup)
+    const toMaterials = captureParticleMaterials(toGroup)
+
     // Surface-sampled positions for both formulas (runtime, after layout)
     let startPositions = buildSurfaceSamples(fromGroup, particleCount)
     let endPositions   = buildSurfaceSamples(toGroup,   particleCount)
@@ -280,11 +331,13 @@ export function createLatexParticleTransitionController(
     if (startPositions.length === 0 || endPositions.length === 0) {
       return {
         updater(t: number, _tick?: number, isLast?: boolean) {
-          setOpacity(fromGroup, 1 - t)
-          setOpacity(toGroup, t)
+          setParticleTransitionProgress(fromGroup, fromMaterials, 1 - t)
+          setParticleTransitionProgress(toGroup, toMaterials, t)
           if (isLast) {
-            setOpacity(fromGroup, 0)
-            setOpacity(toGroup, 1)
+            fromGroup.visible = false
+            toGroup.visible = true
+            restoreParticleMaterials(fromMaterials)
+            restoreParticleMaterials(toMaterials)
           }
         }
       }
@@ -331,8 +384,8 @@ export function createLatexParticleTransitionController(
         // One-time scene setup, only on first actual tick
         if (!initialized) {
           if (parent) parent.add(particles)
-          setOpacity(fromGroup, 1)
-          setOpacity(toGroup, 0)
+          setParticleTransitionProgress(fromGroup, fromMaterials, 1)
+          setParticleTransitionProgress(toGroup, toMaterials, 0)
           initialized = true
         }
 
@@ -349,23 +402,25 @@ export function createLatexParticleTransitionController(
 
         if (t < phase1End) {
           const s = t / phase1End
-          setOpacity(fromGroup, 1 - s)
-          setOpacity(toGroup, 0)
+          setParticleTransitionProgress(fromGroup, fromMaterials, 1 - s)
+          setParticleTransitionProgress(toGroup, toMaterials, 0)
           material.opacity = s
         } else if (t < phase2End) {
-          setOpacity(fromGroup, 0)
-          setOpacity(toGroup, 0)
+          setParticleTransitionProgress(fromGroup, fromMaterials, 0)
+          setParticleTransitionProgress(toGroup, toMaterials, 0)
           material.opacity = 1
         } else {
           const s = (t - phase2End) / (1 - phase2End)
-          setOpacity(fromGroup, 0)
-          setOpacity(toGroup, s)
+          setParticleTransitionProgress(fromGroup, fromMaterials, 0)
+          setParticleTransitionProgress(toGroup, toMaterials, s)
           material.opacity = 1 - s
         }
 
         if (isLast) {
-          setOpacity(fromGroup, 0)
-          setOpacity(toGroup, 1)
+          fromGroup.visible = false
+          toGroup.visible = true
+          restoreParticleMaterials(fromMaterials)
+          restoreParticleMaterials(toMaterials)
           material.opacity = 0
 
           if (parent) parent.remove(particles)

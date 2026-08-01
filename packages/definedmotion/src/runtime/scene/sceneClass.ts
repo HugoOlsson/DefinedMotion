@@ -56,7 +56,7 @@ import {
 } from './frameResource'
 import { type Positioning, PositioningSystem } from '../positioning'
 import type { RenderProgress } from '../../renderProgress'
-import { resolveSceneLayouts } from '../visuals/layout'
+import { resetSceneLayouts, resolveSceneLayouts } from '../visuals/layout'
 import {
   SceneVerificationRegistry,
   type SceneVerification,
@@ -1218,7 +1218,9 @@ export class AnimatedScene {
 
   // Replace recreateComponents with reset logic
   private resetComponents(notSize: boolean) {
-    audioStopAll()   
+    audioStopAll()
+    resetSceneLayouts(this.scene)
+    resetSceneLayouts(this.camera)
     this.resetSceneVars()
     this.resetScene()
     this.resetCamera()
