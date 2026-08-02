@@ -31,6 +31,8 @@ export type {
   CollisionWatch,
   CollisionWatchOptions,
   ExposedCameraMetadata,
+  ExposedObjectData,
+  ExposedObjectDataValue,
   ExposedObjectMetadata,
   ExposedSceneObject,
   InspectionCamera,

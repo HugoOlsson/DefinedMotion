@@ -102,6 +102,7 @@ export enum SpaceSetting {
 
 export { SceneRuntimeError } from './sceneErrors'
 export type {
+  ExposedObjectData,
   ExposedObjectDataValue,
   ExposedObjectMetadata,
   ExposedSceneObject

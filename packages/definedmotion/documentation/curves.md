@@ -16,7 +16,7 @@ const orbit = createCurve({
 })
 ```
 
-`sampleCount` is fixed for the visual. Open curves include both domain endpoints. A closed curve omits the duplicate endpoint and connects its last sample to its first. Stroke width, opacity, dash length, and dash gap use curve-local units. `normal` defaults to local positive Z and defines the plane used to expand the ribbon.
+`sampleCount` defaults to `257` and is fixed for the visual. Open curves include both domain endpoints. A closed curve omits the duplicate endpoint and connects its last sample to its first. Stroke width, opacity, dash length, and dash gap use curve-local units. `normal` defaults to local positive Z and defines the plane used to expand the ribbon. High-frequency functions should set a larger count derived from their highest represented frequency.
 
 Curves use ordinary scene depth. Fully opaque strokes write depth; translucent strokes do not. In a camera-facing planar diagram, place guides, data curves, and annotations at small increasing local Z values to establish their visual order without disabling depth testing.
 

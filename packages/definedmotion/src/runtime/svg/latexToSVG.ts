@@ -120,12 +120,12 @@ export function prepareMathJaxSVG(svg: string): string {
     const f = el.getAttribute('fill');
     if (f === 'currentColor' || f == null) {
       const c = nearestColor(el);
-      if (c) el.setAttribute('fill', c);
+      el.setAttribute('fill', c && c.toLowerCase() !== 'currentcolor' ? c : '#000000');
     }
     const s = el.getAttribute('stroke');
     if (s === 'currentColor') {
       const c = nearestColor(el);
-      if (c) el.setAttribute('stroke', c);
+      el.setAttribute('stroke', c && c.toLowerCase() !== 'currentcolor' ? c : '#000000');
     }
     splitRgbaToAttrs(el, 'fill',   'fill-opacity');
     splitRgbaToAttrs(el, 'stroke', 'stroke-opacity');
@@ -133,5 +133,4 @@ export function prepareMathJaxSVG(svg: string): string {
 
   return new XMLSerializer().serializeToString(root);
 }
-
 

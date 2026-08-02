@@ -264,6 +264,7 @@ try {
     visuals.sceneInfo.durationInFrames !== 12 ||
     leftText?.text !== 'Updated title' ||
     leftText?.metadata.data?.rootStable !== true ||
+    leftText?.metadata.data?.authoredOpacity !== 0.7 ||
     leftText?.localBounds?.min[0] !== 0 ||
     leftText?.localBounds?.max[1] !== 0 ||
     centerText?.localBounds?.size[0] !== 18 ||
@@ -272,11 +273,13 @@ try {
     leftLatex?.latex !== String.raw`a = \frac{F}{\dmClass{mass}{m}}` ||
     leftLatex?.metadata.data?.rootStable !== true ||
     leftLatex?.metadata.data?.partStable !== true ||
+    leftLatex?.metadata.data?.authoredOpacity !== 0.6 ||
     leftLatex?.localBounds?.min[0] !== 0 ||
     leftLatex?.localBounds?.max[1] !== 0 ||
     centerLatex?.localBounds?.center[0] !== 0 ||
     centerLatex?.localBounds?.center[1] !== 0 ||
-    invalidVisuals?.text !== 'font=true;latex=true' ||
+    invalidVisuals?.text !==
+      'font=true;latex=true;textOpacity=true;latexOpacity=true' ||
     earlyParticleTarget?.attached !== false ||
     latexEffects?.latex !== String.raw`a = \frac{F}{\dmClass{mass}{m}}` ||
     latexEffects?.metadata.data?.rootStable !== true ||

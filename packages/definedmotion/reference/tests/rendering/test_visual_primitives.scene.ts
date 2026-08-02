@@ -21,6 +21,7 @@ export function testVisualPrimitives(): AnimatedScene {
         text: 'Initial',
         fontSize: 3,
         color: '#38bdf8',
+        opacity: 0.7,
         anchorX: 'left',
         anchorY: 'top'
       })
@@ -29,7 +30,7 @@ export function testVisualPrimitives(): AnimatedScene {
       title.position.set(-22, 9, 0)
       scene.add(title)
       scene.expose('visual-text-left-top', title, {
-        data: { rootStable: title.uuid === titleId }
+        data: { rootStable: title.uuid === titleId, authoredOpacity: objectOpacity(title) }
       })
 
       const wrapped = await createText({
@@ -47,6 +48,7 @@ export function testVisualPrimitives(): AnimatedScene {
         latex: String.raw`F = \dmClass{mass}{m}a`,
         fontSize: 4,
         color: '#f8fafc',
+        opacity: 0.6,
         anchorX: 'left',
         anchorY: 'top'
       })
@@ -58,7 +60,8 @@ export function testVisualPrimitives(): AnimatedScene {
       scene.expose('visual-latex-left-top', equation, {
         data: {
           rootStable: equation.uuid === equationId,
-          partStable: mass.visual === equation && mass.id === 'mass'
+          partStable: mass.visual === equation && mass.id === 'mass',
+          authoredOpacity: objectOpacity(equation)
         }
       })
 
@@ -95,6 +98,8 @@ export function testVisualPrimitives(): AnimatedScene {
 
       let invalidFontRejected = false
       let invalidLatexRejected = false
+      let invalidTextOpacityRejected = false
+      let invalidLatexOpacityRejected = false
       try {
         await createText({
           text: 'Missing font',
@@ -112,8 +117,20 @@ export function testVisualPrimitives(): AnimatedScene {
       } catch {
         invalidLatexRejected = true
       }
+      try {
+        await createText({ text: 'Invalid opacity', fontSize: 2, opacity: 1.1 })
+      } catch {
+        invalidTextOpacityRejected = true
+      }
+      try {
+        await createLatex({ latex: 'x', fontSize: 2, opacity: -0.1 })
+      } catch {
+        invalidLatexOpacityRejected = true
+      }
       const invalidMarker = new THREE.Object3D() as THREE.Object3D & { text: string }
-      invalidMarker.text = `font=${invalidFontRejected};latex=${invalidLatexRejected}`
+      invalidMarker.text =
+        `font=${invalidFontRejected};latex=${invalidLatexRejected};` +
+        `textOpacity=${invalidTextOpacityRejected};latexOpacity=${invalidLatexOpacityRejected}`
       scene.add(invalidMarker)
       scene.expose('visual-invalid-inputs', invalidMarker)
 
@@ -173,6 +190,20 @@ export function testVisualPrimitives(): AnimatedScene {
       )
     }
   )
+}
+
+const objectOpacity = (object: THREE.Object3D): number => {
+  let opacity: number | undefined
+  object.traverse((child) => {
+    if (opacity !== undefined) return
+    const material = (child as THREE.Object3D & {
+      material?: THREE.Material | THREE.Material[]
+    }).material
+    const first = Array.isArray(material) ? material[0] : material
+    if (first) opacity = first.opacity
+  })
+  if (opacity === undefined) throw new Error('Expected visual to contain a material')
+  return opacity
 }
 
 const unionBounds = (bounds: Array<ScreenBounds | null>): ScreenBounds | null => {

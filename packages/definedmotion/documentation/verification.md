@@ -31,3 +31,15 @@ npm run dm -- verify --scene my-scene --test label-inside-panel --frame 120 --js
 ```
 
 `watchCollisions` plus `layout-check` remains the conservative generic screen-bounds safety net.
+
+Expose important objects for semantic inspection with flat primitive metadata:
+
+```ts
+scene.expose('result-label', resultLabel, {
+  description: 'The final value shown to the audience',
+  tags: ['result', 'text'],
+  data: { role: 'result', emphasized: true, step: 4 }
+})
+```
+
+`data` accepts at most 50 `string | number | boolean | null` values. Arrays and nested objects are rejected by TypeScript; runtime validation preserves the same boundary for JavaScript and untyped inputs. Use `tags` for lists of labels.

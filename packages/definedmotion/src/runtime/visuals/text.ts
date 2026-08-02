@@ -27,6 +27,13 @@ const nonNegative = (value: number, name: string): number => {
   return value
 }
 
+const unitInterval = (value: number, name: string): number => {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${name} must be a finite number from 0 to 1, received ${value}`)
+  }
+  return value
+}
+
 const resolveTextAlign = (alignment: TextAlign | undefined): TextAlign => {
   const resolved = alignment ?? 'center'
   if (resolved !== 'left' && resolved !== 'center' && resolved !== 'right') {
@@ -50,6 +57,7 @@ export const createText = async (options: TextOptions): Promise<TextVisual> => {
   }
   if (typeof options.text !== 'string') throw new Error('Text content must be a string')
   const fontSize = positive(options.fontSize, 'fontSize')
+  const opacity = unitInterval(options.opacity ?? 1, 'opacity')
   const maxWidth =
     options.maxWidth === undefined
       ? Number.POSITIVE_INFINITY
@@ -100,6 +108,11 @@ export const createText = async (options: TextOptions): Promise<TextVisual> => {
     ).textRenderInfo?.blockBounds
     if (!blockBounds || blockBounds.length !== 4 || !blockBounds.every(Number.isFinite)) {
       throw new Error('Text shaping completed without finite local bounds')
+    }
+    const material = textMesh.material
+    for (const current of Array.isArray(material) ? material : [material]) {
+      current.opacity = opacity
+      if (opacity < 1) current.transparent = true
     }
     localBounds = new THREE.Box2(
       new THREE.Vector2(blockBounds[0], blockBounds[1]),

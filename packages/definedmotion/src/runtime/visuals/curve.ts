@@ -68,7 +68,7 @@ interface CurveController {
   readonly bounds: THREE.Box2
 }
 
-const DEFAULT_SAMPLE_COUNT = 129
+const DEFAULT_SAMPLE_COUNT = 257
 const controllers = new WeakMap<CurveVisual, CurveController>()
 
 const finitePositive = (value: number | undefined, name: string): number => {
@@ -283,7 +283,8 @@ const renderCurve = (visual: CurveVisual, controller: CurveController): void => 
     }
     delta.subVectors(end, start)
     perpendicular.crossVectors(normal, delta)
-    if (perpendicular.lengthSq() <= 1e-12) {
+    const deltaLengthSq = delta.lengthSq()
+    if (perpendicular.lengthSq() <= deltaLengthSq * 1e-12) {
       throw new SceneRuntimeError(
         'INVALID_CURVE_PATH',
         `Curve segment ${index} is parallel to the configured normal`

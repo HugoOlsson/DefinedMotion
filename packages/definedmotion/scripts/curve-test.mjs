@@ -207,12 +207,32 @@ try {
     }
     const open = createCurve({ ...path, sampleCount: 5 })
     const closed = createCurve({ ...path, sampleCount: 5, closed: true })
+    const defaultSampled = createCurve(path)
     assert.equal(open.geometry.drawRange.count, 4 * 6)
     assert.equal(closed.geometry.drawRange.count, 5 * 6)
+    assert.equal(defaultSampled.sampleCount, 257)
+    assert.equal(defaultSampled.geometry.drawRange.count, 256 * 6)
     assert.throws(
       () => createCurve({ ...path, sampleCount: 2, closed: true }),
       /sampleCount must be an integer of at least 3/
     )
+  }
+
+  // CURVE-07: very small valid segments are not mistaken for segments parallel to the normal.
+  {
+    const radius = 1e-5
+    const tinyCircle = createCurve({
+      sampleCount: 97,
+      domain: [0, Math.PI * 2],
+      closed: true,
+      pointAt: (value) =>
+        new THREE.Vector2(Math.cos(value) * radius, Math.sin(value) * radius),
+      stroke: { color: '#55dec9', width: 0.1 }
+    })
+    assert.ok(
+      Array.from(tinyCircle.geometry.getAttribute('position').array).every(Number.isFinite)
+    )
+    assert.equal(segmentIsCollapsed(tinyCircle, 0), false)
   }
 
   console.log('curve primitive tests passed')

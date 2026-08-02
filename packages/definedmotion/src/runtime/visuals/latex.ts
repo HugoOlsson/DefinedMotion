@@ -21,6 +21,13 @@ const positive = (value: number, name: string): number => {
   return value
 }
 
+const unitInterval = (value: number, name: string): number => {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${name} must be a finite number from 0 to 1, received ${value}`)
+  }
+  return value
+}
+
 const svgTargetWidth = (svg: string, fontSize: number): number => {
   const document = new DOMParser().parseFromString(svg, 'image/svg+xml')
   if (document.querySelector('parsererror')) throw new Error('LaTeX produced invalid SVG')
@@ -89,6 +96,7 @@ export const createLatex = async (options: LatexOptions): Promise<LatexVisual> =
     throw new Error('LaTeX content must be a non-empty string')
   }
   const fontSize = positive(options.fontSize, 'fontSize')
+  const opacity = unitInterval(options.opacity ?? 1, 'opacity')
   const anchorX = resolveAnchorX(options.anchorX)
   const anchorY = resolveAnchorY(options.anchorY)
   const color = new THREE.Color(options.color ?? 0xffffff)
@@ -115,6 +123,8 @@ export const createLatex = async (options: LatexOptions): Promise<LatexVisual> =
     for (const material of materialsIn(content)) {
       const colorMaterial = material as THREE.Material & { color?: THREE.Color }
       colorMaterial.color?.copy(color)
+      material.opacity = opacity
+      if (opacity < 1) material.transparent = true
     }
     const bounds = getObjectLocalBounds(content)
     if (!bounds || !bounds.min.toArray().concat(bounds.max.toArray()).every(Number.isFinite)) {

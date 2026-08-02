@@ -9,6 +9,7 @@ export interface TextOptions {
   text: string
   fontSize: number
   color?: THREE.ColorRepresentation
+  opacity?: number
   font?: AssetSource
   textAlign?: TextAlign
   anchorX?: AnchorX
@@ -23,6 +24,7 @@ export interface LatexOptions {
   latex: string
   fontSize: number
   color?: THREE.ColorRepresentation
+  opacity?: number
   anchorX?: AnchorX
   anchorY?: AnchorY
 }

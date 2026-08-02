@@ -2,11 +2,12 @@ import * as THREE from 'three'
 import { SceneRuntimeError } from './sceneErrors'
 
 export type ExposedObjectDataValue = string | number | boolean | null
+export type ExposedObjectData = Readonly<Record<string, ExposedObjectDataValue>>
 
 export interface ExposedObjectMetadata {
   description?: string
-  tags?: string[]
-  data?: Record<string, ExposedObjectDataValue>
+  tags?: readonly string[]
+  data?: ExposedObjectData
 }
 
 export interface ExposedSceneObject {
