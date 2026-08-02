@@ -49,8 +49,8 @@ interface CurveController {
   readonly segmentCount: number
   readonly normal: THREE.Vector3
   readonly width: number
-  readonly dash?: Required<CurveDashOptions>
   readonly positions: Float32Array
+  readonly distances?: Float32Array
   readonly weights: Float32Array
   readonly lengths: Float32Array
   readonly scratch: {
@@ -220,14 +220,47 @@ const pointFromSamples = (
   return target.set(samples[offset], samples[offset + 1], samples[offset + 2])
 }
 
-const positiveModulo = (value: number, divisor: number): number =>
-  ((value % divisor) + divisor) % divisor
-
 const writeVertex = (positions: Float32Array, offset: number, point: THREE.Vector3): number => {
   positions[offset] = point.x
   positions[offset + 1] = point.y
   positions[offset + 2] = point.z
   return offset + 3
+}
+
+const configureDashMaterial = (
+  material: THREE.MeshBasicMaterial,
+  dash: Required<CurveDashOptions> | undefined
+): void => {
+  if (!dash) return
+  const period = dash.length + dash.gap
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.definedMotionDashLength = { value: dash.length }
+    shader.uniforms.definedMotionDashPeriod = { value: period }
+    shader.uniforms.definedMotionDashOffset = { value: dash.offset }
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nattribute float curveDistance;\nvarying float vCurveDistance;'
+      )
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvCurveDistance = curveDistance;'
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying float vCurveDistance;\n' +
+          'uniform float definedMotionDashLength;\n' +
+          'uniform float definedMotionDashPeriod;\n' +
+          'uniform float definedMotionDashOffset;'
+      )
+      .replace(
+        '#include <dithering_fragment>',
+        'if (mod(vCurveDistance + definedMotionDashOffset, definedMotionDashPeriod) >= ' +
+          'definedMotionDashLength) discard;\n#include <dithering_fragment>'
+      )
+  }
+  material.customProgramCacheKey = () => 'definedmotion-curve-local-dash-v1'
 }
 
 const renderCurve = (visual: CurveVisual, controller: CurveController): void => {
@@ -237,14 +270,13 @@ const renderCurve = (visual: CurveVisual, controller: CurveController): void => 
     sampleCount: count,
     normal,
     width,
-    dash,
     positions,
+    distances,
     weights,
     lengths,
     scratch
   } = controller
   const { start, end, delta, perpendicular, a, b, c, d, anchor } = scratch
-  let cumulativeLength = 0
   let hasVisibleAnchor = false
 
   for (let index = 0; index < segmentCount; index++) {
@@ -252,33 +284,39 @@ const renderCurve = (visual: CurveVisual, controller: CurveController): void => 
     pointFromSamples(current.points, (index + 1) % count, end)
     const length = start.distanceTo(end)
     lengths[index] = length
-    let weight = THREE.MathUtils.clamp(current.visibility[index], 0, 1)
-    if (dash && length > 0) {
-      const period = dash.length + dash.gap
-      const midpoint = cumulativeLength + length / 2 + dash.offset
-      if (positiveModulo(midpoint, period) >= dash.length) weight = 0
-    }
+    const weight = THREE.MathUtils.clamp(current.visibility[index], 0, 1)
     weights[index] = weight
     if (!hasVisibleAnchor && weight > 0 && length > 1e-10) {
       anchor.copy(start)
       hasVisibleAnchor = true
     }
-    cumulativeLength += length
   }
 
   if (!hasVisibleAnchor) pointFromSamples(current.points, 0, anchor)
   let vertexOffset = 0
+  let distanceOffset = 0
+  let cumulativeDistance = 0
 
   for (let index = 0; index < segmentCount; index++) {
     pointFromSamples(current.points, index, start)
     pointFromSamples(current.points, (index + 1) % count, end)
     const weight = weights[index]
+    const segmentEndDistance = cumulativeDistance + lengths[index]
+    if (distances) {
+      distances[distanceOffset++] = cumulativeDistance
+      distances[distanceOffset++] = cumulativeDistance
+      distances[distanceOffset++] = segmentEndDistance
+      distances[distanceOffset++] = segmentEndDistance
+      distances[distanceOffset++] = cumulativeDistance
+      distances[distanceOffset++] = segmentEndDistance
+    }
     if (weight <= 0 || lengths[index] <= 1e-10) {
       for (let vertex = 0; vertex < 6; vertex++) {
         positions[vertexOffset++] = anchor.x
         positions[vertexOffset++] = anchor.y
         positions[vertexOffset++] = anchor.z
       }
+      cumulativeDistance = segmentEndDistance
       continue
     }
     delta.subVectors(end, start)
@@ -301,10 +339,15 @@ const renderCurve = (visual: CurveVisual, controller: CurveController): void => 
     vertexOffset = writeVertex(positions, vertexOffset, c)
     vertexOffset = writeVertex(positions, vertexOffset, b)
     vertexOffset = writeVertex(positions, vertexOffset, d)
+    cumulativeDistance = segmentEndDistance
   }
 
   const attribute = visual.geometry.getAttribute('position') as THREE.BufferAttribute
   attribute.needsUpdate = true
+  const distanceAttribute = visual.geometry.getAttribute('curveDistance') as
+    | THREE.BufferAttribute
+    | undefined
+  if (distanceAttribute) distanceAttribute.needsUpdate = true
   visual.geometry.setDrawRange(0, segmentCount * 6)
   visual.geometry.computeBoundingBox()
   visual.geometry.computeBoundingSphere()
@@ -390,6 +433,13 @@ export const createCurve = (options: CurveOptions): CurveVisual => {
   const attribute = new THREE.BufferAttribute(positions, 3)
   attribute.setUsage(THREE.DynamicDrawUsage)
   geometry.setAttribute('position', attribute)
+  const dash = dashOptions(options.stroke.dash)
+  const distances = dash ? new Float32Array(segmentCount * 6) : undefined
+  if (distances) {
+    const distanceAttribute = new THREE.BufferAttribute(distances, 1)
+    distanceAttribute.setUsage(THREE.DynamicDrawUsage)
+    geometry.setAttribute('curveDistance', distanceAttribute)
+  }
   const material = new THREE.MeshBasicMaterial({
     color: options.stroke.color,
     transparent: strokeOpacity < 1,
@@ -397,6 +447,7 @@ export const createCurve = (options: CurveOptions): CurveVisual => {
     side: THREE.DoubleSide,
     depthWrite: strokeOpacity === 1
   })
+  configureDashMaterial(material, dash)
   const visual = new THREE.Mesh(geometry, material) as CurveVisual
   visual.name = 'DefinedMotionCurve'
   visual.userData.definedMotionVisual = 'curve'
@@ -411,8 +462,8 @@ export const createCurve = (options: CurveOptions): CurveVisual => {
     segmentCount,
     normal: curveNormal(options.normal),
     width,
-    dash: dashOptions(options.stroke.dash),
     positions,
+    distances,
     weights: new Float32Array(segmentCount),
     lengths: new Float32Array(segmentCount),
     scratch: {

@@ -31,9 +31,11 @@ const compileModules = async () => {
   const animationDirectory = join(temporaryDirectory, 'animation')
   const sceneDirectory = join(temporaryDirectory, 'scene')
   const svgDirectory = join(temporaryDirectory, 'svg')
+  const visualsDirectory = join(temporaryDirectory, 'visuals')
   await mkdir(animationDirectory)
   await mkdir(sceneDirectory)
   await mkdir(svgDirectory)
+  await mkdir(visualsDirectory)
 
   await writeFile(
     join(sceneDirectory, 'sceneErrors.mjs'),
@@ -84,25 +86,42 @@ const compileModules = async () => {
     )
   )
 
+  await writeFile(
+    join(visualsDirectory, 'latexInternal.mjs'),
+    await transpile(join(sourceRoot, 'visuals/latexInternal.ts'))
+  )
+  const latexPlanOutput = (await transpile(join(sourceRoot, 'animation/latexEffects.ts')))
+    .replace('../svg/latexSVGQueries', '../svg/latexSVGQueries.mjs')
+    .replace('../visuals/latexInternal', '../visuals/latexInternal.mjs')
+    .replace('./latexMarkAndHighlight', './latexMarkAndHighlight.mjs')
+    .replace('./latexTransitionsAndWrite', './latexTransitionsAndWrite.mjs')
+  await writeFile(join(animationDirectory, 'latexEffects.mjs'), latexPlanOutput)
+
   const [
     effectsModule,
     cameraEffectsModule,
     latexEffectsModule,
+    latexPlanModule,
     latexMarkModule,
-    timelineModule
+    timelineModule,
+    latexInternalModule
   ] = await Promise.all([
     import(pathToFileURL(join(animationDirectory, 'effects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'cameraEffects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'latexTransitionsAndWrite.mjs')).href),
+    import(pathToFileURL(join(animationDirectory, 'latexEffects.mjs')).href),
     import(pathToFileURL(join(animationDirectory, 'latexMarkAndHighlight.mjs')).href),
-    import(pathToFileURL(join(animationDirectory, 'timeline.mjs')).href)
+    import(pathToFileURL(join(animationDirectory, 'timeline.mjs')).href),
+    import(pathToFileURL(join(visualsDirectory, 'latexInternal.mjs')).href)
   ])
   return {
     ...effectsModule,
     ...cameraEffectsModule,
     ...latexEffectsModule,
+    ...latexPlanModule,
     ...latexMarkModule,
-    ...timelineModule
+    ...timelineModule,
+    ...latexInternalModule
   }
 }
 
@@ -117,6 +136,7 @@ try {
     createAnimation,
     createLatexMarkController,
     createLatexParticleTransitionController,
+    LATEX_VISUAL_CONTROLLER,
     fadeIn,
     fadeOut,
     matchTransform,
@@ -126,8 +146,71 @@ try {
     scaleIn,
     scaleOut,
     scaleTo,
+    latex,
     wait
   } = await compileModules()
+
+  // VISUAL-11 and ANIM-03: morph binding observes and prepares the current
+  // expression without attaching target content or particles to the scene.
+  {
+    const visual = new THREE.Group()
+    const source = new THREE.Group()
+    source.add(
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 1),
+        new THREE.MeshBasicMaterial({ opacity: 0.7 })
+      )
+    )
+    visual.add(source)
+    let active = source
+    let stageCount = 0
+    const target = new THREE.Group()
+    target.position.set(2, 0, 0)
+    target.add(new THREE.Mesh(new THREE.PlaneGeometry(1, 2), new THREE.MeshBasicMaterial()))
+    const sourceBounds = new THREE.Box2(
+      new THREE.Vector2(-1, -0.5),
+      new THREE.Vector2(1, 0.5)
+    )
+    const targetBounds = new THREE.Box2(
+      new THREE.Vector2(1.5, -1),
+      new THREE.Vector2(2.5, 1)
+    )
+    visual.getLocalBounds = () => sourceBounds.clone()
+    visual[LATEX_VISUAL_CONTROLLER] = {
+      prepare: () => ({ latex: 'target', content: target, bounds: targetBounds }),
+      currentContent: () => active,
+      stage(prepared) {
+        stageCount++
+        visual.add(prepared.content)
+      },
+      setTransitionBounds() {},
+      complete(prepared) {
+        active = prepared.content
+      },
+      discard() {}
+    }
+
+    const plan = await latex.morphTo(visual, {
+      latex: 'target',
+      duration: 1,
+      particleCount: 20
+    })
+    const childrenBeforeBind = [...visual.children]
+    const bound = plan.bind({ startFrame: 0, durationFrames: 2, endFrame: 2 })
+    assert.deepEqual(visual.children, childrenBeforeBind)
+    assert.equal(stageCount, 0)
+    assert.equal(visual.getObjectByName('DefinedMotionLatexMorphParticles'), undefined)
+
+    bound.update({
+      easedProgress: 0,
+      linearProgress: 0,
+      isFirstFrame: true,
+      isLastFrame: false
+    })
+    assert.equal(stageCount, 1)
+    assert.equal(target.parent, visual)
+    assert.ok(visual.getObjectByName('DefinedMotionLatexMorphParticles'))
+  }
 
   // EFFECT-12: LaTeX marks use root-local geometry, height-relative padding, and
   // visible mesh strokes under nested transforms.

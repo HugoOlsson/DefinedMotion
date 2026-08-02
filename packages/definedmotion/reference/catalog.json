@@ -8,16 +8,10 @@
       "source": "examples/azimuthal-wavefunction-explainer/azimuthal_wavefunction_explainer.scene.ts"
     },
     {
-      "id": "fourier-series",
-      "name": "Fourier Series",
-      "kind": "example",
-      "source": "examples/fourierSeriesScene.scene.ts"
-    },
-    {
       "id": "fourier-square-wave",
       "name": "Fourier Square Wave",
       "kind": "example",
-      "source": "examples/fourierSquareWave.scene.ts"
+      "source": "examples/fourier-square-wave/fourier_square_wave.scene.ts"
     },
     {
       "id": "galton-board",

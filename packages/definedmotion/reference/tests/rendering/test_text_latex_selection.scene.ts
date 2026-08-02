@@ -227,14 +227,15 @@ const verifyVisibleMark = (
   frame: number
 ): void => {
   scene.verify(id, { frames: { start: frame, end: frame + 1 } }, (context) => {
-    let visibleLine = false
-    equation.traverse((object) => {
-      const line = object as THREE.LineSegments<THREE.BufferGeometry, THREE.Material>
-      if (!line.isLineSegments) return
-      const materials = Array.isArray(line.material) ? line.material : [line.material]
-      visibleLine ||= materials.some((material) => material.opacity > 0.8)
+    const mark = equation.getObjectByName('DefinedMotionLatexMark')
+    let visibleStroke = false
+    mark?.traverse((object) => {
+      const mesh = object as THREE.Mesh<THREE.BufferGeometry, THREE.Material>
+      if (!mesh.isMesh) return
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      visibleStroke ||= materials.some((material) => material.opacity > 0.8)
     })
-    context.assert(visibleLine, 'The semantic LaTeX mark must be visible at its midpoint', {
+    context.assert(visibleStroke, 'The semantic LaTeX mark must be visible at its midpoint', {
       frame: context.globalFrame
     })
   })

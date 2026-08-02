@@ -78,7 +78,8 @@ try {
     import(pathToFileURL(join(animationDirectory, 'curveEffects.mjs')).href)
   ])
 
-  // CURVE-01: ribbon width is local-unit stable and dash gaps collapse cleanly.
+  // CURVE-01: ribbon width is stable and dashes use interpolated local arc length,
+  // independent of whether a sampled segment crosses several dash boundaries.
   {
     const solid = createCurve({
       sampleCount: 11,
@@ -92,7 +93,7 @@ try {
     assert.equal(solid.material.transparent, false)
     assert.equal(solid.material.depthWrite, true)
     const dashed = createCurve({
-      sampleCount: 11,
+      sampleCount: 2,
       domain: [0, 10],
       pointAt: (value) => new THREE.Vector2(value, 0),
       stroke: {
@@ -102,7 +103,36 @@ try {
       }
     })
     assert.equal(segmentIsCollapsed(dashed, 0), false)
-    assert.equal(segmentIsCollapsed(dashed, 1), true)
+    assert.deepEqual(
+      Array.from(dashed.geometry.getAttribute('curveDistance').array),
+      [0, 0, 10, 10, 0, 10]
+    )
+    const shader = {
+      uniforms: {},
+      vertexShader: '#include <common>\n#include <begin_vertex>',
+      fragmentShader: '#include <common>\n#include <dithering_fragment>'
+    }
+    dashed.material.onBeforeCompile(shader)
+    assert.equal(shader.uniforms.definedMotionDashLength.value, 1)
+    assert.equal(shader.uniforms.definedMotionDashPeriod.value, 2)
+    assert.match(shader.vertexShader, /vCurveDistance = curveDistance/)
+    assert.match(shader.fragmentShader, /mod\(vCurveDistance/)
+    assert.match(shader.fragmentShader, /discard/)
+
+    const uneven = createCurve({
+      sampleCount: 3,
+      domain: [0, 1],
+      pointAt: (value) => new THREE.Vector2(value < 0.5 ? value * 18 : 9 + (value - 0.5) * 2, 0),
+      stroke: {
+        color: '#55dec9',
+        width: 1,
+        dash: { length: 1, gap: 1 }
+      }
+    })
+    assert.deepEqual(
+      Array.from(uneven.geometry.getAttribute('curveDistance').array),
+      [0, 0, 9, 9, 0, 9, 9, 9, 10, 10, 9, 10]
+    )
     const translucent = createCurve({
       sampleCount: 3,
       pointAt: (value) => new THREE.Vector2(value, 0),

@@ -162,7 +162,7 @@ try {
     'node_modules/definedmotion/reference/INDEX.md',
     'node_modules/definedmotion/reference/catalog.json',
     'node_modules/definedmotion/types/public/index.d.ts',
-    'node_modules/definedmotion/reference/examples/fourierSquareWave.scene.ts',
+    'node_modules/definedmotion/reference/examples/fourier-square-wave/fourier_square_wave.scene.ts',
     'node_modules/definedmotion/reference/tests/assets/test_asset_references.scene.ts'
   ]) {
     if (!existsSync(join(consumerRoot, required))) {

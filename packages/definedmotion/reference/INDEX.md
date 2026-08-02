@@ -7,8 +7,7 @@ This corpus matches the installed DefinedMotion version. Read `agent-workflow.md
 | ID | Kind | Name | Source |
 |---|---|---|---|
 | azimuthal-wavefunction-explainer | example | Azimuthal Wavefunction Explainer | `examples/azimuthal-wavefunction-explainer/azimuthal_wavefunction_explainer.scene.ts` |
-| fourier-series | example | Fourier Series | `examples/fourierSeriesScene.scene.ts` |
-| fourier-square-wave | example | Fourier Square Wave | `examples/fourierSquareWave.scene.ts` |
+| fourier-square-wave | example | Fourier Square Wave | `examples/fourier-square-wave/fourier_square_wave.scene.ts` |
 | galton-board | example | Galton Board: The Normal Distribution | `examples/galtonBoard.scene.ts` |
 | polar-cartesian-explainer | example | Polar versus Cartesian Explainer | `examples/polar-cartesian-explainer/polar_cartesian_explainer.scene.ts` |
 | quadratic-formula-explainer | example | Quadratic Formula Explainer | `examples/quadratic-formula-explainer/quadratic_formula_explainer.scene.ts` |

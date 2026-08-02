@@ -132,9 +132,15 @@ const random = (seed: number): number => {
   return value - Math.floor(value)
 }
 
-const collectTriangles = (group: THREE.Object3D, coordinateRoot: THREE.Object3D): Triangle[] => {
-  coordinateRoot.updateWorldMatrix(true, true)
-  const inverseRoot = coordinateRoot.matrixWorld.clone().invert()
+const collectTriangles = (
+  group: THREE.Object3D,
+  coordinateRoot?: THREE.Object3D
+): Triangle[] => {
+  group.updateWorldMatrix(true, true)
+  coordinateRoot?.updateWorldMatrix(true, true)
+  const inverseRoot = coordinateRoot
+    ? coordinateRoot.matrixWorld.clone().invert()
+    : new THREE.Matrix4()
   const localMatrix = new THREE.Matrix4()
   const a = new THREE.Vector3()
   const b = new THREE.Vector3()
@@ -169,7 +175,7 @@ const collectTriangles = (group: THREE.Object3D, coordinateRoot: THREE.Object3D)
 
 const surfaceSamples = (
   group: THREE.Object3D,
-  coordinateRoot: THREE.Object3D,
+  coordinateRoot: THREE.Object3D | undefined,
   count: number
 ): Float32Array => {
   const triangles = collectTriangles(group, coordinateRoot)
@@ -314,16 +320,8 @@ export const morphTo = async (
       const transitionBounds = new THREE.Box2()
       const sourceMaterials = materialStates(source)
       const inheritedAppearance = sourceMaterials[0]
-      if (inheritedAppearance) {
-        for (const state of materialStates(prepared.content)) {
-          state.material.opacity = inheritedAppearance.opacity
-          state.material.transparent = inheritedAppearance.transparent
-        }
-      }
-      controller.stage(prepared)
-      const targetMaterials = materialStates(prepared.content)
       const fromPositions = sortedSamples(surfaceSamples(source, visual, count))
-      const toPositions = sortedSamples(surfaceSamples(prepared.content, visual, count))
+      const toPositions = sortedSamples(surfaceSamples(prepared.content, undefined, count))
       const canUseParticles = fromPositions.length > 0 && toPositions.length > 0
       const geometry = new THREE.BufferGeometry()
       const currentPositions = canUseParticles
@@ -339,14 +337,27 @@ export const morphTo = async (
       })
       const particles = new THREE.Points(geometry, particleMaterial)
       particles.name = 'DefinedMotionLatexMorphParticles'
-      if (canUseParticles) visual.add(particles)
       const deltas = new Float32Array(fromPositions.length)
       for (let index = 0; index < deltas.length; index++) {
         deltas[index] = toPositions[index] - fromPositions[index]
       }
+      let targetMaterials: MaterialState[] = []
+      let started = false
 
       return {
         update({ easedProgress, isLastFrame }) {
+          if (!started) {
+            if (inheritedAppearance) {
+              for (const state of materialStates(prepared.content)) {
+                state.material.opacity = inheritedAppearance.opacity
+                state.material.transparent = inheritedAppearance.transparent
+              }
+            }
+            targetMaterials = materialStates(prepared.content)
+            controller.stage(prepared)
+            if (canUseParticles) visual.add(particles)
+            started = true
+          }
           const progress = THREE.MathUtils.clamp(easedProgress, 0, 1)
           transitionBounds.min.lerpVectors(sourceBounds.min, targetBounds.min, progress)
           transitionBounds.max.lerpVectors(sourceBounds.max, targetBounds.max, progress)

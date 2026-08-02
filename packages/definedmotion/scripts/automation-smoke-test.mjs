@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 52) {
-    throw new Error(`Expected 52 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 51) {
+    throw new Error(`Expected 51 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -59,7 +59,7 @@ try {
   }
   if (
     scenes.scenes.find((scene) => scene.id === 'playground-smoke')?.kind !== 'project' ||
-    scenes.scenes.find((scene) => scene.id === 'fourier-series')?.kind !== 'example' ||
+    scenes.scenes.find((scene) => scene.id === 'fourier-square-wave')?.kind !== 'example' ||
     scenes.scenes.find((scene) => scene.id === 'test-viewer-preview')?.kind !== 'test'
   ) {
     throw new Error('Scene registry did not classify project, example, and test scenes')
@@ -67,10 +67,10 @@ try {
 
   const scenesWithoutTests = run(['scenes', '--exclude-tests', '--no-build'])
   if (
-    scenesWithoutTests.scenes.length !== 8 ||
+    scenesWithoutTests.scenes.length !== 7 ||
     scenesWithoutTests.scenes.some((scene) => scene.isTest)
   ) {
-    throw new Error('--exclude-tests did not return the seven packaged examples plus the playground scene')
+    throw new Error('--exclude-tests did not return the six packaged examples plus the playground scene')
   }
 
   const emittedMedia = readdirSync(

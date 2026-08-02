@@ -42,7 +42,7 @@ for (const required of [
   'reference/INDEX.md',
   'reference/agent-workflow.md',
   'reference/catalog.json',
-  'reference/examples/fourierSquareWave.scene.ts',
+  'reference/examples/fourier-square-wave/fourier_square_wave.scene.ts',
   'reference/tests/assets/test_asset_references.scene.ts'
 ]) {
   if (!paths.includes(required)) throw new Error(`Required package file is missing: ${required}`)
