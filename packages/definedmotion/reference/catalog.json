@@ -2,16 +2,10 @@
   "version": 1,
   "scenes": [
     {
-      "id": "alternatives",
-      "name": "Alternatives",
+      "id": "azimuthal-wavefunction-explainer",
+      "name": "Azimuthal Wavefunction Explainer",
       "kind": "example",
-      "source": "examples/alternativesScene.scene.ts"
-    },
-    {
-      "id": "dependency",
-      "name": "Dependency Scene",
-      "kind": "example",
-      "source": "examples/dependencyScene.scene.ts"
+      "source": "examples/azimuthal-wavefunction-explainer/azimuthal_wavefunction_explainer.scene.ts"
     },
     {
       "id": "fourier-series",
@@ -26,52 +20,28 @@
       "source": "examples/fourierSquareWave.scene.ts"
     },
     {
-      "id": "fractal-tree-growth",
-      "name": "Growing Fractal Tree",
-      "kind": "example",
-      "source": "examples/fractalTreeGrowth.scene.ts"
-    },
-    {
-      "id": "functions",
-      "name": "Visualizing Functions",
-      "kind": "example",
-      "source": "examples/visulizingFunctions.scene.ts"
-    },
-    {
       "id": "galton-board",
       "name": "Galton Board: The Normal Distribution",
       "kind": "example",
       "source": "examples/galtonBoard.scene.ts"
     },
     {
-      "id": "keyboard",
-      "name": "Keyboard",
+      "id": "polar-cartesian-explainer",
+      "name": "Polar versus Cartesian Explainer",
       "kind": "example",
-      "source": "examples/keyboardScene.scene.ts"
+      "source": "examples/polar-cartesian-explainer/polar_cartesian_explainer.scene.ts"
     },
     {
-      "id": "latex-text-transitions",
-      "name": "LaTeX Text Transitions",
+      "id": "quadratic-formula-explainer",
+      "name": "Quadratic Formula Explainer",
       "kind": "example",
-      "source": "examples/latex_text_transitions_scene.scene.ts"
+      "source": "examples/quadratic-formula-explainer/quadratic_formula_explainer.scene.ts"
     },
     {
-      "id": "matrix-multiplication",
-      "name": "Matrix Multiplication as Transformation",
+      "id": "spherical-triangle-explainer",
+      "name": "Spherical Triangle Explainer",
       "kind": "example",
-      "source": "examples/matrixMultiplication.scene.ts"
-    },
-    {
-      "id": "newtons-second-law",
-      "name": "Newton",
-      "kind": "example",
-      "source": "examples/newtonsSecondLaw.scene.ts"
-    },
-    {
-      "id": "surface",
-      "name": "Surface",
-      "kind": "example",
-      "source": "examples/surfaceScene.scene.ts"
+      "source": "examples/spherical-triangle-explainer/spherical_triangle_explainer.scene.ts"
     },
     {
       "id": "test-2d-camera-centers-labels",
@@ -102,12 +72,6 @@
       "name": "Asset References",
       "kind": "test",
       "source": "tests/assets/test_asset_references.scene.ts"
-    },
-    {
-      "id": "test-azimuthal-wavefunction-explainer",
-      "name": "Azimuthal Wavefunction Explainer Integration Contract",
-      "kind": "test",
-      "source": "tests/integration/azimuthal-wavefunction-explainer/azimuthal_wavefunction_explainer.scene.ts"
     },
     {
       "id": "test-basic-latex-query",
@@ -236,12 +200,6 @@
       "source": "tests/positioning/test_place_once_positioning.scene.ts"
     },
     {
-      "id": "test-polar-cartesian-explainer",
-      "name": "Polar versus Cartesian Explainer Integration Contract",
-      "kind": "test",
-      "source": "tests/integration/polar-cartesian-explainer/polar_cartesian_explainer.scene.ts"
-    },
-    {
       "id": "test-primitive-layout",
       "name": "Primitive Layout Contract",
       "kind": "test",
@@ -252,18 +210,6 @@
       "name": "Positioning: 3D Product Layout",
       "kind": "test",
       "source": "tests/positioning/test_product_layout_positioning.scene.ts"
-    },
-    {
-      "id": "test-production-heat-flow",
-      "name": "Production Heat Flow Explainer Contract",
-      "kind": "test",
-      "source": "tests/rendering/test_production_heat_flow.scene.ts"
-    },
-    {
-      "id": "test-quadratic-formula-explainer",
-      "name": "Quadratic Formula Explainer Integration Contract",
-      "kind": "test",
-      "source": "tests/integration/quadratic-formula-explainer/quadratic_formula_explainer.scene.ts"
     },
     {
       "id": "test-regular-text-latex",
@@ -288,12 +234,6 @@
       "name": "Scene Verification Contract",
       "kind": "test",
       "source": "tests/inspection/test_scene_verifications.scene.ts"
-    },
-    {
-      "id": "test-spherical-triangle-explainer",
-      "name": "Spherical Triangle Explainer Integration Contract",
-      "kind": "test",
-      "source": "tests/integration/spherical-triangle-explainer/spherical_triangle_explainer.scene.ts"
     },
     {
       "id": "test-super-complex-latex-to-svg",
@@ -348,36 +288,6 @@
       "name": "Zoom Perspective Sequential",
       "kind": "test",
       "source": "tests/camera/test_zoom_perspective_sequential.scene.ts"
-    },
-    {
-      "id": "tutorial-easy-1",
-      "name": "Tutorial: Easy 1",
-      "kind": "example",
-      "source": "examples/tutorials/easy1.scene.ts"
-    },
-    {
-      "id": "tutorial-easy-2",
-      "name": "Tutorial: Easy 2",
-      "kind": "example",
-      "source": "examples/tutorials/easy2.scene.ts"
-    },
-    {
-      "id": "tutorial-easy-3",
-      "name": "Tutorial: Easy 3",
-      "kind": "example",
-      "source": "examples/tutorials/easy3.scene.ts"
-    },
-    {
-      "id": "tutorial-medium-1",
-      "name": "Tutorial: Medium 1",
-      "kind": "example",
-      "source": "examples/tutorials/medium1.scene.ts"
-    },
-    {
-      "id": "vector-field",
-      "name": "Vector Field",
-      "kind": "example",
-      "source": "examples/vectorField.scene.ts"
     }
   ]
 }

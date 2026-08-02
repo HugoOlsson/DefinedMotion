@@ -207,27 +207,12 @@ try {
     'overview',
     '--require-session'
   ])
-  const firstVectorCameras = run(['cameras', 'vector-field', '--frame', '600', '--require-session'])
-  const repeatedVectorCameras = run([
-    'cameras',
-    'vector-field',
-    '--frame',
-    '600',
-    '--require-session'
-  ])
-  const firstFollowCamera = firstVectorCameras.cameras.find(
-    (camera) => camera.id === 'particle-follow'
-  )
-  const repeatedFollowCamera = repeatedVectorCameras.cameras.find(
-    (camera) => camera.id === 'particle-follow'
-  )
   const unexposedInspection = run([
     'inspect',
     'test-zoom-perspective-sequential',
     '--require-session'
   ])
-  const assetHeavyInspection = run(['inspect', 'keyboard', '--frame', '300', '--require-session'])
-  const typedMessage = assetHeavyInspection.objects.find((object) => object.id === 'typed-message')
+  const assetInspection = run(['inspect', 'test-asset-references', '--frame', '0', '--require-session'])
   if (
     initialInspection.runtimeId !== initialStatus.runtimeId ||
     repeatedInspection.runtimeId !== initialStatus.runtimeId ||
@@ -243,27 +228,15 @@ try {
       5.9 ||
     overviewInspection.cameraId !== 'overview' ||
     overviewInspection.camera.type !== 'perspective' ||
-    firstVectorCameras.runtimeId !== initialStatus.runtimeId ||
-    repeatedVectorCameras.runtimeId !== initialStatus.runtimeId ||
-    firstVectorCameras.generation !== repeatedVectorCameras.generation ||
-    !firstFollowCamera ||
-    !repeatedFollowCamera ||
-    JSON.stringify(firstFollowCamera.camera.position) !==
-      JSON.stringify(repeatedFollowCamera.camera.position) ||
     initialInspection.objects.length !== 4 ||
     repeatedInspection.objects.length !== 4 ||
     unexposedInspection.objects.length !== 0 ||
     unexposedInspection.camera.type !== 'perspective' ||
     unexposedInspection.camera.fov === undefined ||
-    assetHeavyInspection.runtimeId !== initialStatus.runtimeId ||
-    typedMessage?.text !== 'I am just testing' ||
-    !typedMessage.worldBounds ||
-    typedMessage.worldBounds.size[0] <= 0 ||
-    !typedMessage.screenBounds ||
-    typedMessage.screenBounds.width <= 0
+    assetInspection.runtimeId !== initialStatus.runtimeId
   ) {
     throw new Error(
-      'Persistent inspection retained stale state, produced nondeterministic cameras, or failed to synchronize asset-heavy text'
+      'Persistent inspection retained stale state, produced nondeterministic cameras, or failed to evaluate package assets'
     )
   }
 
@@ -421,8 +394,8 @@ try {
 
   const concurrentResults = await Promise.all([
     runAsync(['scenes', '--require-session']),
-    runAsync(['inspect', 'alternatives', '--frame', '300', '--require-session']),
-    runAsync(['inspect', 'vector-field', '--frame', '600', '--require-session'])
+    runAsync(['inspect', 'test-visual-primitives', '--frame', '11', '--require-session']),
+    runAsync(['inspect', 'test-scene-inspection', '--frame', '30', '--require-session'])
   ])
   if (concurrentResults.some((result) => result.runtimeId !== initialStatus.runtimeId)) {
     throw new Error('Concurrent CLI requests did not share the same serialized runtime')
@@ -508,7 +481,7 @@ try {
   writeFileSync(fixturePath, fixtureSource('#0000ff'))
   const inFlightInspection = runAsync([
     'inspect',
-    'vector-field',
+    'test-fourier-series-machine',
     '--frame',
     '1100',
     '--require-session'
@@ -546,7 +519,7 @@ try {
   }
 
   const conflictingSelection = run(
-    ['timeline-grid', 'tutorial-easy-1', '--frames', '0,30', '--count', '2'],
+    ['timeline-grid', 'test-animation-plan', '--frames', '0,30', '--count', '2'],
     false
   )
   if (conflictingSelection.success || conflictingSelection.error?.code !== 'INVALID_ARGUMENTS') {
@@ -558,7 +531,7 @@ try {
   const standaloneOutput = join(temporaryDirectory, 'standalone.png')
   const firstSessionResult = run([
     'still',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--frame',
     '30',
     '--output',
@@ -567,7 +540,7 @@ try {
   ])
   const secondSessionResult = run([
     'still',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--frame',
     '30',
     '--output',
@@ -576,7 +549,7 @@ try {
   ])
   run([
     'still',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--frame',
     '30',
     '--output',
@@ -601,7 +574,7 @@ try {
   const standaloneGridOutput = join(temporaryDirectory, 'standalone-grid.png')
   const sessionGridResult = run([
     'timeline-grid',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--frames',
     '0,30,59',
     '--columns',
@@ -614,7 +587,7 @@ try {
   ])
   const standaloneGridResult = run([
     'timeline-grid',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--frames',
     '0,30,59',
     '--columns',

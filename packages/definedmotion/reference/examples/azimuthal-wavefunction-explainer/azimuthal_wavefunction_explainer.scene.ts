@@ -13,10 +13,9 @@ import {
 import * as THREE from 'three'
 
 export default defineScene({
-  id: 'test-azimuthal-wavefunction-explainer',
-  name: 'Azimuthal Wavefunction Explainer Integration Contract',
-  isTest: true,
-  create: testAzimuthalWavefunctionExplainer
+  id: 'azimuthal-wavefunction-explainer',
+  name: 'Azimuthal Wavefunction Explainer',
+  create: azimuthalWavefunctionExplainer
 })
 
 const COLORS = {
@@ -91,7 +90,7 @@ interface SceneVisuals {
   stateProbe: THREE.Group & { text: string }
 }
 
-export function testAzimuthalWavefunctionExplainer(): AnimatedScene {
+export function azimuthalWavefunctionExplainer(): AnimatedScene {
   return new AnimatedScene(WIDTH, HEIGHT, SpaceSetting.ThreeDim, async (scene) => {
     scene.scene.background = new THREE.Color(COLORS.background)
 

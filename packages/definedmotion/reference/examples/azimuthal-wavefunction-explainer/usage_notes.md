@@ -1,6 +1,6 @@
 # Azimuthal wavefunction explainer usage notes
 
-These notes record the experience of reproducing the supplied vertical orbital/azimuthal animation as a horizontal DefinedMotion explainer. The reference establishes the conceptual sequence and cyan-on-black scientific character; the composition is rebuilt for a 1280×720 blackboard presentation rather than copied frame-for-frame.
+These notes record the experience of authoring the supplied vertical orbital/azimuthal animation as a horizontal DefinedMotion explainer. The reference establishes the conceptual sequence and cyan-on-black scientific character; the composition is rebuilt for a 1280×720 blackboard presentation rather than copied frame-for-frame.
 
 ## Authoring intent
 

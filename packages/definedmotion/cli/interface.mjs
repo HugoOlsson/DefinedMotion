@@ -31,14 +31,14 @@ The render command always uses an isolated Electron process.
 Examples:
   npm run dm -- session start
   npm run dm -- scenes
-  npm run dm -- render tutorial-easy-1 --output renders/tutorial.mp4
-  npm run dm -- still tutorial-easy-1 --frame 30 --output .definedmotion/frame.png
-  npm run dm -- timeline-grid tutorial-easy-1
-  npm run dm -- cameras vector-field --frame 600 --json
-  npm run dm -- camera-grid vector-field --frame 600
-  npm run dm -- inspect tutorial-easy-1 --frame 30 --json
-  npm run dm -- layout-check tutorial-easy-1 --json
-  npm run dm -- verify --scene tutorial-easy-1 --json
+  npm run dm -- render fourier-square-wave --output renders/tutorial.mp4
+  npm run dm -- still fourier-square-wave --frame 30 --output .definedmotion/frame.png
+  npm run dm -- timeline-grid fourier-square-wave
+  npm run dm -- cameras test-scene-inspection --frame 30 --json
+  npm run dm -- camera-grid test-scene-inspection --frame 30
+  npm run dm -- inspect fourier-square-wave --frame 30 --json
+  npm run dm -- layout-check test-layout-check --json
+  npm run dm -- verify --scene quadratic-formula-explainer --json
   npm run dm -- session stop
 
 Agent interface guide:

@@ -1,6 +1,6 @@
 # Polar versus Cartesian explainer usage notes
 
-These notes record the experience of adapting the supplied vertical Instagram animation into a horizontal DefinedMotion scene. The source establishes the mathematical action—one sine function sampled simultaneously in Cartesian and polar coordinates—but not the final composition.
+These notes record the experience of authoring the supplied vertical Instagram animation as a horizontal DefinedMotion scene. The source establishes the mathematical action—one sine function sampled simultaneously in Cartesian and polar coordinates—but not the final composition.
 
 ## Visual and authoring intent
 

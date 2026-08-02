@@ -19,10 +19,9 @@ import {
 import * as THREE from 'three'
 
 export default defineScene({
-  id: 'test-quadratic-formula-explainer',
-  name: 'Quadratic Formula Explainer Integration Contract',
-  isTest: true,
-  create: testQuadraticFormulaExplainer
+  id: 'quadratic-formula-explainer',
+  name: 'Quadratic Formula Explainer',
+  create: quadraticFormulaExplainer
 })
 
 const COLORS = {
@@ -81,7 +80,7 @@ interface ProofVisuals {
   readonly stateProbe: THREE.Group & { text: string }
 }
 
-export function testQuadraticFormulaExplainer(): AnimatedScene {
+export function quadraticFormulaExplainer(): AnimatedScene {
   return new AnimatedScene(1280, 720, SpaceSetting.TwoDim, async (scene) => {
     scene.scene.background = new THREE.Color(COLORS.background)
 

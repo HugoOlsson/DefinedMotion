@@ -1,6 +1,6 @@
 # Spherical triangle explainer usage notes
 
-These notes record the experience of building `spherical_triangle_explainer.scene.ts`. This scene deliberately differs from the quadratic explainer: its mathematical content lives in 3D world space while the title and changing equation remain attached to the audience camera.
+These notes record the experience of authoring `spherical_triangle_explainer.scene.ts`. This scene deliberately differs from the quadratic explainer: its mathematical content lives in 3D world space while the title and changing equation remain attached to the audience camera.
 
 ## Visual and authoring intent
 

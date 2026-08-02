@@ -12,10 +12,9 @@ import { createText, type TextVisual } from 'definedmotion/rendering'
 import * as THREE from 'three'
 
 export default defineScene({
-  id: 'test-spherical-triangle-explainer',
-  name: 'Spherical Triangle Explainer Integration Contract',
-  isTest: true,
-  create: testSphericalTriangleExplainer
+  id: 'spherical-triangle-explainer',
+  name: 'Spherical Triangle Explainer',
+  create: sphericalTriangleExplainer
 })
 
 const COLORS = {
@@ -94,7 +93,7 @@ interface ExplainerVisuals {
   stateProbe: THREE.Group & { text: string }
 }
 
-export function testSphericalTriangleExplainer(): AnimatedScene {
+export function sphericalTriangleExplainer(): AnimatedScene {
   return new AnimatedScene(1280, 720, SpaceSetting.ThreeDim, async (scene) => {
     scene.scene.background = new THREE.Color(COLORS.background)
     scene.renderer.shadowMap.enabled = true

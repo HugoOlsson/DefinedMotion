@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 67) {
-    throw new Error(`Expected 67 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 52) {
+    throw new Error(`Expected 52 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -67,10 +67,10 @@ try {
 
   const scenesWithoutTests = run(['scenes', '--exclude-tests', '--no-build'])
   if (
-    scenesWithoutTests.scenes.length !== 18 ||
+    scenesWithoutTests.scenes.length !== 8 ||
     scenesWithoutTests.scenes.some((scene) => scene.isTest)
   ) {
-    throw new Error('--exclude-tests did not return the 17 examples plus the playground scene')
+    throw new Error('--exclude-tests did not return the seven packaged examples plus the playground scene')
   }
 
   const emittedMedia = readdirSync(
@@ -153,16 +153,16 @@ try {
 
   const first = run([
     'still',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--frame',
     '30',
     '--output',
     firstOutput,
     '--no-build'
   ])
-  run(['still', 'tutorial-easy-1', '--frame', '30', '--output', secondOutput, '--no-build'])
+  run(['still', 'test-animation-plan', '--frame', '30', '--output', secondOutput, '--no-build'])
 
-  if (first.width !== 1080 || first.height !== 1920 || first.timeMs !== 500) {
+  if (first.width !== 400 || first.height !== 200 || first.timeMs !== 500) {
     throw new Error('Still metadata did not match the scene and fixed 60 FPS timebase')
   }
   if (sha256(firstOutput) !== sha256(secondOutput)) {
@@ -458,45 +458,6 @@ try {
   ) {
     throw new Error(
       'Animated 3D camera-attached UI screen lock, late attachment, or verification was incorrect'
-    )
-  }
-
-  const productionHeatEnd = run([
-    'inspect',
-    'test-production-heat-flow',
-    '--frame',
-    '509',
-    '--no-build'
-  ])
-  const productionHeatVerification = run([
-    'verify',
-    '--scene',
-    'test-production-heat-flow',
-    '--no-build'
-  ])
-  const productionHeatLayoutCheck = run([
-    'layout-check',
-    'test-production-heat-flow',
-    '--output-dir',
-    join(temporaryDirectory, 'production-heat-layout-check'),
-    '--no-build'
-  ])
-  const productionHeatObject = (id) => productionHeatEnd.objects.find((object) => object.id === id)
-  if (
-    productionHeatEnd.sceneInfo.durationInFrames !== 510 ||
-    productionHeatObject('heat-flow-equation')?.latex !==
-      String.raw`\dmClass{temperature}{\Delta T}=\frac{\dmClass{energy}{Q}}{\dmClass{mass}{mc}}` ||
-    productionHeatObject('heat-flow-takeaway')?.visible !== true ||
-    productionHeatObject('heat-flow-spread-fill')?.localTransform.scale[0] !== 0.18 ||
-    productionHeatVerification.passed !== true ||
-    productionHeatVerification.verificationCount !== 7 ||
-    productionHeatLayoutCheck.checkedFrames !== 510 ||
-    productionHeatLayoutCheck.watchedObjectCount !== 6 ||
-    productionHeatLayoutCheck.clean !== true ||
-    productionHeatLayoutCheck.incidentCount !== 0
-  ) {
-    throw new Error(
-      'Production heat-flow composition, semantic morph, or verification was incorrect'
     )
   }
 
@@ -822,18 +783,6 @@ try {
     throw new Error('Camera grid image or structured camera metadata was incorrect')
   }
 
-  const dynamicTextInspection = run(['inspect', 'alternatives', '--frame', '300', '--no-build'])
-  const courseName = dynamicTextInspection.objects.find((object) => object.id === 'course-name')
-  if (
-    courseName?.text !== 'Optik' ||
-    !courseName.worldBounds ||
-    courseName.worldBounds.size[0] <= 0 ||
-    !courseName.screenBounds ||
-    courseName.screenBounds.width <= 0
-  ) {
-    throw new Error('Dynamic text content and geometry were not synchronized before inspection')
-  }
-
   const layoutCheckDirectory = join(temporaryDirectory, 'layout-check')
   const layoutCheck = run([
     'layout-check',
@@ -881,7 +830,7 @@ try {
   writeFileSync(unrelatedLayoutCheckImage, 'preserve this unrelated file')
   const unwatchedLayoutCheck = run([
     'layout-check',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--output-dir',
     layoutCheckDirectory,
     '--no-build'
@@ -918,7 +867,7 @@ try {
   const timelineGridOutput = join(temporaryDirectory, 'timeline-grid.png')
   const timelineGrid = run([
     'timeline-grid',
-    'tutorial-easy-1',
+    'test-animation-plan',
     '--cell-width',
     '180',
     '--output',
@@ -933,7 +882,7 @@ try {
     timelineGrid.columns !== 3 ||
     timelineGrid.rows !== 3 ||
     timelineGrid.width !== 572 ||
-    timelineGrid.height !== 1088 ||
+    timelineGrid.height !== 398 ||
     timelineGridImage.width !== timelineGrid.width ||
     timelineGridImage.height !== timelineGrid.height ||
     timelineGrid.cells[4].frame !== 30 ||

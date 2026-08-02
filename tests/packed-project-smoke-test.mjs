@@ -162,7 +162,7 @@ try {
     'node_modules/definedmotion/reference/INDEX.md',
     'node_modules/definedmotion/reference/catalog.json',
     'node_modules/definedmotion/types/public/index.d.ts',
-    'node_modules/definedmotion/reference/examples/tutorials/easy1.scene.ts',
+    'node_modules/definedmotion/reference/examples/fourierSquareWave.scene.ts',
     'node_modules/definedmotion/reference/tests/assets/test_asset_references.scene.ts'
   ]) {
     if (!existsSync(join(consumerRoot, required))) {
@@ -192,7 +192,7 @@ try {
   const jsonStart = scenesOutput.indexOf('{')
   const result = JSON.parse(scenesOutput.slice(jsonStart))
   const ids = new Set(result.scenes.map((scene) => scene.id))
-  for (const id of ['my-first-scene', 'tutorial-easy-1', 'test-asset-references']) {
+  for (const id of ['my-first-scene', 'fourier-square-wave', 'test-asset-references']) {
     if (!ids.has(id)) throw new Error(`Packed consumer did not discover ${id}`)
   }
 

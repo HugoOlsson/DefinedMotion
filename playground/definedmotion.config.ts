@@ -10,5 +10,5 @@ export default defineConfig({
   timelineFps: 60,
   renderEveryNthFrame: 1,
   seed: 1,
-  defaultScene: 'functions'
+  defaultScene: 'fourier-square-wave'
 })

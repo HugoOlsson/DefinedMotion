@@ -15,10 +15,9 @@ import {
 import * as THREE from 'three'
 
 export default defineScene({
-  id: 'test-polar-cartesian-explainer',
-  name: 'Polar versus Cartesian Explainer Integration Contract',
-  isTest: true,
-  create: testPolarCartesianExplainer
+  id: 'polar-cartesian-explainer',
+  name: 'Polar versus Cartesian Explainer',
+  create: polarCartesianExplainer
 })
 
 const WIDTH = 1280
@@ -87,7 +86,7 @@ interface SceneVisuals {
   stateProbe: THREE.Group & { text: string }
 }
 
-export function testPolarCartesianExplainer(): AnimatedScene {
+export function polarCartesianExplainer(): AnimatedScene {
   return new AnimatedScene(WIDTH, HEIGHT, SpaceSetting.TwoDim, async (scene) => {
     scene.scene.background = new THREE.Color(COLORS.background)
 

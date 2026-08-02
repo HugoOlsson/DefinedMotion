@@ -1,6 +1,6 @@
 # Quadratic formula explainer usage notes
 
-These notes record the experience of building `quadratic_formula_explainer.scene.ts`. They are intentionally separate from the Fourier machine notes because this scene stresses sustained 2D mathematical explanation rather than physical 3D construction.
+These notes record the experience of authoring `quadratic_formula_explainer.scene.ts`. They are intentionally separate from the Fourier machine notes because this scene stresses sustained 2D mathematical explanation rather than physical 3D construction.
 
 ## Visual and authoring intent
 
