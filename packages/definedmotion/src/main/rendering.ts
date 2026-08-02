@@ -10,6 +10,7 @@ import {
   getProjectRoot,
   getRenderOutputRoot
 } from '../projectPaths'
+import { validateVideoDimensions } from '../runtime/rendering/videoDimensions'
 
 export interface AudioInScene {
   audioPath: string
@@ -38,6 +39,8 @@ export const generateID = (numCharacters: number = 10) =>
  * @returns A promise that resolves to the output file path.
  */
 export async function renderVideo(options: RenderOptions): Promise<string> {
+  validateVideoDimensions(options.width, options.height)
+
   console.log(`Converting frames to video at ${options.fps} fps`)
 
   const rootDir = getFrameCacheRoot()

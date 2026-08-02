@@ -71,6 +71,7 @@ import {
   type ScenePreviewMarker
 } from './scenePreview'
 import { notifyFramePresented } from './framePresentation'
+import { validateVideoDimensions } from '../rendering/videoDimensions'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -893,6 +894,8 @@ export class AnimatedScene {
   }
 
   private async renderAnimation(options: RenderVideoOptions): Promise<string> {
+    validateVideoDimensions(this.pixelsWidth, this.pixelsHeight)
+
     const ro = this.resizeObserver
     const renderName = generateID(10)
     const cpu_free_time = 5

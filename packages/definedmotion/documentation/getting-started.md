@@ -21,6 +21,8 @@ export default defineScene({ id: 'cold-spots', name: 'Cold Spots', create })
 
 Set `defaultScene: 'cold-spots'` in `definedmotion.config.ts`. The viewer can switch to any other project scene without editing the config.
 
+Use positive, even pixel dimensions for video scenes. H.264 `yuv420p` output requires both width and height to be even, and `render` reports `INVALID_VIDEO_DIMENSIONS` before rendering any frames when they are not.
+
 Enable **Show FPS monitor** in the viewer to see presentation rate, average and 95th-percentile frame time, and how many evaluated timeline frames were not presented while the viewer caught up. The preference is stored per project and the monitor does not affect rendered output.
 
 Next: [Scenes and timeline](scenes-and-timeline.md).

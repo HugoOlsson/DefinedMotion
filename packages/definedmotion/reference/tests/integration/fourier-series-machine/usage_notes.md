@@ -27,7 +27,7 @@ These notes record the experience of building `fourier_series_machine.scene.ts`.
 - Mathematical continuity and physical plausibility are separate concerns. The original planar joint check could pass while coplanar rings intersected one another and crossed the stage. Physical scenes need explicit clearance and depth-separation contracts in addition to animation-state contracts.
 - The core line helper represents a segment, not a thick changing polyline. The waveform therefore uses `three.meshline` directly. A measurable dynamic polyline would be a useful small rendering primitive.
 - Continuously revealing a variable number of nested rotors required custom material-opacity and scale logic. The one-shot core entrance effects were not the right abstraction for a value that changes forward and backward during a later beat.
-- The video encoder requires even output dimensions, but scene construction accepts odd dimensions and the render path validates them only after every frame has been produced. The first full render spent time rendering all 1,800 frames at 1200×675 before H.264 rejected the odd height. The final scene uses 1280×720. This constraint should fail before frame rendering or be handled automatically.
+- The video encoder requires even output dimensions. The first full render originally spent time rendering all 1,800 frames at 1200×675 before H.264 rejected the odd height. The render path now rejects invalid dimensions before it changes render state, traces a frame, creates frame files, or starts the encoder. The final scene uses 1280×720.
 
 ## Things that failed during construction
 
