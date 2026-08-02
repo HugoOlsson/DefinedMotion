@@ -1,10 +1,18 @@
-import { wait } from 'definedmotion/animation'
+import { AnimatedScene, SpaceSetting, defineScene, type ScreenBounds } from 'definedmotion'
+import { fadeIn, fadeOut, wait } from 'definedmotion/animation'
+import { createLatex, latex, queryLaTeXClass, type LatexVisual } from 'definedmotion/latex'
+import {
+  createCircle,
+  createCurve,
+  createLine,
+  createRectangle,
+  createText,
+  layout,
+  type CurveVisual,
+  type LayoutVisual,
+  type TextVisual
+} from 'definedmotion/rendering'
 import * as THREE from 'three'
-import { defineScene } from 'definedmotion'
-import { createText, createLine } from 'definedmotion/rendering'
-import { createSVGShape } from 'definedmotion/latex'
-import { latexToSVG } from 'definedmotion/latex'
-import { AnimatedScene, SpaceSetting } from 'definedmotion'
 
 export default defineScene({
   id: 'galton-board',
@@ -12,305 +20,533 @@ export default defineScene({
   create: galtonBoardScene
 })
 
-const DURATION_MS = 14_000
+const WIDTH = 1280
+const HEIGHT = 720
 const ROW_COUNT = 10
 const BIN_COUNT = ROW_COUNT + 1
 const BALL_COUNT = 160
-const PEG_SPACING = 7.5
-const FIRST_PEG_Y = 9.8
-const ROW_SPACING = 1.72
-const BIN_BASE_Y = -26.5
-const BALL_STACK_STEP = 0.68
+const PEG_SPACING = 6.7
+const FIRST_PEG_Y = 8.8
+const ROW_SPACING = 1.65
+const BIN_TOP_Y = -8.6
+const BIN_BASE_Y = -24.8
+const BALL_RADIUS = 0.34
+const BALL_STACK_STEP = 0.62
 const COUNT_HEIGHT_STEP = BALL_STACK_STEP / 2
-const BALL_RADIUS = 0.38
+
+const COLORS = {
+  background: '#040708',
+  ivory: '#f0ece2',
+  muted: '#879293',
+  quiet: '#263638',
+  quieter: '#182527',
+  mint: '#55dec9',
+  paleMint: '#a2eee2',
+  gold: '#e0bd57',
+  coral: '#e1876d'
+} as const
+
+const DEPTH = {
+  guides: 0.05,
+  histogram: 0.14,
+  pegs: 0.24,
+  curve: 0.36,
+  balls: 0.5,
+  labels: 0.65
+} as const
+
+interface BeatFrames {
+  intro: number
+  path: number
+  sample: number
+  resolve: number
+  end: number
+}
 
 interface BallSimulation {
-  mesh: THREE.Mesh
+  mesh: ReturnType<typeof createCircle>
   decisions: boolean[]
   path: THREE.Vector3[]
   bin: number
-  stackIndex: number
   startFrame: number
   durationFrames: number
 }
 
-interface DynamicLine extends THREE.Line {
-  updatePoints(points: THREE.Vector3[]): void
+interface BoardVisuals {
+  root: THREE.Group
+  pegField: THREE.Group
+  bins: THREE.Group & { text: string }
+  histogram: THREE.Group & { text: string }
+  histogramBars: ReturnType<typeof createRectangle>[]
+  expectedCurve: CurveVisual
+  expectedLabel: TextVisual
+  activeBalls: THREE.Group & { text: string }
+  heroBall: ReturnType<typeof createCircle>
+  decisionGuide: THREE.Group
+  leftBranch: ReturnType<typeof createLine>
+  rightBranch: ReturnType<typeof createLine>
+  balls: BallSimulation[]
 }
 
-interface TextSwitcher {
-  group: THREE.Group & { text: string }
-  show(index: number): void
+interface GaltonState {
+  beat: string
+  beatProgress: number
+  activeCount: number
+  landedCount: number
+  landedCounts: number[]
+}
+
+interface SceneVisuals {
+  header: LayoutVisual
+  title: TextVisual
+  formula: LatexVisual
+  choiceCaption: LayoutVisual
+  sampleCaption: LayoutVisual
+  board: BoardVisuals
+  summary: LayoutVisual
+  stateProbe: THREE.Group & { text: string }
 }
 
 export function galtonBoardScene(): AnimatedScene {
-  return new AnimatedScene(
-    1600,
-    900,
-    SpaceSetting.TwoDim,
-    async (scene) => {
-      scene.scene.background = new THREE.Color('#070b16')
+  return new AnimatedScene(WIDTH, HEIGHT, SpaceSetting.TwoDim, async (scene) => {
+    scene.scene.background = new THREE.Color(COLORS.background)
 
-      const title = await createText({ text: 'Order from Randomness', fontSize: 3.1, color: 0xf8fafc })
-      title.position.set(0, 27, 1)
-      scene.add(title)
-
-      const subtitle = await createText({ text: 'A Galton board turns many coin-flip paths into a bell curve', fontSize: 1.18, color: 0x94a3b8 })
-      subtitle.position.set(0, 23.5, 1)
-      scene.add(subtitle)
-
-      const formula = scene.expose(
-        'distribution-formula',
-        createSVGShape(
-          latexToSVG(
-            String.raw`X\sim\operatorname{Binomial}\!\left(10,\frac12\right)\ \approx\ \mathcal N\!\left(5,\,2.5\right)`
-          ),
-          29
-        ),
-        {
-          description:
-            'Ten independent left-or-right decisions form a binomial distribution approaching a normal distribution',
-          tags: ['latex', 'probability', 'normal-distribution']
-        }
-      )
-      formula.position.set(0, 17.3, 1)
-      scene.add(formula)
-
-      scene.add(
-        createLine({
-          point1: new THREE.Vector3(-49, 13.1, 0),
-          point2: new THREE.Vector3(49, 13.1, 0),
-          color: '#26324f'
-        })
-      )
-
-      const phaseLabels = await createTextSwitcher(
-        ['ONE RANDOM PATH', 'WATCH THE SAMPLE GROW', 'A PATTERN EMERGES'],
-        1.05,
-        0x64748b
-      )
-      phaseLabels.group.position.set(-37, 10.5, 2)
-      scene.add(phaseLabels.group)
-
-      const probability = createSVGShape(
-        latexToSVG(String.raw`p(\mathrm{left})=p(\mathrm{right})=\frac12`),
-        21
-      )
-      probability.position.set(31, 10.3, 1)
-      scene.add(probability)
-
-      const pegField = scene.expose('peg-field', new THREE.Group(), {
-        description: 'Ten rows of pegs where every collision sends a ball left or right',
-        tags: ['galton-board', 'pegs', 'probability']
-      })
-      const pegGeometry = new THREE.CircleGeometry(0.24, 20)
-      const pegMaterial = new THREE.MeshBasicMaterial({ color: '#94a3b8', depthTest: false })
-      for (let row = 0; row < ROW_COUNT; row++) {
-        for (let column = 0; column <= row; column++) {
-          const peg = new THREE.Mesh(pegGeometry, pegMaterial)
-          peg.position.set(pegX(row, column), pegY(row), 0)
-          pegField.add(peg)
-        }
-      }
-      scene.add(pegField)
-
-      const bins = scene.expose(
-        'outcome-bins',
-        Object.assign(new THREE.Group(), { text: 'No balls have landed' }),
-        {
-          description: 'Eleven bins corresponding to zero through ten rightward decisions',
-          tags: ['bins', 'outcomes', 'histogram']
-        }
-      )
-      addBins(bins)
-      const binLabels = await Promise.all(
-        Array.from({ length: BIN_COUNT }, (_, index) => createText({ text: `${index}`, fontSize: 0.78, color: 0x64748b }))
-      )
-      binLabels.forEach((label, index) => {
-        label.position.set(binX(index), -27.45, 1)
-        bins.add(label)
-      })
-      scene.add(bins)
-
-      const histogram = scene.expose(
-        'sample-histogram',
-        Object.assign(new THREE.Group(), { text: 'counts: 0,0,0,0,0,0,0,0,0,0,0' }),
-        {
-          description: 'Live counts of landed balls for every final horizontal outcome',
-          tags: ['histogram', 'sample', 'dynamic']
-        }
-      )
-      const histogramBars = createHistogramBars(histogram)
-      scene.add(histogram)
-
-      const normalCurve = scene.expose(
-        'expected-normal-curve',
-        createDynamicLine(241, '#f472b6', 0),
-        {
-          description: 'Expected bell curve from the binomial probabilities for 160 trials',
-          tags: ['normal-curve', 'expected-distribution', 'dynamic']
-        }
-      )
-      normalCurve.updatePoints(expectedCurvePoints())
-      scene.add(normalCurve)
-
-      const curveLabel = await createText({ text: 'expected bell curve', fontSize: 1.05, color: 0xf9a8d4 })
-      curveLabel.position.set(30, -9.2, 1)
-      curveLabel.visible = false
-      scene.add(curveLabel)
-
-      const ballGeometry = new THREE.CircleGeometry(BALL_RADIUS, 24)
-      const ballMaterial = new THREE.MeshBasicMaterial({ color: '#38bdf8', depthTest: false })
-      const heroMaterial = new THREE.MeshBasicMaterial({ color: '#fbbf24', depthTest: false })
-      const landingSlots = Array.from({ length: BIN_COUNT }, () => 0)
-      const balls: BallSimulation[] = []
-      const activeBalls = scene.expose(
-        'simulated-balls',
-        Object.assign(new THREE.Group(), { text: '0 active, 0 landed, 160 total' }),
-        {
-          description: 'Seeded balls following reproducible left-or-right paths through the pegs',
-          tags: ['balls', 'simulation', 'dynamic', 'deterministic']
-        }
-      )
-
-      for (let index = 0; index < BALL_COUNT; index++) {
-        const decisions = Array.from({ length: ROW_COUNT }, () => scene.random() >= 0.5)
-        const bin = decisions.filter(Boolean).length
-        const stackIndex = landingSlots[bin]++
-        const mesh = new THREE.Mesh(ballGeometry, index === 0 ? heroMaterial : ballMaterial)
-        mesh.visible = false
-        mesh.renderOrder = index === 0 ? 4 : 3
-        activeBalls.add(mesh)
-        balls.push({
-          mesh,
-          decisions,
-          path: ballPath(decisions, stackIndex),
-          bin,
-          stackIndex,
-          startFrame: index === 0 ? 28 : 105 + (index - 1) * 3,
-          durationFrames: index === 0 ? 180 : 140
-        })
-      }
-      scene.add(activeBalls)
-
-      const heroBall = scene.expose('hero-ball', balls[0].mesh, {
-        description: 'Highlighted first ball demonstrating one sequence of ten random choices',
-        tags: ['hero', 'ball', 'random-path']
-      })
-      Object.assign(heroBall, { text: decisionText(balls[0].decisions) })
-
-      const decisionGuide = scene.expose('decision-guide', new THREE.Group(), {
-        description: 'The two equally likely branches available at the hero ball’s current peg',
-        tags: ['branch', 'probability', 'hero']
-      })
-      const leftBranch = createLine({ color: '#22d3ee' })
-      const rightBranch = createLine({ color: '#c084fc' })
-      decisionGuide.add(leftBranch, rightBranch)
-      scene.add(decisionGuide)
-
-      const sampleLabels = await createTextSwitcher(
-        ['1 ball', '40 balls', '80 balls', '120 balls', '160 balls'],
-        1.15,
-        0xe2e8f0
-      )
-      sampleLabels.group.position.set(-40, -29, 1)
-      scene.add(sampleLabels.group)
-
-      const insight = await createText({ text: 'many independent choices  →  a predictable shape', fontSize: 1.15, color: 0x94a3b8 })
-      insight.position.set(19, -29, 1)
-      scene.add(insight)
-
-      const boardCamera = scene.exposeCamera(
-        'board',
-        new THREE.OrthographicCamera(-47, 47, 26.4375, -26.4375, 1, 100),
-        {
-          description: 'Wide view of the peg field, falling balls, and accumulating bins',
-          tags: ['overview', 'board']
-        }
-      )
-      boardCamera.position.set(0, -11.5, 30)
-      boardCamera.lookAt(0, -11.5, 0)
-
-      const decisionCamera = scene.exposeCamera(
-        'decision',
-        new THREE.OrthographicCamera(-18, 18, 10.125, -10.125, 1, 100),
-        {
-          description: 'Close view of balls making left-or-right decisions among the upper pegs',
-          tags: ['detail', 'decisions', 'pegs']
-        }
-      )
-      decisionCamera.position.set(0, 2, 30)
-      decisionCamera.lookAt(0, 2, 0)
-
-      const distributionCamera = scene.exposeCamera(
-        'distribution',
-        new THREE.OrthographicCamera(-47, 47, 26.4375, -26.4375, 1, 100),
-        {
-          description: 'Close view of the final sampled histogram and expected bell curve',
-          tags: ['detail', 'histogram', 'normal-curve']
-        }
-      )
-      distributionCamera.position.set(0, -20, 30)
-      distributionCamera.lookAt(0, -20, 0)
-
-      const landedCounts = Array.from({ length: BIN_COUNT }, () => 0)
-      let previousLanded = -1
-      let previousPhase = -1
-      scene.onEachTick((frame) => {
-        landedCounts.fill(0)
-        let activeCount = 0
-        let landedCount = 0
-
-        balls.forEach((ball) => {
-          const progress = (frame - ball.startFrame) / ball.durationFrames
-          if (progress < 0) {
-            ball.mesh.visible = false
-            return
-          }
-          ball.mesh.visible = true
-          if (progress >= 1) {
-            ball.mesh.position.copy(ball.path[ball.path.length - 1])
-            landedCounts[ball.bin]++
-            landedCount++
-            return
-          }
-          activeCount++
-          ball.mesh.position.copy(positionOnPath(ball.path, progress))
-        })
-
-        const heroProgress = (frame - balls[0].startFrame) / balls[0].durationFrames
-        updateDecisionGuide(decisionGuide, leftBranch, rightBranch, balls[0].mesh, heroProgress)
-
-        histogramBars.forEach((bar, index) => {
-          const height = Math.max(0.001, landedCounts[index] * COUNT_HEIGHT_STEP)
-          bar.scale.y = height
-          bar.position.y = BIN_BASE_Y + height / 2
-        })
-
-        const curveProgress = smoothstep((frame - 510) / 150)
-        ;(normalCurve.material as THREE.LineBasicMaterial).opacity = curveProgress * 0.95
-        curveLabel.visible = curveProgress > 0.08
-
-        if (landedCount !== previousLanded) {
-          previousLanded = landedCount
-          activeBalls.text = `${activeCount} active, ${landedCount} landed, ${BALL_COUNT} total`
-          bins.text = `${landedCount} balls landed across ${BIN_COUNT} outcome bins`
-          histogram.text = `counts: ${landedCounts.join(',')}`
-          const sampleIndex = Math.min(4, Math.floor(landedCount / 40))
-          sampleLabels.show(sampleIndex)
-        }
-
-        const phase = frame < 105 ? 0 : frame < 650 ? 1 : 2
-        if (phase !== previousPhase) {
-          previousPhase = phase
-          phaseLabels.show(phase)
-        }
-      })
-
-      scene.addAnims(wait((DURATION_MS) / 1000))
+    const frames: BeatFrames = {
+      intro: 0,
+      path: scene.secondsToFrames(3.2),
+      sample: scene.secondsToFrames(6),
+      resolve: scene.secondsToFrames(11),
+      end: scene.secondsToFrames(14)
     }
+    scene.timeline.defineBeats({
+      intro: { start: frames.intro, end: frames.path },
+      path: { start: frames.path, end: frames.sample },
+      sample: { start: frames.sample, end: frames.resolve },
+      resolve: { start: frames.resolve, end: frames.end }
+    })
+
+    const visuals = await createVisuals(scene, frames)
+    scene.add(
+      visuals.header,
+      visuals.choiceCaption,
+      visuals.sampleCaption,
+      visuals.board.root,
+      visuals.summary,
+      visuals.stateProbe
+    )
+
+    visuals.title.visible = false
+    visuals.choiceCaption.visible = false
+    visuals.sampleCaption.visible = false
+    visuals.board.root.visible = false
+    visuals.board.expectedCurve.visible = false
+    visuals.board.expectedLabel.visible = false
+    visuals.summary.visible = false
+
+    const state: GaltonState = {
+      beat: 'intro',
+      beatProgress: 0,
+      activeCount: 0,
+      landedCount: 0,
+      landedCounts: Array.from({ length: BIN_COUNT }, () => 0)
+    }
+
+    scene.timeline.beat('intro', (beat) => {
+      scene.addAnims(
+        fadeIn(visuals.title, { duration: 0.7, easing: 'ease-out' }),
+        latex.write(visuals.formula, { duration: 1.35, easing: 'linear' }),
+        fadeIn(visuals.choiceCaption, { duration: 0.8, easing: 'ease-out' }),
+        fadeIn(visuals.sampleCaption, { duration: 0.8, easing: 'ease-out' }),
+        fadeIn(visuals.board.root, { duration: 1.05, easing: 'ease-out' }),
+        wait((frames.path - frames.intro) / scene.fps)
+      )
+      beat.onEachTick(({ beatProgress }) => setBeatState(state, 'intro', beatProgress))
+    })
+
+    scene.timeline.beat('path', (beat) => {
+      scene.addAnims(wait((frames.sample - frames.path) / scene.fps))
+      beat.onEachTick(({ beatProgress }) => setBeatState(state, 'path', beatProgress))
+    })
+
+    scene.timeline.beat('sample', (beat) => {
+      scene.addAnims(wait((frames.resolve - frames.sample) / scene.fps))
+      beat.onEachTick(({ beatProgress }) => setBeatState(state, 'sample', beatProgress))
+    })
+
+    scene.timeline.beat('resolve', (beat) => {
+      scene.addAnims(
+        fadeIn(visuals.board.expectedCurve, { duration: 0.9, easing: 'ease-out' }),
+        fadeIn(visuals.board.expectedLabel, { duration: 0.7, easing: 'ease-out' }),
+        fadeIn(visuals.summary, { duration: 0.7, easing: 'ease-out' }),
+        fadeOut(visuals.choiceCaption, { duration: 0.45, easing: 'ease-out' }),
+        fadeOut(visuals.sampleCaption, { duration: 0.45, easing: 'ease-out' }),
+        latex.mark(visuals.formula.part('normal'), { color: COLORS.gold }),
+        wait((frames.end - frames.resolve) / scene.fps)
+      )
+      beat.onEachTick(({ beatProgress }) => setBeatState(state, 'resolve', beatProgress))
+    })
+
+    scene.onEachTick((globalFrame) => {
+      updateSimulation(visuals.board, state, globalFrame)
+      visuals.stateProbe.text = JSON.stringify({
+        beat: state.beat,
+        beatProgress: Number(state.beatProgress.toFixed(3)),
+        active: state.activeCount,
+        landed: state.landedCount,
+        counts: state.landedCounts
+      })
+    })
+
+    exposeScene(scene, visuals)
+    addInspectionCameras(scene)
+    registerVerifications(scene, frames, visuals, state)
+  })
+}
+
+const createVisuals = async (scene: AnimatedScene, frames: BeatFrames): Promise<SceneVisuals> => {
+  const title = await createText({
+    text: 'Random choices. Predictable shape.',
+    fontSize: 2.7,
+    color: COLORS.ivory,
+    anchorX: 'center',
+    anchorY: 'top',
+    textAlign: 'center'
+  })
+  title.name = 'GaltonBoardTitle'
+
+  const formula = await createLatex({
+    latex: String.raw`X\sim\operatorname{Binomial}\!\left(10,\frac12\right)\;\dmClass{normal}{\approx\;\mathcal N\!\left(5,2.5\right)}`,
+    fontSize: 1.72,
+    color: COLORS.ivory,
+    opacity: 0.72,
+    anchorX: 'center',
+    anchorY: 'top'
+  })
+  formula.name = 'GaltonBoardFormula'
+
+  const header = layout.flex(
+    {
+      name: 'GaltonBoardHeader',
+      flexDirection: 'column',
+      gap: 0.9,
+      alignItems: 'center',
+      anchorX: 'center',
+      anchorY: 'top'
+    },
+    [title, formula]
+  )
+  header.position.set(0, 28.2, DEPTH.labels)
+
+  const choiceCaption = await createCaption(
+    'AT EACH PEG',
+    String.raw`p(L)=p(R)=\frac12`,
+    COLORS.mint
+  )
+  choiceCaption.position.set(-34.5, 14.5, DEPTH.labels)
+
+  const sampleCaption = await createCaption(
+    'INDEPENDENT DROPS',
+    String.raw`n=160`,
+    COLORS.coral
+  )
+  sampleCaption.position.set(34.5, 14.5, DEPTH.labels)
+
+  const board = await createBoard(scene, frames)
+
+  const summaryText = await createText({
+    text: 'The center has the most paths.',
+    fontSize: 1.28,
+    color: COLORS.ivory,
+    anchorX: 'center',
+    anchorY: 'middle'
+  })
+  const summaryEquation = await createLatex({
+    latex: String.raw`\binom{10}{5}=252`,
+    fontSize: 1.42,
+    color: COLORS.gold,
+    anchorX: 'center',
+    anchorY: 'middle'
+  })
+  const summary = layout.flex(
+    {
+      name: 'GaltonBoardSummary',
+      flexDirection: 'row',
+      gap: 1.5,
+      alignItems: 'center',
+      anchorX: 'center',
+      anchorY: 'middle'
+    },
+    [summaryText, summaryEquation]
+  )
+  summary.position.set(0, 14.2, DEPTH.labels)
+
+  const stateProbe = new THREE.Group() as THREE.Group & { text: string }
+  stateProbe.name = 'GaltonBoardState'
+  stateProbe.text = ''
+
+  return {
+    header,
+    title,
+    formula,
+    choiceCaption,
+    sampleCaption,
+    board,
+    summary,
+    stateProbe
+  }
+}
+
+const createCaption = async (
+  labelText: string,
+  latexText: string,
+  accent: THREE.ColorRepresentation
+): Promise<LayoutVisual> => {
+  const label = await createText({
+    text: labelText,
+    fontSize: 1.02,
+    color: COLORS.muted,
+    anchorX: 'center',
+    anchorY: 'top',
+    textAlign: 'center'
+  })
+  const equation = await createLatex({
+    latex: latexText,
+    fontSize: 1.58,
+    color: accent,
+    anchorX: 'center',
+    anchorY: 'top'
+  })
+  return layout.flex(
+    {
+      name: `${labelText} caption`,
+      flexDirection: 'column',
+      gap: 0.55,
+      alignItems: 'center',
+      anchorX: 'center',
+      anchorY: 'top'
+    },
+    [label, equation]
   )
 }
+
+const createBoard = async (scene: AnimatedScene, frames: BeatFrames): Promise<BoardVisuals> => {
+  const root = new THREE.Group()
+  root.name = 'GaltonBoardDiagram'
+
+  const pegField = new THREE.Group()
+  pegField.name = 'GaltonBoardPegs'
+  for (let row = 0; row < ROW_COUNT; row++) {
+    for (let column = 0; column <= row; column++) {
+      const peg = createCircle(0.21, { color: row === 0 ? COLORS.gold : COLORS.quiet })
+      peg.position.set(pegX(row, column), pegY(row), DEPTH.pegs)
+      pegField.add(peg)
+    }
+  }
+
+  const bins = Object.assign(new THREE.Group(), { text: '0 balls landed' })
+  bins.name = 'GaltonBoardBins'
+  addBinGuides(bins)
+  const binLabels = await Promise.all(
+    Array.from({ length: BIN_COUNT }, (_, index) =>
+      createText({
+        text: `${index}`,
+        fontSize: 0.72,
+        color: COLORS.muted,
+        anchorX: 'center',
+        anchorY: 'top'
+      })
+    )
+  )
+  binLabels.forEach((label, index) => {
+    label.position.set(binX(index), BIN_BASE_Y - 0.8, DEPTH.labels)
+    bins.add(label)
+  })
+
+  const histogram = Object.assign(new THREE.Group(), {
+    text: 'counts: 0,0,0,0,0,0,0,0,0,0,0'
+  })
+  histogram.name = 'GaltonBoardHistogram'
+  const histogramBars = createHistogramBars(histogram)
+
+  const expectedCurve = createCurve({
+    domain: [-0.5, ROW_COUNT + 0.5],
+    sampleCount: 257,
+    pointAt: (outcome) => expectedCurvePoint(outcome),
+    stroke: { color: COLORS.coral, width: 0.13, opacity: 0.95 }
+  })
+  expectedCurve.name = 'GaltonBoardExpectedCurve'
+  expectedCurve.position.z = DEPTH.curve
+
+  const expectedLabel = await createText({
+    text: 'EXPECTED FREQUENCY',
+    fontSize: 0.78,
+    color: COLORS.coral,
+    anchorX: 'center',
+    anchorY: 'bottom'
+  })
+  expectedLabel.name = 'GaltonBoardExpectedLabel'
+  expectedLabel.position.set(25.5, -10.5, DEPTH.labels)
+
+  const activeBalls = Object.assign(new THREE.Group(), {
+    text: `0 active, 0 landed, ${BALL_COUNT} total`
+  })
+  activeBalls.name = 'GaltonBoardBalls'
+
+  const landingSlots = Array.from({ length: BIN_COUNT }, () => 0)
+  const balls: BallSimulation[] = []
+  for (let index = 0; index < BALL_COUNT; index++) {
+    const decisions = Array.from({ length: ROW_COUNT }, () => scene.random() >= 0.5)
+    const bin = decisions.filter(Boolean).length
+    const stackIndex = landingSlots[bin]++
+    const mesh = createCircle(BALL_RADIUS, {
+      color: index === 0 ? COLORS.gold : COLORS.paleMint
+    })
+    mesh.name = index === 0 ? 'GaltonBoardHeroBall' : `GaltonBoardBall${index}`
+    mesh.visible = false
+    mesh.position.z = DEPTH.balls
+    activeBalls.add(mesh)
+    balls.push({
+      mesh,
+      decisions,
+      path: ballPath(decisions, stackIndex),
+      bin,
+      startFrame: index === 0 ? frames.path + 12 : frames.sample + (index - 1) * 2,
+      durationFrames: index === 0 ? 145 : 108
+    })
+  }
+
+  const decisionGuide = new THREE.Group()
+  decisionGuide.name = 'GaltonBoardDecisionGuide'
+  const leftBranch = createLine({ color: COLORS.mint })
+  const rightBranch = createLine({ color: COLORS.coral })
+  decisionGuide.add(leftBranch, rightBranch)
+  decisionGuide.visible = false
+
+  root.add(
+    histogram,
+    bins,
+    pegField,
+    expectedCurve,
+    expectedLabel,
+    decisionGuide,
+    activeBalls
+  )
+
+  return {
+    root,
+    pegField,
+    bins,
+    histogram,
+    histogramBars,
+    expectedCurve,
+    expectedLabel,
+    activeBalls,
+    heroBall: balls[0].mesh,
+    decisionGuide,
+    leftBranch,
+    rightBranch,
+    balls
+  }
+}
+
+const updateSimulation = (
+  board: BoardVisuals,
+  state: GaltonState,
+  globalFrame: number
+): void => {
+  state.landedCounts.fill(0)
+  state.activeCount = 0
+  state.landedCount = 0
+
+  for (const ball of board.balls) {
+    const progress = (globalFrame - ball.startFrame) / ball.durationFrames
+    if (progress < 0) {
+      ball.mesh.visible = false
+      continue
+    }
+    ball.mesh.visible = true
+    if (progress >= 1) {
+      ball.mesh.position.copy(ball.path[ball.path.length - 1])
+      state.landedCounts[ball.bin]++
+      state.landedCount++
+      continue
+    }
+    state.activeCount++
+    ball.mesh.position.copy(positionOnPath(ball.path, progress))
+  }
+
+  const hero = board.balls[0]
+  const heroProgress = (globalFrame - hero.startFrame) / hero.durationFrames
+  updateDecisionGuide(board, heroProgress)
+
+  board.histogramBars.forEach((bar, index) => {
+    const height = Math.max(0.001, state.landedCounts[index] * COUNT_HEIGHT_STEP)
+    bar.scale.y = height
+    bar.position.y = BIN_BASE_Y + height / 2
+  })
+
+  board.activeBalls.text =
+    `${state.activeCount} active, ${state.landedCount} landed, ${BALL_COUNT} total`
+  board.bins.text = `${state.landedCount} balls landed across ${BIN_COUNT} bins`
+  board.histogram.text = `counts: ${state.landedCounts.join(',')}`
+}
+
+const updateDecisionGuide = (board: BoardVisuals, heroProgress: number): void => {
+  if (heroProgress < 0 || heroProgress >= 0.64) {
+    board.decisionGuide.visible = false
+    return
+  }
+  board.decisionGuide.visible = true
+  const spread = PEG_SPACING / 2
+  const start = new THREE.Vector3(
+    board.heroBall.position.x,
+    board.heroBall.position.y,
+    DEPTH.balls - 0.02
+  )
+  board.leftBranch.updatePositions(
+    start,
+    new THREE.Vector3(start.x - spread, start.y - 2, start.z)
+  )
+  board.rightBranch.updatePositions(
+    start,
+    new THREE.Vector3(start.x + spread, start.y - 2, start.z)
+  )
+}
+
+const addBinGuides = (group: THREE.Group): void => {
+  const leftEdge = binX(0) - PEG_SPACING / 2
+  const rightEdge = binX(BIN_COUNT - 1) + PEG_SPACING / 2
+  group.add(
+    createLine({
+      point1: new THREE.Vector3(leftEdge, BIN_BASE_Y, DEPTH.guides),
+      point2: new THREE.Vector3(rightEdge, BIN_BASE_Y, DEPTH.guides),
+      color: COLORS.quiet
+    })
+  )
+  for (let index = 0; index <= BIN_COUNT; index++) {
+    const x = leftEdge + index * PEG_SPACING
+    group.add(
+      createLine({
+        point1: new THREE.Vector3(x, BIN_BASE_Y, DEPTH.guides),
+        point2: new THREE.Vector3(x, BIN_TOP_Y, DEPTH.guides),
+        color: COLORS.quieter
+      })
+    )
+  }
+}
+
+const createHistogramBars = (group: THREE.Group): ReturnType<typeof createRectangle>[] =>
+  Array.from({ length: BIN_COUNT }, (_, index) => {
+    const bar = createRectangle(PEG_SPACING - 0.72, 1, { color: COLORS.mint })
+    bar.name = `GaltonBoardHistogramBar${index}`
+    bar.position.set(binX(index), BIN_BASE_Y, DEPTH.histogram)
+    bar.scale.y = 0.001
+    bar.material.transparent = true
+    bar.material.opacity = 0.16
+    bar.material.depthWrite = false
+    group.add(bar)
+    return bar
+  })
 
 const pegX = (row: number, column: number): number => (column - row / 2) * PEG_SPACING
 
@@ -319,20 +555,22 @@ const pegY = (row: number): number => FIRST_PEG_Y - row * ROW_SPACING
 const binX = (bin: number): number => (bin - ROW_COUNT / 2) * PEG_SPACING
 
 const ballPath = (decisions: boolean[], stackIndex: number): THREE.Vector3[] => {
-  const points = [new THREE.Vector3(0, 12.3, 2)]
+  const points = [new THREE.Vector3(0, 11.8, DEPTH.balls)]
   let rights = 0
-  points.push(new THREE.Vector3(pegX(0, 0), pegY(0) + 0.55, 2))
+  points.push(new THREE.Vector3(pegX(0, 0), pegY(0) + 0.48, DEPTH.balls))
   decisions.forEach((right, row) => {
     if (right) rights++
     if (row < ROW_COUNT - 1) {
-      points.push(new THREE.Vector3(pegX(row + 1, rights), pegY(row + 1) + 0.55, 2))
+      points.push(
+        new THREE.Vector3(pegX(row + 1, rights), pegY(row + 1) + 0.48, DEPTH.balls)
+      )
     }
   })
   points.push(
     new THREE.Vector3(
-      binX(rights) + (stackIndex % 2 === 0 ? -0.62 : 0.62),
+      binX(rights) + (stackIndex % 2 === 0 ? -0.53 : 0.53),
       BIN_BASE_Y + BALL_RADIUS + Math.floor(stackIndex / 2) * BALL_STACK_STEP,
-      2
+      DEPTH.balls
     )
   )
   return points
@@ -341,143 +579,225 @@ const ballPath = (decisions: boolean[], stackIndex: number): THREE.Vector3[] => 
 const positionOnPath = (path: THREE.Vector3[], progress: number): THREE.Vector3 => {
   const scaled = THREE.MathUtils.clamp(progress, 0, 0.999999) * (path.length - 1)
   const segment = Math.floor(scaled)
-  const local = scaled - segment
-  const eased = smoothstep(local)
+  const localProgress = scaled - segment
+  const eased = smoothstep(localProgress)
   const position = path[segment].clone().lerp(path[segment + 1], eased)
-  if (segment > 0 && segment < path.length - 2) position.y += Math.sin(local * Math.PI) * 0.28
+  if (segment > 0 && segment < path.length - 2) {
+    position.y += Math.sin(localProgress * Math.PI) * 0.24
+  }
   return position
 }
 
-const updateDecisionGuide = (
-  group: THREE.Group,
-  left: ReturnType<typeof createLine>,
-  right: ReturnType<typeof createLine>,
-  hero: THREE.Mesh,
-  heroProgress: number
-): void => {
-  if (heroProgress < 0 || heroProgress >= 0.48) {
-    group.visible = false
-    return
-  }
-  group.visible = true
-  const spread = PEG_SPACING / 2
-  left.updatePositions(
-    new THREE.Vector3(hero.position.x, hero.position.y, 1),
-    new THREE.Vector3(hero.position.x - spread, hero.position.y - 2.2, 1)
-  )
-  right.updatePositions(
-    new THREE.Vector3(hero.position.x, hero.position.y, 1),
-    new THREE.Vector3(hero.position.x + spread, hero.position.y - 2.2, 1)
+const expectedCurvePoint = (outcome: number): THREE.Vector3 => {
+  const variance = ROW_COUNT / 4
+  const expectedCount =
+    BALL_COUNT *
+    (1 / Math.sqrt(2 * Math.PI * variance)) *
+    Math.exp(-((outcome - ROW_COUNT / 2) ** 2) / (2 * variance))
+  return new THREE.Vector3(
+    (outcome - ROW_COUNT / 2) * PEG_SPACING,
+    BIN_BASE_Y + expectedCount * COUNT_HEIGHT_STEP,
+    0
   )
 }
-
-const addBins = (group: THREE.Group): void => {
-  const top = -9.25
-  const leftEdge = binX(0) - PEG_SPACING / 2
-  const rightEdge = binX(BIN_COUNT - 1) + PEG_SPACING / 2
-  group.add(
-    createLine({
-      point1: new THREE.Vector3(leftEdge, BIN_BASE_Y, 0),
-      point2: new THREE.Vector3(rightEdge, BIN_BASE_Y, 0),
-      color: '#475569'
-    })
-  )
-  for (let index = 0; index <= BIN_COUNT; index++) {
-    const x = leftEdge + index * PEG_SPACING
-    group.add(
-      createLine({
-        point1: new THREE.Vector3(x, BIN_BASE_Y, 0),
-        point2: new THREE.Vector3(x, top, 0),
-        color: '#1e293b'
-      })
-    )
-  }
-}
-
-const createHistogramBars = (group: THREE.Group): THREE.Mesh[] => {
-  const geometry = new THREE.PlaneGeometry(PEG_SPACING - 1.1, 1)
-  const material = new THREE.MeshBasicMaterial({
-    color: '#8b5cf6',
-    transparent: true,
-    opacity: 0.18,
-    depthTest: false,
-    depthWrite: false
-  })
-  return Array.from({ length: BIN_COUNT }, (_, index) => {
-    const bar = new THREE.Mesh(geometry, material)
-    bar.position.set(binX(index), BIN_BASE_Y, -1)
-    bar.scale.y = 0.001
-    group.add(bar)
-    return bar
-  })
-}
-
-const expectedCurvePoints = (): THREE.Vector3[] =>
-  Array.from({ length: 241 }, (_, index) => {
-    const outcome = THREE.MathUtils.lerp(-0.5, ROW_COUNT + 0.5, index / 240)
-    const expectedCount =
-      BALL_COUNT *
-      (1 / Math.sqrt(2 * Math.PI * (ROW_COUNT / 4))) *
-      Math.exp(-((outcome - ROW_COUNT / 2) ** 2) / (2 * (ROW_COUNT / 4)))
-    return new THREE.Vector3(
-      (outcome - ROW_COUNT / 2) * PEG_SPACING,
-      BIN_BASE_Y + expectedCount * COUNT_HEIGHT_STEP,
-      3
-    )
-  })
-
-const createDynamicLine = (
-  pointCount: number,
-  color: THREE.ColorRepresentation,
-  opacity: number
-): DynamicLine => {
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pointCount * 3), 3))
-  const material = new THREE.LineBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    depthTest: false,
-    depthWrite: false
-  })
-  const line = new THREE.Line(geometry, material) as DynamicLine
-  line.frustumCulled = false
-  line.updatePoints = (points): void => {
-    const positions = geometry.getAttribute('position') as THREE.BufferAttribute
-    points.forEach((point, index) => positions.setXYZ(index, point.x, point.y, point.z))
-    positions.needsUpdate = true
-    geometry.computeBoundingBox()
-    geometry.computeBoundingSphere()
-  }
-  return line
-}
-
-const createTextSwitcher = async (
-  values: string[],
-  size: number,
-  color: number
-): Promise<TextSwitcher> => {
-  const group = Object.assign(new THREE.Group(), { text: values[0] })
-  const labels = await Promise.all(values.map((value) => createText({ text: value, fontSize: size, color: color })))
-  labels.forEach((label, index) => {
-    label.visible = index === 0
-    group.add(label)
-  })
-  return {
-    group,
-    show: (index): void => {
-      group.text = values[index]
-      labels.forEach((label, labelIndex) => {
-        label.visible = labelIndex === index
-      })
-    }
-  }
-}
-
-const decisionText = (decisions: boolean[]): string =>
-  decisions.map((right) => (right ? 'R' : 'L')).join(' → ')
 
 const smoothstep = (value: number): number => {
   const clamped = THREE.MathUtils.clamp(value, 0, 1)
   return clamped * clamped * (3 - 2 * clamped)
 }
+
+const setBeatState = (state: GaltonState, beat: string, beatProgress: number): void => {
+  state.beat = beat
+  state.beatProgress = beatProgress
+}
+
+const exposeScene = (scene: AnimatedScene, visuals: SceneVisuals): void => {
+  scene.expose('galton-board-header-layout', visuals.header)
+  scene.expose('distribution-formula', visuals.formula, {
+    description: 'The binomial distribution and its normal approximation',
+    tags: ['latex', 'probability', 'normal-distribution'],
+    data: { rows: ROW_COUNT, probability: 0.5 }
+  })
+  scene.expose('peg-field', visuals.board.pegField, {
+    description: 'Ten rows of equally likely left-or-right decisions',
+    tags: ['galton-board', 'pegs', 'probability']
+  })
+  scene.expose('outcome-bins', visuals.board.bins, {
+    description: 'Eleven outcomes representing zero through ten right turns',
+    tags: ['bins', 'outcomes']
+  })
+  scene.expose('sample-histogram', visuals.board.histogram, {
+    description: 'The accumulated deterministic sample',
+    tags: ['histogram', 'sample', 'dynamic']
+  })
+  scene.expose('expected-normal-curve', visuals.board.expectedCurve, {
+    description: 'The expected normal approximation over the sampled bins',
+    tags: ['curve', 'expected-distribution']
+  })
+  scene.expose('simulated-balls', visuals.board.activeBalls, {
+    description: 'Seeded balls following reproducible paths through the pegs',
+    tags: ['balls', 'simulation', 'deterministic'],
+    data: { total: BALL_COUNT }
+  })
+  scene.expose('hero-ball', visuals.board.heroBall, {
+    description: 'The first highlighted path through all ten decisions',
+    tags: ['hero', 'ball', 'random-path']
+  })
+  scene.expose('galton-board-summary-layout', visuals.summary)
+  scene.expose('galton-board-state', visuals.stateProbe)
+  scene.watchCollisions('galton-board-header', visuals.header, {})
+  scene.watchCollisions('galton-board-summary', visuals.summary, {})
+}
+
+const addInspectionCameras = (scene: AnimatedScene): void => {
+  const decisions = scene.exposeCamera(
+    'decisions',
+    new THREE.OrthographicCamera(-20, 20, 11.25, -11.25, 1, 100),
+    { description: 'Close view of the upper peg rows and branch choices' }
+  )
+  decisions.position.set(0, 2.5, 30)
+  decisions.lookAt(0, 2.5, 0)
+
+  const distribution = scene.exposeCamera(
+    'distribution',
+    new THREE.OrthographicCamera(-43, 43, 15, -15, 1, 100),
+    { description: 'Close view of the final sample and expected curve' }
+  )
+  distribution.position.set(0, -18, 30)
+  distribution.lookAt(0, -18, 0)
+}
+
+const registerVerifications = (
+  scene: AnimatedScene,
+  frames: BeatFrames,
+  visuals: SceneVisuals,
+  state: GaltonState
+): void => {
+  scene.verify(
+    'galton-board-duration-and-beats',
+    { frames: { start: frames.end - 1, end: frames.end } },
+    (context) => {
+      context.assert(
+        scene.totalSceneTicks === frames.end && context.beat?.name === 'resolve',
+        'The scene must end after fourteen seconds inside the resolve beat',
+        {
+          expectedFrames: frames.end,
+          actualFrames: scene.totalSceneTicks,
+          beat: context.beat?.name ?? null
+        }
+      )
+    }
+  )
+
+  scene.verify(
+    'galton-board-primitive-contract',
+    { frames: { start: frames.intro, end: frames.end } },
+    (context) => {
+      const layouts = [
+        visuals.header,
+        visuals.choiceCaption,
+        visuals.sampleCaption,
+        visuals.summary
+      ]
+      const primitivesAreCanonical =
+        layouts.every((item) => item.userData.definedMotionVisual === 'layout') &&
+        visuals.board.expectedCurve.userData.definedMotionVisual === 'curve' &&
+        visuals.board.histogramBars.every(
+          (item) => item.userData.definedMotionVisual === 'rectangle'
+        )
+      context.assert(
+        primitivesAreCanonical,
+        'Typography, the expected curve, and histogram bars must use DefinedMotion primitives',
+        { frame: context.globalFrame, primitivesAreCanonical }
+      )
+    }
+  )
+
+  scene.verify(
+    'galton-board-formula-semantic-handle',
+    { frames: { start: frames.intro, end: frames.end } },
+    (context) => {
+      context.assert(
+        queryLaTeXClass(visuals.formula, 'normal') !== null,
+        'The normal approximation must remain semantically selectable',
+        { frame: context.globalFrame, latex: visuals.formula.latex }
+      )
+    }
+  )
+
+  scene.verify(
+    'galton-board-regions-readable',
+    { frames: { start: frames.intro, end: frames.end } },
+    (context) => {
+      const header = context.screenBounds(visuals.header)
+      const pegs = context.screenBounds(visuals.board.pegField)
+      const bins = context.screenBounds(visuals.board.bins)
+      const summary = context.isVisibleInHierarchy(visuals.summary)
+        ? context.screenBounds(visuals.summary)
+        : null
+      const bounds = [header, pegs, bins, summary].filter(
+        (value): value is ScreenBounds => value !== null
+      )
+      const inViewport = bounds.every((value) =>
+        insideViewport(value, context.viewport.width, context.viewport.height, 18)
+      )
+      const verticallySeparated = header !== null && pegs !== null && header.bottom + 16 <= pegs.top
+      context.assert(
+        inViewport && verticallySeparated,
+        'The header, board, bins, and final summary must remain readable',
+        { frame: context.globalFrame, header, pegs, bins, summary }
+      )
+    }
+  )
+
+  scene.verify(
+    'galton-board-final-sample',
+    { frames: { start: frames.end - 1, end: frames.end } },
+    (context) => {
+      const countSum = state.landedCounts.reduce((sum, count) => sum + count, 0)
+      const centralCount = state.landedCounts[ROW_COUNT / 2]
+      const edgeCount = state.landedCounts[0] + state.landedCounts[ROW_COUNT]
+      context.assert(
+        state.activeCount === 0 && state.landedCount === BALL_COUNT && countSum === BALL_COUNT,
+        'Every seeded ball must land before the final frame',
+        {
+          frame: context.globalFrame,
+          active: state.activeCount,
+          landed: state.landedCount,
+          countSum,
+          centralCount,
+          edgeCount
+        }
+      )
+    }
+  )
+
+  scene.verify(
+    'galton-board-bar-heights-match-counts',
+    { frames: { start: frames.sample, end: frames.end } },
+    (context) => {
+      const matches = visuals.board.histogramBars.every((bar, index) => {
+        const expectedHeight = Math.max(0.001, state.landedCounts[index] * COUNT_HEIGHT_STEP)
+        return (
+          Math.abs(bar.scale.y - expectedHeight) < 1e-6 &&
+          Math.abs(bar.position.y - (BIN_BASE_Y + expectedHeight / 2)) < 1e-6
+        )
+      })
+      context.assert(matches, 'Every histogram bar must represent its landed count exactly', {
+        frame: context.globalFrame,
+        counts: state.landedCounts.join(',')
+      })
+    }
+  )
+}
+
+const insideViewport = (
+  bounds: ScreenBounds,
+  width: number,
+  height: number,
+  margin: number
+): boolean =>
+  bounds.left >= margin &&
+  bounds.top >= margin &&
+  bounds.right <= width - margin &&
+  bounds.bottom <= height - margin
