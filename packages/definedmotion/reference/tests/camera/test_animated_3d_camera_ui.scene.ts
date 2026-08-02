@@ -32,15 +32,13 @@ export function testAnimated3dCameraUi(): AnimatedScene {
     cameraUi.root.position.set(-8.4, 3.4, -18)
     const statusChip = await createStatusChip()
     statusChip.root.position.set(9.8, 6.25, -18)
-    makeCameraOverlay(cameraUi.root)
-    makeCameraOverlay(statusChip.root)
 
     const callout = await createWorldCallout()
     callout.root.position.copy(SUBJECT_POSITION)
 
     scene.add(stage, ...lights, subject.root)
-    scene.camera.add(cameraUi.root, statusChip.root)
-    scene.add(scene.camera)
+    scene.addCameraAttachedUI(cameraUi.root)
+    scene.addCameraAttachedUI(statusChip.root)
 
     scene.camera.position.copy(START_POSITION)
     scene.camera.quaternion.copy(START_ROTATION)
@@ -113,7 +111,6 @@ export function testAnimated3dCameraUi(): AnimatedScene {
     scene.timeline.beat('focus', (beat) => {
       scene.do(() => {
         cameraUi.content.append(cameraUi.focusNote)
-        makeCameraOverlay(cameraUi.focusNote)
       })
       scene.addAnims(
         camera.moveToPose(
@@ -403,24 +400,6 @@ const createWorldCallout = async () => {
   pill.add(panel, label)
   root.add(leader, pill)
   return { root, pill }
-}
-
-const makeCameraOverlay = (root: THREE.Object3D): void => {
-  root.traverse((object) => {
-    object.renderOrder = 100
-    const candidate = object as THREE.Object3D & {
-      material?: THREE.Material | THREE.Material[]
-    }
-    const materials = Array.isArray(candidate.material)
-      ? candidate.material
-      : candidate.material
-        ? [candidate.material]
-        : []
-    for (const material of materials) {
-      material.depthTest = false
-      material.depthWrite = false
-    }
-  })
 }
 
 const setMeterProgress = (cameraUi: CameraUiVisuals, progress: number): void => {

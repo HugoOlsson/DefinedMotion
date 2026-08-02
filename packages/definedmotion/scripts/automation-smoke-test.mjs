@@ -46,8 +46,8 @@ function sha256(path) {
 
 try {
   const scenes = run(['scenes'])
-  if (scenes.scenes.length !== 62) {
-    throw new Error(`Expected 62 packaged and project scenes, received ${scenes.scenes.length}`)
+  if (scenes.scenes.length !== 67) {
+    throw new Error(`Expected 67 packaged and project scenes, received ${scenes.scenes.length}`)
   }
   if (scenes.scenes.filter((scene) => scene.isDefault).length !== 1) {
     throw new Error('Scene discovery did not identify exactly one configured default')
@@ -610,6 +610,58 @@ try {
     JSON.stringify(cameraOverlayResult.frames) !== JSON.stringify([0, 1])
   ) {
     throw new Error('Camera-attached overlay rebuild regression did not render both seeks')
+  }
+
+  const cameraUiAudienceOutput = join(temporaryDirectory, 'camera-ui-audience.png')
+  const cameraUiInspectionOutput = join(temporaryDirectory, 'camera-ui-inspection.png')
+  const cameraUiInspection = run([
+    'inspect',
+    'test-camera-attached-overlay-rebuild',
+    '--frame',
+    '0',
+    '--no-build'
+  ])
+  run([
+    'still',
+    'test-camera-attached-overlay-rebuild',
+    '--frame',
+    '0',
+    '--output',
+    cameraUiAudienceOutput,
+    '--no-build'
+  ])
+  run([
+    'still',
+    'test-camera-attached-overlay-rebuild',
+    '--frame',
+    '0',
+    '--camera',
+    'world-only',
+    '--output',
+    cameraUiInspectionOutput,
+    '--no-build'
+  ])
+  const audiencePixel = Array.from(
+    await sharp(cameraUiAudienceOutput)
+      .extract({ left: 160, top: 90, width: 1, height: 1 })
+      .raw()
+      .toBuffer()
+  )
+  const inspectionPixel = Array.from(
+    await sharp(cameraUiInspectionOutput)
+      .extract({ left: 160, top: 90, width: 1, height: 1 })
+      .raw()
+      .toBuffer()
+  )
+  if (
+    cameraUiInspection.objects.find((object) => object.id === 'camera-ui-rebuild-overlay')
+      ?.attached !== true ||
+    !(audiencePixel[1] > 180 && audiencePixel[2] > 180 && audiencePixel[0] < 80) ||
+    !(inspectionPixel[0] > 180 && inspectionPixel[1] < 120 && inspectionPixel[2] < 160)
+  ) {
+    throw new Error(
+      'Camera-attached UI was not inspectable, above world geometry, or excluded from inspection cameras'
+    )
   }
 
   const inspection = run(['inspect', 'test-scene-inspection', '--frame', '30', '--no-build'])

@@ -151,13 +151,10 @@ export function testFourierSeriesMachine(): AnimatedScene {
 
     cameraUi.root.position.set(-12.05, -1.85, -18)
     cameraUi.statusChip.position.set(9.5, -6.05, -18)
-    makeCameraAttachedUi(cameraUi.root)
-    makeCameraAttachedUi(cameraUi.statusChip)
-
     scene.add(studio.root, machine.root, labels.titlePlaque, labels.formulaPlaque)
     scene.add(labels.drivePlaque, labels.outputLabel)
-    scene.camera.add(cameraUi.root, cameraUi.statusChip)
-    scene.add(scene.camera)
+    scene.addCameraAttachedUI(cameraUi.root)
+    scene.addCameraAttachedUI(cameraUi.statusChip)
 
     scene.camera.position.copy(CAMERA_POSES.opening.position)
     scene.camera.quaternion.copy(CAMERA_POSES.opening.rotation)
@@ -246,7 +243,6 @@ export function testFourierSeriesMachine(): AnimatedScene {
       scene.do(() => {
         labels.formulaPlaque.visible = true
         cameraUi.root.append(cameraUi.fundamentalNote)
-        makeCameraAttachedUi(cameraUi.fundamentalNote)
       })
       scene.addAnims(
         camera.moveToPose(scene.camera, CAMERA_POSES.fundamental, {
@@ -339,7 +335,6 @@ export function testFourierSeriesMachine(): AnimatedScene {
     scene.timeline.beat('convergence', (beat) => {
       scene.do(() => {
         cameraUi.root.append(cameraUi.convergenceNote)
-        makeCameraAttachedUi(cameraUi.convergenceNote)
       })
       scene.addAnims(
         camera.moveToPose(scene.camera, CAMERA_POSES.convergence, {
@@ -1155,18 +1150,6 @@ const setMeterProgress = (cameraUi: CameraUi, progress: number): void => {
   const clamped = THREE.MathUtils.clamp(progress, 0, 1)
   cameraUi.meterFill.scale.x = clamped
   cameraUi.meterFill.position.x = -1.75 + (3.5 * clamped) / 2
-}
-
-const makeCameraAttachedUi = (root: THREE.Object3D): void => {
-  root.traverse((object) => {
-    object.renderOrder = 100
-    const material = (object as THREE.Object3D & { material?: THREE.Material | THREE.Material[] })
-      .material
-    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
-      current.depthTest = false
-      current.depthWrite = false
-    }
-  })
 }
 
 const exposeScene = (

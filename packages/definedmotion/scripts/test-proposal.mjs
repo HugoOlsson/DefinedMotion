@@ -15,6 +15,7 @@ const scripts = {
   'text-and-latex': 'test:visual-primitives',
   'primitive-layout': 'test:layout',
   'layout-owned-backgrounds': 'test:layout',
+  'camera-attached-ui': 'test:camera-ui',
   'scene-verifications': 'test:verification',
   'viewer-preview': 'test:viewer-preview',
   'viewer-scene-selection': 'test:viewer-selection',

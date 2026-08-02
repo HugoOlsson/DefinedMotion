@@ -114,23 +114,15 @@ export function testSphericalTriangleExplainer(): AnimatedScene {
     typography.formula.position.set(0, -5.5, -18)
     typography.sphereTitle.visible = false
     typography.finalTitle.visible = false
-    makeCameraAttached(typography.flatTitle)
-    makeCameraAttached(typography.sphereTitle)
-    makeCameraAttached(typography.finalTitle)
-    makeCameraAttached(typography.formula)
-
     const stateProbe = new THREE.Group() as THREE.Group & { text: string }
     stateProbe.name = 'SphericalTriangleState'
     stateProbe.text = ''
 
     scene.add(flat.root, sphere.root, ...createLights(), stateProbe)
-    scene.camera.add(
-      typography.flatTitle,
-      typography.sphereTitle,
-      typography.finalTitle,
-      typography.formula
-    )
-    scene.add(scene.camera)
+    scene.addCameraAttachedUI(typography.flatTitle)
+    scene.addCameraAttachedUI(typography.sphereTitle)
+    scene.addCameraAttachedUI(typography.finalTitle)
+    scene.addCameraAttachedUI(typography.formula)
 
     scene.camera.position.copy(FLAT_CAMERA_POSITION)
     scene.camera.quaternion.copy(cameraRotation(FLAT_CAMERA_POSITION, FLAT_POSITION))
@@ -291,9 +283,6 @@ export function testSphericalTriangleExplainer(): AnimatedScene {
 
     scene.onEachTick(() => {
       for (const label of sphere.angleLabels) setBillboard(label, scene.camera)
-      // Morph destinations are attached after their plans bind. Re-assert camera-overlay
-      // material state so prepared LaTeX content cannot enter the world depth buffer.
-      makeCameraAttached(typography.formula)
       stateProbe.text = JSON.stringify({
         beat: state.beat,
         beatProgress: Number(state.beatProgress.toFixed(3)),
@@ -755,18 +744,6 @@ const lineFromPoints = (
     new THREE.BufferGeometry().setFromPoints(points.map((point) => point.clone())),
     material
   )
-
-const makeCameraAttached = (root: THREE.Object3D): void => {
-  root.traverse((object) => {
-    object.renderOrder = 100
-    const material = (object as THREE.Object3D & { material?: THREE.Material | THREE.Material[] })
-      .material
-    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
-      current.depthTest = false
-      current.depthWrite = false
-    }
-  })
-}
 
 const setBillboard = (object: THREE.Object3D, cameraObject: THREE.Camera): void => {
   const cameraWorld = cameraObject.getWorldQuaternion(new THREE.Quaternion())

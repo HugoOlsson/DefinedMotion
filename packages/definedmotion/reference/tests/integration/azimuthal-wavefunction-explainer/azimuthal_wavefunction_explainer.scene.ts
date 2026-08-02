@@ -122,8 +122,7 @@ export function testAzimuthalWavefunctionExplainer(): AnimatedScene {
       finalModes.root,
       stateProbe
     )
-    scene.camera.add(...typography.roots)
-    scene.add(scene.camera)
+    for (const root of typography.roots) scene.addCameraAttachedUI(root)
 
     scene.camera.position.set(7, 3.5, 19)
     scene.camera.quaternion.copy(cameraRotation(scene.camera.position, new THREE.Vector3()))
@@ -335,7 +334,6 @@ const createTypography = async (): Promise<TypographyVisuals> => {
     )
     root.name = `AzimuthalTypography${index}`
     root.position.set(0, 0, CAMERA_DEPTH)
-    makeCameraAttached(root)
     roots.push(root)
     titles.push(title)
     formulas.push(formula)
@@ -876,18 +874,6 @@ const mulberry32 = (seed: number): (() => number) => {
     result ^= result + Math.imul(result ^ (result >>> 7), result | 61)
     return ((result ^ (result >>> 14)) >>> 0) / 4294967296
   }
-}
-
-const makeCameraAttached = (root: THREE.Object3D): void => {
-  root.traverse((object) => {
-    object.renderOrder = 100
-    const material = (object as THREE.Object3D & { material?: THREE.Material | THREE.Material[] })
-      .material
-    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
-      current.depthTest = false
-      current.depthWrite = false
-    }
-  })
 }
 
 const setBillboard = (object: THREE.Object3D, cameraObject: THREE.Camera): void => {

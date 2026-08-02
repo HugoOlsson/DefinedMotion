@@ -62,7 +62,7 @@ const inspectObject = (
   const { object } = exposed
   object.updateWorldMatrix(true, true)
 
-  const attached = isAttachedToScene(object, scene.scene)
+  const attached = scene.isObjectAttached(object)
   const visible = attached && isVisibleInHierarchy(object)
   const measuredWorldBounds = measureWorldBounds(object)
   const worldBounds = inspectWorldBounds(measuredWorldBounds)
@@ -192,15 +192,6 @@ const inspectWorldBounds = (box: THREE.Box3): InspectBounds3D | null => {
     size: vector3(size),
     center: vector3(center)
   }
-}
-
-const isAttachedToScene = (object: THREE.Object3D, root: THREE.Scene): boolean => {
-  let current: THREE.Object3D | null = object
-  while (current) {
-    if (current === root) return true
-    current = current.parent
-  }
-  return false
 }
 
 const findExposedParentId = (

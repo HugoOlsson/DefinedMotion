@@ -72,6 +72,7 @@ import {
 } from './scenePreview'
 import { notifyFramePresented } from './framePresentation'
 import { validateVideoDimensions } from '../rendering/videoDimensions'
+import { CameraAttachedUiLayer } from './cameraAttachedUi'
 
 export const screenFPS = await (window.api as any).getDisplayHz();   //Your screen fps
 
@@ -166,6 +167,7 @@ export class AnimatedScene {
   private cameraRegistry = new SceneCameraRegistry()
   private collisionRegistry = new SceneCollisionRegistry()
   private verificationRegistry = new SceneVerificationRegistry()
+  private readonly cameraAttachedUiLayer: CameraAttachedUiLayer
   private previewMarkerFrame?: number
   private useViewerPreviewMarker = true
   private readonly frameResources = new FrameResourceHost()
@@ -255,6 +257,7 @@ export class AnimatedScene {
     this.camera = camera
     this.renderer = renderer
     this.controls = controls
+    this.cameraAttachedUiLayer = new CameraAttachedUiLayer(camera)
     this.timeline = new SceneTimeline(
       this.animationTimeline,
       timelineFPS,
@@ -306,11 +309,39 @@ export class AnimatedScene {
     this.clearExposedCameras()
     this.clearCollisionWatches()
     this.clearVerifications()
+    this.cameraAttachedUiLayer.clear()
     this.frameResources.dispose()
   }
 
   add = (...elements: THREE.Mesh[] | THREE.Group[] | THREE.Object3D[]) => {
     elements.forEach((e) => this.scene.add(e))
+  }
+
+  /** Adds audience-only UI using camera-local coordinates and a dedicated render pass. */
+  addCameraAttachedUI<T extends THREE.Object3D>(root: T): T {
+    if (!this.isBuilding) {
+      throw new SceneRuntimeError(
+        'CAMERA_ATTACHED_UI_OUTSIDE_BUILD',
+        'scene.addCameraAttachedUI() must be called while the scene build function is running'
+      )
+    }
+    if (Object.is(root, this.scene) || Object.is(root, this.camera)) {
+      throw new SceneRuntimeError(
+        'INVALID_CAMERA_ATTACHED_UI_ROOT',
+        'scene.addCameraAttachedUI() requires a UI Object3D, not the scene or audience camera'
+      )
+    }
+    return this.cameraAttachedUiLayer.add(root)
+  }
+
+  /** @internal Used by automation to include the audience UI render tree in attachment checks. */
+  isObjectAttached(object: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = object
+    while (current) {
+      if (current === this.scene) return true
+      current = current.parent
+    }
+    return this.cameraAttachedUiLayer.contains(object)
   }
 
   /** Registers one-way positioning relationships using world-axis-aligned bounds. */
@@ -850,7 +881,7 @@ export class AnimatedScene {
 
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(width, height)
-    this.renderer.render(this.scene, this.camera)
+    this.renderCurrentFrame()
   }
 
   // Initial sizing
@@ -1124,6 +1155,7 @@ export class AnimatedScene {
     camera.updateProjectionMatrix()
     camera.updateWorldMatrix(true, false)
     this.renderer.render(this.scene, camera)
+    if (camera === this.camera) this.cameraAttachedUiLayer.render(this.renderer)
     notifyFramePresented(this, this.sceneRenderTick)
   }
 
@@ -1204,6 +1236,8 @@ export class AnimatedScene {
       }
 
       resolveSceneLayouts(this.scene)
+      resolveSceneLayouts(this.cameraAttachedUiLayer.root)
+      this.cameraAttachedUiLayer.syncCamera()
       this.positioningSystem.solve(this.scene)
     })
   }
@@ -1224,6 +1258,8 @@ export class AnimatedScene {
     audioStopAll()
     resetSceneLayouts(this.scene)
     resetSceneLayouts(this.camera)
+    resetSceneLayouts(this.cameraAttachedUiLayer.root)
+    this.cameraAttachedUiLayer.clear()
     this.resetSceneVars()
     this.resetScene()
     this.resetCamera()
