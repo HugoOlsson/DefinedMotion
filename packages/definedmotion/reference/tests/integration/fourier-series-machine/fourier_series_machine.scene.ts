@@ -829,6 +829,7 @@ const createWorldLabels = async (): Promise<WorldLabels> => {
   })
   const titlePlaque = layout.flex(
     {
+      name: 'FourierMachineTitlePlaque',
       flexDirection: 'column',
       width: 12.2,
       height: 2.5,
@@ -843,7 +844,6 @@ const createWorldLabels = async (): Promise<WorldLabels> => {
     },
     [title, subtitle]
   )
-  titlePlaque.name = 'FourierMachineTitlePlaque'
 
   const formula = await createLatex({
     latex: String.raw`f(t)=\dmClass{amplitude}{a_1}\sin(\dmClass{frequency}{\omega t})`,
@@ -852,6 +852,7 @@ const createWorldLabels = async (): Promise<WorldLabels> => {
   })
   const formulaPlaque = layout.flex(
     {
+      name: 'FourierFormulaPlaque',
       flexDirection: 'column',
       width: 15.6,
       height: 3.3,
@@ -865,7 +866,6 @@ const createWorldLabels = async (): Promise<WorldLabels> => {
     },
     [formula]
   )
-  formulaPlaque.name = 'FourierFormulaPlaque'
 
   const driveLabel = await createText({
     text: 'ODD HARMONIC DRIVE  ·  1  3  5  7  9',
@@ -876,6 +876,7 @@ const createWorldLabels = async (): Promise<WorldLabels> => {
   })
   const drivePlaque = layout.flex(
     {
+      name: 'HarmonicDrivePlaque',
       flexDirection: 'row',
       gap: 0,
       padding: 0.34,
@@ -887,7 +888,6 @@ const createWorldLabels = async (): Promise<WorldLabels> => {
     },
     [driveLabel]
   )
-  drivePlaque.name = 'HarmonicDrivePlaque'
 
   const outputLabel = await createText({
     text: 'COMPOSITE OUTPUT',
@@ -957,6 +957,7 @@ const createCameraUi = async (): Promise<CameraUi> => {
 
   const root = layout.flex(
     {
+      name: 'FourierCameraAttachedPanel',
       flexDirection: 'column',
       width: 4.3,
       gap: 0.28,
@@ -969,7 +970,6 @@ const createCameraUi = async (): Promise<CameraUi> => {
     },
     [eyebrow, title, description, meterTrack]
   )
-  root.name = 'FourierCameraAttachedPanel'
 
   const statusDot = createCircle(0.075, { color: COLORS.green })
   const statusLabel = await createText({
@@ -981,6 +981,7 @@ const createCameraUi = async (): Promise<CameraUi> => {
   })
   const statusChip = layout.flex(
     {
+      name: 'FourierCameraStatusChip',
       flexDirection: 'row',
       gap: 0.2,
       padding: 0.28,
@@ -992,7 +993,6 @@ const createCameraUi = async (): Promise<CameraUi> => {
     },
     [statusDot, statusLabel]
   )
-  statusChip.name = 'FourierCameraStatusChip'
   return {
     root,
     title,
@@ -1018,9 +1018,7 @@ const updateMachine = (machine: FourierMachine, globalFrame: number, fps: number
     const reveal = THREE.MathUtils.clamp(machine.state.termReveal - index, 0, 1)
     const angle = phase * assembly.harmonic
     const depth =
-      index === 0
-        ? MACHINE_CENTER.z
-        : MACHINE_CENTER.z + ROTOR_DEPTH_STEP * (index - 1 + reveal)
+      index === 0 ? MACHINE_CENTER.z : MACHINE_CENTER.z + ROTOR_DEPTH_STEP * (index - 1 + reveal)
     const center = new THREE.Vector3(planarCenter.x, planarCenter.y, depth)
     assembly.root.position.copy(center)
     assembly.root.scale.setScalar(reveal)
@@ -1030,7 +1028,11 @@ const updateMachine = (machine: FourierMachine, globalFrame: number, fps: number
     centers.push(center.clone())
     planarCenter = planarCenter
       .clone()
-      .add(new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(assembly.radius * reveal))
+      .add(
+        new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(
+          assembly.radius * reveal
+        )
+      )
     const tip = new THREE.Vector3(planarCenter.x, planarCenter.y, depth)
     tips.push(tip)
     if (reveal > 0.001) activeTip = tip
@@ -1047,11 +1049,7 @@ const updateMachine = (machine: FourierMachine, globalFrame: number, fps: number
   })
 
   const finalTip = new THREE.Vector3(planarCenter.x, planarCenter.y, activeTip.z)
-  setBeamBetween(
-    machine.connector,
-    finalTip,
-    new THREE.Vector3(WAVE_START_X, finalTip.y, 0.72)
-  )
+  setBeamBetween(machine.connector, finalTip, new THREE.Vector3(WAVE_START_X, finalTip.y, 0.72))
 
   const waveformPoints: THREE.Vector3[] = []
   let finite = true

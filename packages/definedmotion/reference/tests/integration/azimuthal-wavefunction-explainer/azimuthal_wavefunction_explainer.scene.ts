@@ -34,6 +34,7 @@ const COLORS = {
 const CAMERA_DEPTH = -18
 const WIDTH = 1280
 const HEIGHT = 720
+const DIAGRAM_DATA_DEPTH = 0.04
 
 interface BeatFrames {
   cloud: number
@@ -234,7 +235,7 @@ export function testAzimuthalWavefunctionExplainer(): AnimatedScene {
       const transitionStart = scene.getTimelinePointer()
       scene.addAnims(
         fadeOut(azimuth.root, { duration: 0.55, easing: 'ease-in-out' }),
-        fadeIn(finalModes.root, { duration: 0.95, easing: 'ease-out' }),
+        fadeIn(finalModes.root, { duration: 0.95, easing: 'ease-out' })
       )
       addTypographySwap(scene, transitionStart, typography, 3, 4)
       scene.addAnims(wait(6))
@@ -397,6 +398,7 @@ const createOrbitalComparison = async (): Promise<{
   const items: OrbitalVisual[] = []
   for (const [index, spec] of specs.entries()) {
     const itemRoot = new THREE.Group()
+    itemRoot.name = `${spec.kind.toUpperCase()}OrbitalConstruction`
     itemRoot.position.set(spec.x, 0.35, 0)
     itemRoot.scale.setScalar(1.2)
     const points = createOrbitalPoints(spec.kind, 6200, 4100 + index * 911)
@@ -418,6 +420,7 @@ const createOrbitalComparison = async (): Promise<{
     })
     const caption = layout.flex(
       {
+        name: `${spec.kind.toUpperCase()}OrbitalCaption`,
         flexDirection: 'column',
         gap: 0.28,
         alignItems: 'center',
@@ -426,7 +429,6 @@ const createOrbitalComparison = async (): Promise<{
       },
       [label, quantumLabel]
     )
-    caption.name = `${spec.kind.toUpperCase()}OrbitalCaption`
     caption.position.set(0, -2.85, 0.2)
     itemRoot.add(points, axes.root, caption)
     root.add(itemRoot)
@@ -435,11 +437,7 @@ const createOrbitalComparison = async (): Promise<{
   return { root, items }
 }
 
-const createOrbitalPoints = (
-  kind: 's' | 'p' | 'd',
-  count: number,
-  seed: number
-): THREE.Points => {
+const createOrbitalPoints = (kind: 's' | 'p' | 'd', count: number, seed: number): THREE.Points => {
   const random = mulberry32(seed)
   const positions = new Float32Array(count * 3)
   const colors = new Float32Array(count * 3)
@@ -508,12 +506,7 @@ const createAxes3D = async (
   for (const axis of axes) {
     const end = axis.direction.clone().multiplyScalar(length)
     root.add(
-      primitiveLine(
-        axis.direction.clone().multiplyScalar(-length * 0.55),
-        end,
-        COLORS.muted,
-        0.68
-      )
+      primitiveLine(axis.direction.clone().multiplyScalar(-length * 0.55), end, COLORS.muted, 0.68)
     )
     const cone = new THREE.Mesh(
       new THREE.ConeGeometry(0.11, 0.34, 12),
@@ -633,10 +626,10 @@ const createModeDiagram = async (): Promise<ModeDiagram> => {
       dash: { length: 0.15, gap: 0.12 }
     }
   })
-  placePlotInForeground(positivePolar)
-  placePlotInForeground(negativePolar)
-  placePlotInForeground(positiveWave)
-  placePlotInForeground(negativeWave)
+  positivePolar.position.z = DIAGRAM_DATA_DEPTH
+  negativePolar.position.z = DIAGRAM_DATA_DEPTH
+  positiveWave.position.z = DIAGRAM_DATA_DEPTH
+  negativeWave.position.z = DIAGRAM_DATA_DEPTH
   polarRoot.add(positivePolar, negativePolar)
   waveRoot.add(positiveWave, negativeWave)
 
@@ -685,7 +678,10 @@ const createModeDiagram = async (): Promise<ModeDiagram> => {
   return diagram
 }
 
-const createFinalModes = async (): Promise<{ root: THREE.Group; plots: THREE.Group[] }> => {
+const createFinalModes = async (): Promise<{
+  root: THREE.Group
+  plots: THREE.Group[]
+}> => {
   const root = new THREE.Group()
   root.name = 'ClosedIntegerModeComparison'
   root.position.y = 0.05
@@ -713,8 +709,8 @@ const createFinalModes = async (): Promise<{ root: THREE.Group; plots: THREE.Gro
         dash: { length: 0.12, gap: 0.1 }
       }
     })
-    placePlotInForeground(positive)
-    placePlotInForeground(negative)
+    positive.position.z = DIAGRAM_DATA_DEPTH
+    negative.position.z = DIAGRAM_DATA_DEPTH
     plot.add(positive, negative)
     const label = await createLatex({
       latex: String.raw`m=${value}`,
@@ -738,19 +734,11 @@ const updateModeDiagram = (diagram: ModeDiagram, mode: number): void => {
 
 type AmplitudeSign = 'positive' | 'negative'
 
-const polarCurvePath = (
-  mode: number,
-  radius: number,
-  sign: AmplitudeSign
-): CurvePath => ({
+const polarCurvePath = (mode: number, radius: number, sign: AmplitudeSign): CurvePath => ({
   domain: [0, Math.PI * 2],
   pointAt(phi) {
     const radial = Math.cos(mode * phi)
-    return new THREE.Vector3(
-      Math.cos(phi) * radial * radius,
-      Math.sin(phi) * radial * radius,
-      0.04
-    )
+    return new THREE.Vector3(Math.cos(phi) * radial * radius, Math.sin(phi) * radial * radius, 0)
   },
   visibleAt(phi) {
     const amplitude = Math.cos(mode * phi)
@@ -761,7 +749,7 @@ const polarCurvePath = (
 const waveCurvePath = (mode: number, sign: AmplitudeSign): CurvePath => ({
   domain: [0, Math.PI * 2],
   pointAt(phi) {
-    return new THREE.Vector3(-3 + (phi / (Math.PI * 2)) * 6, Math.cos(mode * phi) * 1.35, 0.04)
+    return new THREE.Vector3(-3 + (phi / (Math.PI * 2)) * 6, Math.cos(mode * phi) * 1.35, 0)
   },
   visibleAt(phi) {
     const amplitude = Math.cos(mode * phi)
@@ -792,11 +780,7 @@ const showNearestModeLabel = (labels: readonly LatexVisual[], mode: number): voi
   for (const [index, label] of labels.entries()) label.visible = index === nearest
 }
 
-const circlePoints = (
-  radius: number,
-  segments: number,
-  plane: 'xy' | 'xz'
-): THREE.Vector3[] => {
+const circlePoints = (radius: number, segments: number, plane: 'xy' | 'xz'): THREE.Vector3[] => {
   const points: THREE.Vector3[] = []
   for (let index = 0; index <= segments; index++) {
     const angle = (index / segments) * Math.PI * 2
@@ -838,20 +822,6 @@ const primitiveLine = (
   return line
 }
 
-const placePlotInForeground = (plot: THREE.Object3D): void => {
-  plot.traverse((object) => {
-    object.renderOrder = 10
-    const material = (object as THREE.Object3D & { material?: THREE.Material | THREE.Material[] })
-      .material
-    for (const current of Array.isArray(material) ? material : material ? [material] : []) {
-      current.transparent = true
-      current.depthTest = false
-      current.depthWrite = false
-      current.needsUpdate = true
-    }
-  })
-}
-
 const randomUnitVector = (random: () => number): THREE.Vector3 => {
   const z = random() * 2 - 1
   const angle = random() * Math.PI * 2
@@ -878,7 +848,8 @@ const mulberry32 = (seed: number): (() => number) => {
 
 const setBillboard = (object: THREE.Object3D, cameraObject: THREE.Camera): void => {
   const cameraWorld = cameraObject.getWorldQuaternion(new THREE.Quaternion())
-  const parentWorld = object.parent?.getWorldQuaternion(new THREE.Quaternion()) ?? new THREE.Quaternion()
+  const parentWorld =
+    object.parent?.getWorldQuaternion(new THREE.Quaternion()) ?? new THREE.Quaternion()
   object.quaternion.copy(parentWorld.invert().multiply(cameraWorld))
 }
 
@@ -1011,7 +982,9 @@ const registerVerifications = (
     (context) => {
       const captions = visuals.orbitalItems.map((item) => context.screenBounds(item.caption))
       const labelBounds = visuals.orbitalItems.map((item) => context.screenBounds(item.label))
-      const quantumBounds = visuals.orbitalItems.map((item) => context.screenBounds(item.quantumLabel))
+      const quantumBounds = visuals.orbitalItems.map((item) =>
+        context.screenBounds(item.quantumLabel)
+      )
       const gaps = labelBounds.map((label, index) =>
         label && quantumBounds[index] ? quantumBounds[index]!.top - label.bottom : null
       )
@@ -1029,17 +1002,22 @@ const registerVerifications = (
       const layoutBacked =
         visuals.orbitalItems.every(
           (item) => item.caption.userData.definedMotionVisual === 'layout'
-        ) &&
-        visuals.typographyRoots.every(
-          (root) => root.userData.definedMotionVisual === 'layout'
-        )
+        ) && visuals.typographyRoots.every((root) => root.userData.definedMotionVisual === 'layout')
       context.assert(
         layoutBacked &&
           captions.every((bounds) => bounds !== null) &&
           gaps.every((gap) => gap !== null && gap >= 6) &&
           contained,
         'Orbital captions and camera typography must use measured layout with readable caption gaps',
-        { frame: context.globalFrame, captions, labelBounds, quantumBounds, gaps, contained, layoutBacked }
+        {
+          frame: context.globalFrame,
+          captions,
+          labelBounds,
+          quantumBounds,
+          gaps,
+          contained,
+          layoutBacked
+        }
       )
     }
   )
@@ -1088,7 +1066,13 @@ const registerVerifications = (
       const formula = visuals.formulas.find((item) => context.isVisibleInHierarchy(item))
       const titleBounds = title ? context.screenBounds(title) : null
       const formulaBounds = formula ? context.screenBounds(formula) : null
-      const worldBounds = [visuals.cloud, visuals.orbitals, visuals.waveSphere, visuals.azimuth.root, visuals.modes]
+      const worldBounds = [
+        visuals.cloud,
+        visuals.orbitals,
+        visuals.waveSphere,
+        visuals.azimuth.root,
+        visuals.modes
+      ]
         .filter((root) => context.isVisibleInHierarchy(root))
         .map((root) => context.screenBounds(root))
         .filter((bounds): bounds is ScreenBounds => bounds !== null)
@@ -1132,7 +1116,8 @@ const registerVerifications = (
       const separated = bounds.every(
         (current, index) =>
           current !== null &&
-          (index === 0 || (bounds[index - 1] !== null && bounds[index - 1]!.right + 12 <= current.left))
+          (index === 0 ||
+            (bounds[index - 1] !== null && bounds[index - 1]!.right + 12 <= current.left))
       )
       context.assert(separated, 'The final integer modes must read as four separate examples', {
         frame: context.globalFrame,

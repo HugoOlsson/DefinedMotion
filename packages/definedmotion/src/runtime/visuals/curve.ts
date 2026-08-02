@@ -223,11 +223,7 @@ const pointFromSamples = (
 const positiveModulo = (value: number, divisor: number): number =>
   ((value % divisor) + divisor) % divisor
 
-const writeVertex = (
-  positions: Float32Array,
-  offset: number,
-  point: THREE.Vector3
-): number => {
+const writeVertex = (positions: Float32Array, offset: number, point: THREE.Vector3): number => {
   positions[offset] = point.x
   positions[offset + 1] = point.y
   positions[offset + 2] = point.z
@@ -313,7 +309,10 @@ const renderCurve = (visual: CurveVisual, controller: CurveController): void => 
   visual.geometry.computeBoundingSphere()
   const box = visual.geometry.boundingBox
   if (!box || box.isEmpty()) {
-    controller.bounds.setFromCenterAndSize(new THREE.Vector2(anchor.x, anchor.y), new THREE.Vector2())
+    controller.bounds.setFromCenterAndSize(
+      new THREE.Vector2(anchor.x, anchor.y),
+      new THREE.Vector2()
+    )
   } else {
     controller.bounds.min.set(box.min.x, box.min.y)
     controller.bounds.max.set(box.max.x, box.max.y)
@@ -349,7 +348,7 @@ export const applyCurveMorph = (
   ) {
     throw new SceneRuntimeError(
       'INCOMPATIBLE_CURVE_TOPOLOGY',
-      'Curve snapshots must use the visual\'s existing sample count and topology'
+      "Curve snapshots must use the visual's existing sample count and topology"
     )
   }
   const visibilityProgress = THREE.MathUtils.clamp(progress, 0, 1)
@@ -395,7 +394,7 @@ export const createCurve = (options: CurveOptions): CurveVisual => {
     transparent: strokeOpacity < 1,
     opacity: strokeOpacity,
     side: THREE.DoubleSide,
-    depthWrite: false
+    depthWrite: strokeOpacity === 1
   })
   const visual = new THREE.Mesh(geometry, material) as CurveVisual
   visual.name = 'DefinedMotionCurve'

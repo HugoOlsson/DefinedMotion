@@ -89,6 +89,8 @@ try {
     const bounds = solid.getLocalBounds()
     assert.equal(bounds.min.y, -1)
     assert.equal(bounds.max.y, 1)
+    assert.equal(solid.material.transparent, false)
+    assert.equal(solid.material.depthWrite, true)
     const dashed = createCurve({
       sampleCount: 11,
       domain: [0, 10],
@@ -101,6 +103,13 @@ try {
     })
     assert.equal(segmentIsCollapsed(dashed, 0), false)
     assert.equal(segmentIsCollapsed(dashed, 1), true)
+    const translucent = createCurve({
+      sampleCount: 3,
+      pointAt: (value) => new THREE.Vector2(value, 0),
+      stroke: { color: '#55dec9', width: 1, opacity: 0.5 }
+    })
+    assert.equal(translucent.material.transparent, true)
+    assert.equal(translucent.material.depthWrite, false)
   }
 
   // CURVE-02: visibility masks produce separated finite runs.
@@ -116,9 +125,7 @@ try {
     assert.equal(segmentIsCollapsed(masked, 1), false)
     assert.equal(segmentIsCollapsed(masked, 2), true)
     assert.equal(segmentIsCollapsed(masked, 3), true)
-    assert.ok(
-      Array.from(masked.geometry.getAttribute('position').array).every(Number.isFinite)
-    )
+    assert.ok(Array.from(masked.geometry.getAttribute('position').array).every(Number.isFinite))
   }
 
   // CURVE-03: setPath reuses geometry buffers and updates measurement immediately.

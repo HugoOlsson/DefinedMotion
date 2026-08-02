@@ -19,7 +19,7 @@ These notes record the experience of building `fourier_series_machine.scene.ts`.
 
 ## Unintuitive or laborious parts
 
-- A layout resolves inside `layout.flex()`, before the returned object can be named. The first overflow therefore reported only `DefinedMotionLayout`; later overflows could use `FourierFormulaPlaque` because it had been named by then. A `name` option would make initial errors much easier to locate.
+- Layout constructors now accept `name`, so the machine's plaques and camera UI identify themselves even when initial measurement or overflow fails during `layout.flex()`.
 - Explicit layout dimensions include the content and padding. This is correct, but long LaTeX made it easy to underestimate the required size by a very small amount. Some overflows appeared only during a later morph, so build success at frame 0 was not meaningful evidence.
 - Camera-attached UI was originally assembled manually by parenting geometry to the camera and traversing materials again after appends. `scene.addCameraAttachedUI()` now mounts the complete layout in an audience-only pass, so appended notes inherit the behavior without material repair.
 - Per-frame text is not a natural fit because `setText()` is asynchronous. The scene pre-creates stable text items, appends them at beat boundaries, and exposes changing numerical state through an inspection probe instead of rewriting visible text on every tick.

@@ -235,6 +235,123 @@ try {
     assert.deepEqual(roundedBounds(shapes.getLocalBounds()), [0, -7, 12, 0])
   }
 
+  // LAYOUT-OBJECT-02/03: ordinary Object3D descendants are measured in their root's local plane.
+  {
+    const diagram = new THREE.Group()
+    diagram.name = 'TransformedDiagram'
+    diagram.position.set(40, -20, 7)
+    diagram.rotation.z = 0.7
+    diagram.scale.setScalar(3)
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), new THREE.MeshBasicMaterial())
+    panel.position.set(3, -2, 1)
+    panel.scale.set(2, 0.5, 1)
+    diagram.add(panel)
+
+    const row = layout.flex(
+      {
+        name: 'Automatic object row',
+        flexDirection: 'row',
+        anchorX: 'left',
+        anchorY: 'top'
+      },
+      [diagram]
+    )
+
+    assert.equal(row.name, 'Automatic object row')
+    assert.deepEqual(roundedBounds(row.getLocalBounds()), [0, -1, 8, 0])
+    assert.deepEqual(diagram.position.toArray(), [40, -20, 7])
+    assert.equal(diagram.rotation.z, 0.7)
+    assert.deepEqual(diagram.scale.toArray(), [3, 3, 3])
+  }
+
+  // LAYOUT-OBJECT-02: line and point geometry use the same automatic Object3D contract.
+  {
+    const lineConstruction = new THREE.Group()
+    lineConstruction.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-1, -2, 0),
+          new THREE.Vector3(3, 2, 0)
+        ]),
+        new THREE.LineBasicMaterial()
+      )
+    )
+    const pointConstruction = new THREE.Group()
+    pointConstruction.add(
+      new THREE.Points(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-1, -3, 0),
+          new THREE.Vector3(2, 2, 0)
+        ]),
+        new THREE.PointsMaterial()
+      )
+    )
+
+    const row = layout.flex(
+      {
+        name: 'Line and point row',
+        flexDirection: 'row',
+        gap: 1,
+        anchorX: 'left',
+        anchorY: 'top'
+      },
+      [lineConstruction, pointConstruction]
+    )
+    assert.deepEqual(roundedBounds(row.getLocalBounds()), [0, -5, 8, 0])
+  }
+
+  // LAYOUT-OBJECT-04: transform and geometry changes propagate through ancestor layouts.
+  {
+    const diagram = new THREE.Group()
+    const geometry = new THREE.PlaneGeometry(2, 2)
+    const panel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial())
+    diagram.add(panel)
+    const inner = layout.flex(
+      { name: 'Dynamic diagram', flexDirection: 'row', anchorX: 'left', anchorY: 'top' },
+      [diagram]
+    )
+    const outer = layout.flex(
+      {
+        name: 'Dynamic diagram frame',
+        flexDirection: 'row',
+        padding: 1,
+        anchorX: 'left',
+        anchorY: 'top'
+      },
+      [inner]
+    )
+    const scene = new THREE.Scene()
+    scene.add(outer)
+    assert.deepEqual(roundedBounds(outer.getLocalBounds()), [0, -4, 4, 0])
+
+    panel.scale.x = 2
+    resolveSceneLayouts(scene)
+    assert.deepEqual(roundedBounds(inner.getLocalBounds()), [0, -2, 4, 0])
+    assert.deepEqual(roundedBounds(outer.getLocalBounds()), [0, -4, 6, 0])
+
+    const positions = geometry.getAttribute('position')
+    for (let index = 0; index < positions.count; index++) {
+      positions.setX(index, positions.getX(index) * 1.5)
+    }
+    positions.needsUpdate = true
+    resolveSceneLayouts(scene)
+    assert.deepEqual(roundedBounds(inner.getLocalBounds()), [0, -2, 6, 0])
+    assert.deepEqual(roundedBounds(outer.getLocalBounds()), [0, -4, 8, 0])
+  }
+
+  // LAYOUT-OBJECT-06: unmeasurable children identify themselves and their layout.
+  {
+    const empty = new THREE.Group()
+    empty.name = 'EmptyConstruction'
+    assert.throws(
+      () => layout.flex({ name: 'Named construction', flexDirection: 'row' }, [empty]),
+      (error) =>
+        error?.code === 'LAYOUT_UNMEASURABLE_CHILD' &&
+        /Named construction/.test(error.message) &&
+        /EmptyConstruction/.test(error.message)
+    )
+  }
+
   // LAYOUT-SURFACE-04: explicit dimensions reject intrinsic overflow with details.
   {
     const item = visual(0, -8, 20, 0)
@@ -243,6 +360,7 @@ try {
       () =>
         layout.flex(
           {
+            name: 'Compact copy panel',
             flexDirection: 'row',
             width: 6,
             height: 10,
@@ -255,6 +373,7 @@ try {
         /width/.test(error.message) &&
         /required 22/.test(error.message) &&
         /available 6/.test(error.message) &&
+        /Compact copy panel/.test(error.message) &&
         /OversizedCopy/.test(error.message)
     )
   }

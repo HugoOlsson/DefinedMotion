@@ -31,6 +31,12 @@ const GRAPH_SCALE_Y = 3.55
 const GRAPH_WIDTH = 40
 const POLAR_CENTER = new THREE.Vector2(-25, -4)
 const GRAPH_CENTER = new THREE.Vector2(25, -4)
+const PLOT_DEPTH = {
+  guides: 0.05,
+  liveGuides: 0.25,
+  data: 0.35,
+  markers: 0.5
+} as const
 
 const COLORS = {
   background: '#040708',
@@ -76,7 +82,7 @@ interface SceneVisuals {
   graphDot: ReturnType<typeof createCircle>
   radialArm: CurveVisual
   graphGuide: CurveVisual
-  markers: THREE.Group
+  markerGroups: readonly [THREE.Group, THREE.Group]
   summary: LayoutVisual
   stateProbe: THREE.Group & { text: string }
 }
@@ -86,7 +92,7 @@ export function testPolarCartesianExplainer(): AnimatedScene {
     scene.scene.background = new THREE.Color(COLORS.background)
 
     const visuals = await createVisuals()
-    scene.add(visuals.header, visuals.polar.root, visuals.cartesian.root, visuals.markers, visuals.summary)
+    scene.add(visuals.header, visuals.polar.root, visuals.cartesian.root, visuals.summary)
 
     const stateProbe = new THREE.Group() as THREE.Group & { text: string }
     stateProbe.name = 'PolarCartesianState'
@@ -97,7 +103,7 @@ export function testPolarCartesianExplainer(): AnimatedScene {
     visuals.title.visible = false
     visuals.polar.root.visible = false
     visuals.cartesian.root.visible = false
-    visuals.markers.visible = false
+    for (const markerGroup of visuals.markerGroups) markerGroup.visible = false
     visuals.summary.visible = false
 
     const frames: BeatFrames = {
@@ -137,7 +143,9 @@ export function testPolarCartesianExplainer(): AnimatedScene {
     })
 
     scene.timeline.beat('trace', (beat) => {
-      scene.addAnims(fadeIn(visuals.markers, { duration: 0.4, easing: 'ease-out' }))
+      scene.addAnims(
+        ...visuals.markerGroups.map((group) => fadeIn(group, { duration: 0.4, easing: 'ease-out' }))
+      )
       scene.addAnims(wait(11.4))
       beat.onEachTick(({ beatProgress }) => {
         setBeatState(state, 'trace', beatProgress)
@@ -192,6 +200,7 @@ const createVisuals = async (): Promise<SceneVisuals> => {
   formula.name = 'PolarCartesianFormula'
   const header = layout.flex(
     {
+      name: 'PolarCartesianHeader',
       flexDirection: 'column',
       gap: 0.9,
       alignItems: 'center',
@@ -200,7 +209,6 @@ const createVisuals = async (): Promise<SceneVisuals> => {
     },
     [title, formula]
   )
-  header.name = 'PolarCartesianHeader'
   header.position.set(0, 27, 0.4)
 
   const polar = await createPolarPlot()
@@ -210,38 +218,33 @@ const createVisuals = async (): Promise<SceneVisuals> => {
 
   const polarDot = createCircle(0.28, { color: COLORS.ivory })
   polarDot.name = 'PolarTracePoint'
-  polarDot.position.z = 0.5
-  placeInForeground(polarDot, 30)
+  polarDot.position.z = PLOT_DEPTH.markers
   const graphDot = createCircle(0.28, { color: COLORS.ivory })
   graphDot.name = 'CartesianTracePoint'
-  graphDot.position.z = 0.5
-  placeInForeground(graphDot, 30)
+  graphDot.position.z = PLOT_DEPTH.markers
   const radialArm = createCurve({
     sampleCount: 2,
     pointAt: () => new THREE.Vector2(),
     stroke: { color: COLORS.gold, width: 0.055, opacity: 0.68 }
   })
   radialArm.name = 'PolarRadiusArm'
-  radialArm.position.z = 0.25
-  placeInForeground(radialArm, 20)
+  radialArm.position.z = PLOT_DEPTH.liveGuides
   const graphGuide = createCurve({
     sampleCount: 2,
     pointAt: () => new THREE.Vector2(),
     stroke: { color: COLORS.gold, width: 0.045, opacity: 0.46 }
   })
   graphGuide.name = 'CartesianValueGuide'
-  graphGuide.position.z = 0.2
-  placeInForeground(graphGuide, 20)
+  graphGuide.position.z = PLOT_DEPTH.liveGuides
 
-  const markers = new THREE.Group()
-  markers.name = 'SynchronizedTraceMarkers'
   const polarMarkerRoot = new THREE.Group()
-  polarMarkerRoot.position.set(POLAR_CENTER.x, POLAR_CENTER.y, 0)
+  polarMarkerRoot.name = 'PolarTraceMarkers'
   polarMarkerRoot.add(radialArm, polarDot)
   const graphMarkerRoot = new THREE.Group()
-  graphMarkerRoot.position.set(GRAPH_CENTER.x, GRAPH_CENTER.y, 0)
+  graphMarkerRoot.name = 'CartesianTraceMarkers'
   graphMarkerRoot.add(graphGuide, graphDot)
-  markers.add(polarMarkerRoot, graphMarkerRoot)
+  polar.root.add(polarMarkerRoot)
+  cartesian.root.add(graphMarkerRoot)
 
   const turns = await createText({
     text: 'five turns around',
@@ -266,6 +269,7 @@ const createVisuals = async (): Promise<SceneVisuals> => {
   })
   const summary = layout.flex(
     {
+      name: 'PolarCartesianSummary',
       flexDirection: 'row',
       gap: 1.45,
       alignItems: 'center',
@@ -274,7 +278,6 @@ const createVisuals = async (): Promise<SceneVisuals> => {
     },
     [turns, relation, oscillations]
   )
-  summary.name = 'PolarCartesianSummary'
   summary.position.set(0, -26.4, 0.4)
 
   const placeholder = new THREE.Group() as THREE.Group & { text: string }
@@ -289,7 +292,7 @@ const createVisuals = async (): Promise<SceneVisuals> => {
     graphDot,
     radialArm,
     graphGuide,
-    markers,
+    markerGroups: [polarMarkerRoot, graphMarkerRoot],
     summary,
     stateProbe: placeholder
   }
@@ -359,6 +362,7 @@ const createPolarPlot = async (): Promise<PlotVisual> => {
   })
   const caption = layout.flex(
     {
+      name: 'PolarPlotCaption',
       flexDirection: 'column',
       gap: 0.55,
       alignItems: 'center',
@@ -367,7 +371,6 @@ const createPolarPlot = async (): Promise<PlotVisual> => {
     },
     [captionTitle, captionFormula]
   )
-  caption.name = 'PolarPlotCaption'
   caption.position.set(0, 19, 0.3)
   root.add(caption)
 
@@ -377,8 +380,7 @@ const createPolarPlot = async (): Promise<PlotVisual> => {
     stroke: { color: COLORS.paleMint, width: 0.15 }
   })
   trace.name = 'PolarFunctionTrace'
-  trace.position.z = 0.35
-  placeInForeground(trace, 10)
+  trace.position.z = PLOT_DEPTH.data
   root.add(trace)
   return { root, caption, trace }
 }
@@ -425,7 +427,11 @@ const createCartesianPlot = async (): Promise<PlotVisual> => {
     label.position.set(-21, y, 0.15)
     root.add(label)
   }
-  const thetaLabel = await createLatex({ latex: String.raw`\theta`, fontSize: 1.25, color: COLORS.gold })
+  const thetaLabel = await createLatex({
+    latex: String.raw`\theta`,
+    fontSize: 1.25,
+    color: COLORS.gold
+  })
   thetaLabel.position.set(21.45, 1.15, 0.2)
   root.add(thetaLabel)
 
@@ -445,6 +451,7 @@ const createCartesianPlot = async (): Promise<PlotVisual> => {
   })
   const caption = layout.flex(
     {
+      name: 'CartesianPlotCaption',
       flexDirection: 'column',
       gap: 0.55,
       alignItems: 'center',
@@ -453,7 +460,6 @@ const createCartesianPlot = async (): Promise<PlotVisual> => {
     },
     [captionTitle, captionFormula]
   )
-  caption.name = 'CartesianPlotCaption'
   caption.position.set(0, 19, 0.3)
   root.add(caption)
 
@@ -463,8 +469,7 @@ const createCartesianPlot = async (): Promise<PlotVisual> => {
     stroke: { color: COLORS.blue, width: 0.14 }
   })
   trace.name = 'CartesianFunctionTrace'
-  trace.position.z = 0.35
-  placeInForeground(trace, 10)
+  trace.position.z = PLOT_DEPTH.data
   root.add(trace)
   return { root, caption, trace }
 }
@@ -477,7 +482,10 @@ const polarPoint = (theta: number): THREE.Vector2 => {
 }
 
 const graphPoint = (theta: number): THREE.Vector2 =>
-  new THREE.Vector2(-GRAPH_WIDTH / 2 + (theta / MAX_THETA) * GRAPH_WIDTH, radiusAt(theta) * GRAPH_SCALE_Y)
+  new THREE.Vector2(
+    -GRAPH_WIDTH / 2 + (theta / MAX_THETA) * GRAPH_WIDTH,
+    radiusAt(theta) * GRAPH_SCALE_Y
+  )
 
 const polarTracePath = (visibleThrough: number): CurvePath => ({
   domain: [0, MAX_THETA],
@@ -520,23 +528,8 @@ const guideLine = (
   material.transparent = true
   material.opacity = opacity
   material.depthWrite = false
-  line.renderOrder = -10
-  line.position.z = 0.05
+  line.position.z = PLOT_DEPTH.guides
   return line
-}
-
-const placeInForeground = (
-  visual: THREE.Mesh | THREE.Line,
-  renderOrder: number
-): void => {
-  const materials = Array.isArray(visual.material) ? visual.material : [visual.material]
-  for (const material of materials) {
-    material.transparent = true
-    material.depthTest = false
-    material.depthWrite = false
-    material.needsUpdate = true
-  }
-  visual.renderOrder = renderOrder
 }
 
 const setBeatState = (state: TraceState, beat: string, beatProgress: number): void => {
@@ -551,7 +544,8 @@ const exposeScene = (scene: AnimatedScene, visuals: SceneVisuals): void => {
   scene.expose('polar-cartesian-cartesian-plot', visuals.cartesian.root)
   scene.expose('polar-cartesian-polar-trace', visuals.polar.trace)
   scene.expose('polar-cartesian-cartesian-trace', visuals.cartesian.trace)
-  scene.expose('polar-cartesian-markers', visuals.markers)
+  scene.expose('polar-cartesian-polar-markers', visuals.markerGroups[0])
+  scene.expose('polar-cartesian-cartesian-markers', visuals.markerGroups[1])
   scene.expose('polar-cartesian-summary-layout', visuals.summary)
   scene.expose('polar-cartesian-state', visuals.stateProbe)
   scene.watchCollisions('polar-cartesian-header', visuals.header, {})
@@ -582,14 +576,26 @@ const registerVerifications = (
     'polar-cartesian-primitive-contract',
     { frames: { start: frames.intro, end: frames.end } },
     (context) => {
-      const curves = [visuals.polar.trace, visuals.cartesian.trace, visuals.radialArm, visuals.graphGuide]
-      const layoutBacked = [visuals.header, visuals.polar.caption, visuals.cartesian.caption, visuals.summary].every(
-        (item) => item.userData.definedMotionVisual === 'layout'
-      )
+      const curves = [
+        visuals.polar.trace,
+        visuals.cartesian.trace,
+        visuals.radialArm,
+        visuals.graphGuide
+      ]
+      const layoutBacked = [
+        visuals.header,
+        visuals.polar.caption,
+        visuals.cartesian.caption,
+        visuals.summary
+      ].every((item) => item.userData.definedMotionVisual === 'layout')
       context.assert(
         curves.every((item) => item.userData.definedMotionVisual === 'curve') && layoutBacked,
         'Foreground paths must use createCurve and typography groups must use layout',
-        { frame: context.globalFrame, layoutBacked, curveKinds: curves.map((item) => item.userData.definedMotionVisual) }
+        {
+          frame: context.globalFrame,
+          layoutBacked,
+          curveKinds: curves.map((item) => item.userData.definedMotionVisual)
+        }
       )
     }
   )
@@ -620,8 +626,12 @@ const registerVerifications = (
       const tolerance = 2e-5
       const synchronized =
         Math.abs(state.theta - expectedTheta) < tolerance &&
-        visuals.polarDot.position.distanceTo(new THREE.Vector3(expectedPolar.x, expectedPolar.y, 0.5)) < tolerance &&
-        visuals.graphDot.position.distanceTo(new THREE.Vector3(expectedGraph.x, expectedGraph.y, 0.5)) < tolerance
+        visuals.polarDot.position.distanceTo(
+          new THREE.Vector3(expectedPolar.x, expectedPolar.y, 0.5)
+        ) < tolerance &&
+        visuals.graphDot.position.distanceTo(
+          new THREE.Vector3(expectedGraph.x, expectedGraph.y, 0.5)
+        ) < tolerance
       context.assert(synchronized, 'Both moving points must represent the same theta sample', {
         frame: context.globalFrame,
         expectedTheta,
@@ -644,16 +654,22 @@ const registerVerifications = (
         : null
       const inViewport = [header, polar, cartesian, summary]
         .filter((bounds): bounds is ScreenBounds => bounds !== null)
-        .every((bounds) => insideViewport(bounds, context.viewport.width, context.viewport.height, 18))
+        .every((bounds) =>
+          insideViewport(bounds, context.viewport.width, context.viewport.height, 18)
+        )
       const separated = polar !== null && cartesian !== null && polar.right + 24 <= cartesian.left
-      context.assert(inViewport && separated, 'Header and plots must remain readable and separated', {
-        frame: context.globalFrame,
-        header,
-        polar,
-        cartesian,
-        summary,
-        minimumPlotGap: 24
-      })
+      context.assert(
+        inViewport && separated,
+        'Header and plots must remain readable and separated',
+        {
+          frame: context.globalFrame,
+          header,
+          polar,
+          cartesian,
+          summary,
+          minimumPlotGap: 24
+        }
+      )
     }
   )
 
@@ -661,7 +677,12 @@ const registerVerifications = (
     'polar-cartesian-finite-curves',
     { frames: { start: frames.trace, end: frames.end } },
     (context) => {
-      const curves = [visuals.polar.trace, visuals.cartesian.trace, visuals.radialArm, visuals.graphGuide]
+      const curves = [
+        visuals.polar.trace,
+        visuals.cartesian.trace,
+        visuals.radialArm,
+        visuals.graphGuide
+      ]
       const finite = curves.every((curve) =>
         Array.from(curve.geometry.getAttribute('position').array).every(Number.isFinite)
       )

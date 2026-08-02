@@ -16,6 +16,7 @@ export interface LayoutBorderOptions {
 }
 
 interface LayoutBoxOptions {
+  name?: string
   padding?: number
   width?: number
   height?: number
@@ -41,14 +42,15 @@ export interface GridOptions extends LayoutBoxOptions {
 }
 
 export type LayoutVisual = MeasurableVisual<THREE.Group> & {
-  readonly items: readonly MeasurableVisual[]
-  append(item: MeasurableVisual): void
+  readonly items: readonly THREE.Object3D[]
+  append(item: THREE.Object3D): void
 }
 
 interface ItemRecord {
-  readonly visual: MeasurableVisual
+  readonly visual: THREE.Object3D
   readonly slot: THREE.Group
-  observedBoundsVersion: number
+  readonly getBounds: () => THREE.Box2
+  readonly observedBounds: THREE.Box2
 }
 
 interface MeasuredItem extends ItemRecord {
@@ -115,16 +117,14 @@ const justification = (value: LayoutJustification | undefined): LayoutJustificat
   return resolved
 }
 
-const boundsVersion = (visual: MeasurableVisual): number => {
-  const value = visual.userData.boundsVersion
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0
-}
-
-const measure = (record: ItemRecord): MeasuredItem => {
-  const bounds = record.visual.getLocalBounds()
+const measure = (record: ItemRecord, layoutRoot: THREE.Object3D): MeasuredItem => {
+  const bounds = record.getBounds()
   const values = [...bounds.min.toArray(), ...bounds.max.toArray()]
   if (bounds.isEmpty() || !values.every(Number.isFinite)) {
-    throw new Error('Layout items must report finite, non-empty local bounds')
+    throw new SceneRuntimeError(
+      'LAYOUT_UNMEASURABLE_CHILD',
+      `Layout "${visualName(layoutRoot)}" cannot measure child "${visualName(record.visual)}": no finite, non-empty local bounds are available`
+    )
   }
   const size = bounds.getSize(new THREE.Vector2())
   return { ...record, bounds, width: size.x, height: size.y }
@@ -132,6 +132,119 @@ const measure = (record: ItemRecord): MeasuredItem => {
 
 const visualName = (visual: THREE.Object3D): string =>
   visual.name.trim() || String(visual.userData.definedMotionVisual ?? 'unnamed visual')
+
+const layoutName = (value: string | undefined): string => {
+  if (value === undefined) return 'DefinedMotionLayout'
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('name must be a non-empty string when provided')
+  }
+  return value.trim()
+}
+
+type ObjectWithGeometry = THREE.Object3D & {
+  geometry?: THREE.BufferGeometry
+}
+
+const geometryBoundsCache = new WeakMap<
+  THREE.BufferGeometry,
+  { positionVersion: number; bounds: THREE.Box3 }
+>()
+
+const geometryBounds = (geometry: THREE.BufferGeometry): THREE.Box3 | undefined => {
+  const position = geometry.getAttribute('position')
+  const positionVersion = position
+    ? position instanceof THREE.InterleavedBufferAttribute
+      ? position.data.version
+      : position.version
+    : -1
+  const cached = geometryBoundsCache.get(geometry)
+  const authoredBoundsChanged =
+    cached !== undefined &&
+    geometry.boundingBox !== null &&
+    !geometry.boundingBox.equals(cached.bounds)
+  if (!cached || cached.positionVersion !== positionVersion || authoredBoundsChanged) {
+    geometry.computeBoundingBox()
+    if (!geometry.boundingBox) return undefined
+    const next = { positionVersion, bounds: geometry.boundingBox.clone() }
+    geometryBoundsCache.set(geometry, next)
+    return next.bounds
+  }
+  return cached.bounds
+}
+
+const isMeasurableVisual = (object: THREE.Object3D): object is MeasurableVisual =>
+  typeof (object as Partial<MeasurableVisual>).getLocalBounds === 'function'
+
+const expandByTransformedBox3 = (
+  bounds: THREE.Box2,
+  box: THREE.Box3,
+  transform: THREE.Matrix4,
+  point: THREE.Vector3
+): void => {
+  for (const x of [box.min.x, box.max.x]) {
+    for (const y of [box.min.y, box.max.y]) {
+      for (const z of [box.min.z, box.max.z]) {
+        point.set(x, y, z).applyMatrix4(transform)
+        bounds.expandByPoint(new THREE.Vector2(point.x, point.y))
+      }
+    }
+  }
+}
+
+const expandByTransformedBox2 = (
+  bounds: THREE.Box2,
+  box: THREE.Box2,
+  transform: THREE.Matrix4,
+  point: THREE.Vector3
+): void => {
+  for (const x of [box.min.x, box.max.x]) {
+    for (const y of [box.min.y, box.max.y]) {
+      point.set(x, y, 0).applyMatrix4(transform)
+      bounds.expandByPoint(new THREE.Vector2(point.x, point.y))
+    }
+  }
+}
+
+const automaticLocalBounds = (root: THREE.Object3D): THREE.Box2 => {
+  const bounds = new THREE.Box2().makeEmpty()
+  const instance = new THREE.Matrix4()
+  const transformedInstance = new THREE.Matrix4()
+  const point = new THREE.Vector3()
+
+  const visit = (object: THREE.Object3D, parentTransform: THREE.Matrix4): void => {
+    const relative = parentTransform.clone()
+    if (object !== root) {
+      if (object.matrixAutoUpdate) object.updateMatrix()
+      relative.multiply(object.matrix)
+    }
+    if (object !== root && isMeasurableVisual(object)) {
+      expandByTransformedBox2(bounds, object.getLocalBounds(), relative, point)
+      return
+    }
+
+    const geometry = (object as ObjectWithGeometry).geometry
+    const localGeometryBounds = geometry ? geometryBounds(geometry) : undefined
+    if (localGeometryBounds) {
+      const instanced = object as THREE.InstancedMesh
+      if (instanced.isInstancedMesh) {
+        for (let index = 0; index < instanced.count; index++) {
+          instanced.getMatrixAt(index, instance)
+          transformedInstance.multiplyMatrices(relative, instance)
+          expandByTransformedBox3(bounds, localGeometryBounds, transformedInstance, point)
+        }
+      } else {
+        expandByTransformedBox3(bounds, localGeometryBounds, relative, point)
+      }
+    }
+    for (const child of object.children) visit(child, relative)
+  }
+
+  visit(root, new THREE.Matrix4())
+  return bounds
+}
+
+const boundsReader = (visual: THREE.Object3D): (() => THREE.Box2) =>
+  isMeasurableVisual(visual) ? () => visual.getLocalBounds() : () => automaticLocalBounds(visual)
 
 const assertFits = (
   root: THREE.Object3D,
@@ -276,22 +389,19 @@ const justifyDistribution = (
   return { leading: 0, between: 0 }
 }
 
-const assertUnparented = (visual: MeasurableVisual): void => {
+const assertUnparented = (visual: THREE.Object3D): void => {
   if (visual.parent) {
     throw new Error('A visual must be unparented before it is added to a layout')
-  }
-  if (typeof visual.getLocalBounds !== 'function') {
-    throw new Error('Layout items must implement getLocalBounds()')
   }
 }
 
 const createLayout = (
-  initialItems: readonly MeasurableVisual[],
+  initialItems: readonly THREE.Object3D[],
   reflow: (items: readonly MeasuredItem[], root: THREE.Object3D) => THREE.Box2,
-  surfaceOptions: Pick<LayoutBoxOptions, 'background' | 'border'>
+  surfaceOptions: Pick<LayoutBoxOptions, 'name' | 'background' | 'border'>
 ): InternalLayoutVisual => {
   const root = new THREE.Group() as InternalLayoutVisual
-  root.name = 'DefinedMotionLayout'
+  root.name = layoutName(surfaceOptions.name)
   root.userData.definedMotionVisual = 'layout'
   const surface = createLayoutSurface(root, surfaceOptions)
   const records: ItemRecord[] = []
@@ -299,36 +409,38 @@ const createLayout = (
   let localBounds = new THREE.Box2(new THREE.Vector2(), new THREE.Vector2())
   let dirty = true
 
-  const addRecord = (visual: MeasurableVisual): void => {
+  const addRecord = (visual: THREE.Object3D): void => {
     if (records.some((record) => record.visual === visual)) {
       throw new Error('A visual cannot be added to the same layout more than once')
     }
     assertUnparented(visual)
-    const initialBounds = visual.getLocalBounds()
-    if (
-      initialBounds.isEmpty() ||
-      ![...initialBounds.min.toArray(), ...initialBounds.max.toArray()].every(Number.isFinite)
-    ) {
-      throw new Error('Layout items must report finite, non-empty local bounds')
-    }
+    const getBounds = boundsReader(visual)
     const slot = new THREE.Group()
     slot.name = 'DefinedMotionLayoutSlot'
+    const record: ItemRecord = {
+      visual,
+      slot,
+      getBounds,
+      observedBounds: new THREE.Box2().makeEmpty()
+    }
+    const initialBounds = measure(record, root).bounds
+    record.observedBounds.copy(initialBounds)
     slot.add(visual)
     root.add(slot)
-    records.push({ visual, slot, observedBoundsVersion: boundsVersion(visual) })
+    records.push(record)
     dirty = true
   }
 
   const resolve = (force = false): void => {
-    for (const record of records) record.visual.getLocalBounds()
-    if (records.some((record) => record.observedBoundsVersion !== boundsVersion(record.visual))) {
+    const measured = records.map((record) => measure(record, root))
+    if (measured.some((item) => !item.observedBounds.equals(item.bounds))) {
       dirty = true
     }
     if (!dirty && !force) return
-    localBounds = reflow(records.map(measure), root)
+    localBounds = reflow(measured, root)
     surface?.update(localBounds)
-    for (const record of records) {
-      record.observedBoundsVersion = boundsVersion(record.visual)
+    for (const item of measured) {
+      item.observedBounds.copy(item.bounds)
     }
     dirty = false
     root.userData.boundsVersion = (root.userData.boundsVersion ?? 0) + 1
@@ -364,7 +476,7 @@ const createLayout = (
   return root
 }
 
-const flex = (options: FlexOptions, items: readonly MeasurableVisual[] = []): LayoutVisual => {
+const flex = (options: FlexOptions, items: readonly THREE.Object3D[] = []): LayoutVisual => {
   if (typeof options !== 'object' || options === null) {
     throw new Error('layout.flex() requires an options object')
   }
@@ -444,7 +556,7 @@ const flex = (options: FlexOptions, items: readonly MeasurableVisual[] = []): La
   )
 }
 
-const grid = (options: GridOptions, items: readonly MeasurableVisual[] = []): LayoutVisual => {
+const grid = (options: GridOptions, items: readonly THREE.Object3D[] = []): LayoutVisual => {
   if (typeof options !== 'object' || options === null) {
     throw new Error('layout.grid() requires an options object')
   }
