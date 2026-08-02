@@ -12,6 +12,7 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const projectRoot = resolve(scriptDirectory, '..', '..', '..', 'playground')
 const cli = join(scriptDirectory, '..', 'cli', 'index.mjs')
 const fixturePath = join(projectRoot, 'src', 'scenes', 'runtime-freshness.scene.ts')
+const concurrencyFixturePath = join(projectRoot, 'src', 'scenes', 'runtime-concurrency.scene.ts')
 const revisionNoisePath = join(projectRoot, 'src', 'runtime-freshness-noise.ts')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'definedmotion-runtime-smoke-'))
 
@@ -80,6 +81,37 @@ function runtimeFreshnessScene(): AnimatedScene {
 `
 }
 
+function concurrencyFixtureSource() {
+  return `import { defineScene, AnimatedScene, SpaceSetting } from 'definedmotion'
+import { wait } from 'definedmotion/animation'
+import { createRectangle } from 'definedmotion/rendering'
+
+export default defineScene({
+  id: 'runtime-concurrency',
+  name: 'Runtime Concurrency',
+  isTest: true,
+  create: runtimeConcurrencyScene
+})
+
+function runtimeConcurrencyScene(): AnimatedScene {
+  return new AnimatedScene(
+    320,
+    180,
+    SpaceSetting.TwoDim,
+    (scene) => {
+      const background = createRectangle(320, 180, { color: '#000000' })
+      scene.add(background)
+      scene.onEachTick((frame) => {
+        const progress = frame / 59
+        background.material.color.setRGB(progress, 0.2, 1 - progress)
+      })
+      scene.addAnims(wait(1))
+    }
+  )
+}
+`
+}
+
 const fixtureSyntaxErrorSource = () =>
   `${fixtureSource('#0000ff')}\nconst __runtimeSyntaxErrorProbe: = true\n`
 
@@ -116,6 +148,7 @@ const delay = (milliseconds) =>
 
 try {
   run(['session', 'stop'])
+  writeFileSync(concurrencyFixturePath, concurrencyFixtureSource())
   writeFileSync(fixturePath, fixtureEvaluationErrorSource())
   const initialFailureStartedAt = Date.now()
   const initialFailure = run(['session', 'start'], false)
@@ -223,7 +256,7 @@ try {
     unexposedInspection.camera.type !== 'perspective' ||
     unexposedInspection.camera.fov === undefined ||
     assetHeavyInspection.runtimeId !== initialStatus.runtimeId ||
-    typedMessage?.text !== 'I am just testin' ||
+    typedMessage?.text !== 'I am just testing' ||
     !typedMessage.worldBounds ||
     typedMessage.worldBounds.size[0] <= 0 ||
     !typedMessage.screenBounds ||
@@ -393,6 +426,63 @@ try {
   ])
   if (concurrentResults.some((result) => result.runtimeId !== initialStatus.runtimeId)) {
     throw new Error('Concurrent CLI requests did not share the same serialized runtime')
+  }
+
+  const concurrencyFrames = [0, 30, 59]
+  const serialStillOutputs = concurrencyFrames.map((frame) =>
+    join(temporaryDirectory, `serial-still-${frame}.png`)
+  )
+  const concurrentStillOutputs = concurrencyFrames.map((frame) =>
+    join(temporaryDirectory, `concurrent-still-${frame}.png`)
+  )
+  const serialStillResults = concurrencyFrames.map((frame, index) =>
+    run([
+      'still',
+      'runtime-concurrency',
+      '--frame',
+      String(frame),
+      '--output',
+      serialStillOutputs[index],
+      '--require-session'
+    ])
+  )
+  const serialStillHashes = serialStillOutputs.map(sha256)
+  if (new Set(serialStillHashes).size !== concurrencyFrames.length) {
+    throw new Error('Concurrency fixture frames were not visually distinguishable')
+  }
+
+  const concurrentStillResults = await Promise.all(
+    concurrencyFrames.map((frame, index) =>
+      runAsync([
+        'still',
+        'runtime-concurrency',
+        '--frame',
+        String(frame),
+        '--output',
+        concurrentStillOutputs[index],
+        '--require-session'
+      ])
+    )
+  )
+  for (const [index, frame] of concurrencyFrames.entries()) {
+    const result = concurrentStillResults[index]
+    if (
+      result.frame !== frame ||
+      result.runtimeId !== initialStatus.runtimeId ||
+      result.runtimeId !== serialStillResults[index].runtimeId ||
+      sha256(concurrentStillOutputs[index]) !== serialStillHashes[index]
+    ) {
+      throw new Error(
+        `Concurrent still for frame ${frame} did not match its serial baseline: ${JSON.stringify({
+          requestedFrame: frame,
+          returnedFrame: result.frame,
+          serialRuntimeId: serialStillResults[index].runtimeId,
+          concurrentRuntimeId: result.runtimeId,
+          serialHash: serialStillHashes[index],
+          concurrentHash: sha256(concurrentStillOutputs[index])
+        })}`
+      )
+    }
   }
 
   writeFileSync(fixturePath, fixtureSyntaxErrorSource())
@@ -591,9 +681,14 @@ try {
   }
 
   rmSync(fixturePath, { force: true })
+  rmSync(concurrencyFixturePath, { force: true })
   rmSync(revisionNoisePath, { force: true })
   const scenesAfterRemoval = run(['scenes', '--require-session'])
-  if (scenesAfterRemoval.scenes.some((scene) => scene.id === 'runtime-freshness')) {
+  if (
+    scenesAfterRemoval.scenes.some(
+      (scene) => scene.id === 'runtime-freshness' || scene.id === 'runtime-concurrency'
+    )
+  ) {
     throw new Error('Removed scene remained in the persistent scene registry')
   }
   if (scenesAfterRemoval.generation <= blueResult.generation) {
@@ -603,6 +698,7 @@ try {
   process.stdout.write('DefinedMotion persistent runtime smoke test passed\n')
 } finally {
   rmSync(fixturePath, { force: true })
+  rmSync(concurrencyFixturePath, { force: true })
   rmSync(revisionNoisePath, { force: true })
   try {
     run(['session', 'stop'])

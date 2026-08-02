@@ -37,8 +37,22 @@ import { disposeScene } from '../runtime/scene/disposeScene'
  */
 export class RenderSession {
   private activeScene?: AnimatedScene
+  // Scene state, the automation viewport, and frame capture are shared mutable resources.
+  private requestQueue: Promise<void> = Promise.resolve()
 
-  async execute(request: AutomationRequest): Promise<AutomationResult> {
+  execute(request: AutomationRequest): Promise<AutomationResult> {
+    const result = this.requestQueue.then(
+      () => this.executeExclusive(request),
+      () => this.executeExclusive(request)
+    )
+    this.requestQueue = result.then(
+      () => undefined,
+      () => undefined
+    )
+    return result
+  }
+
+  private async executeExclusive(request: AutomationRequest): Promise<AutomationResult> {
     const startedAt = performance.now()
 
     if (request.command === 'scenes') {
