@@ -6,7 +6,7 @@ These files describe the shipped authoring API. Proposals and regression fixture
 
 - First scene: [Getting started](getting-started.md) → [Scenes and timeline](scenes-and-timeline.md) → [Animation effects](animation-effects.md)
 - UI explainer: [Text and LaTeX](text-and-latex.md) → [LaTeX effects](latex-effects.md) → [Layout](layout.md) → [Beats](beats.md) → [Verification](verification.md)
-- Procedural or 3D: [Camera and 3D](camera-and-3d.md) → [Custom animations](advanced/custom-animations.md) → [Verification](verification.md)
+- Procedural or 3D: [Camera and 3D](camera-and-3d.md) → [Curves](curves.md) → [Custom animations](advanced/custom-animations.md) → [Verification](verification.md)
 - Tooling: [CLI](cli.md) and [Assets and audio](assets-and-audio.md)
 
 ## Core invariants

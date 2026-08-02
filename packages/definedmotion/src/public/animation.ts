@@ -1,4 +1,6 @@
 export { camera } from '../runtime/animation/cameraEffects'
+export { curve } from '../runtime/animation/curveEffects'
+export type { CurveMorphOptions } from '../runtime/animation/curveEffects'
 export type {
   AnimatedCamera,
   CameraFrameOptions,

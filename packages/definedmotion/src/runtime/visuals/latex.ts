@@ -96,6 +96,7 @@ export const createLatex = async (options: LatexOptions): Promise<LatexVisual> =
   const root = new THREE.Group() as ControlledLatexVisual
   root.name = 'DefinedMotionLatex'
   root.userData.definedMotionVisual = 'latex'
+  root.userData.definedMotionLatexFontSize = fontSize
   let currentLatex = ''
   let localBounds = new THREE.Box2()
   let updateQueue = Promise.resolve()

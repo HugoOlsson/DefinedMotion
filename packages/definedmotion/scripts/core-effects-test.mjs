@@ -129,13 +129,15 @@ try {
     wait
   } = await compileModules()
 
-  // EFFECT-12: LaTeX marks use root-local geometry under nested transforms.
+  // EFFECT-12: LaTeX marks use root-local geometry, height-relative padding, and
+  // visible mesh strokes under nested transforms.
   {
     const composition = new THREE.Group()
     composition.scale.setScalar(1.9)
     const slot = new THREE.Group()
     slot.position.set(-4, 2, 0)
     const root = new THREE.Group()
+    root.userData.definedMotionLatexFontSize = 3
     const selected = new THREE.Mesh(new THREE.PlaneGeometry(2, 4))
     selected.userData.dmClasses = ['energy']
     root.add(selected)
@@ -144,23 +146,44 @@ try {
     composition.updateMatrixWorld(true)
     const selectedBounds = new THREE.Box3().setFromObject(selected)
 
-    const mark = createLatexMarkController(root, 'energy', {
-      padding: 0.1,
-      pulses: 1,
-      scaleAmp: 0
-    })()
+    const mark = createLatexMarkController(root, 'energy', { scaleAmp: 0 })()
     mark.updater(0.5, 0, false)
 
     const helper = root.getObjectByName('DefinedMotionLatexMark')
     assert.ok(helper)
     assert.equal(helper.parent, root)
+    assert.equal(helper.children.length, 6)
+    assert.ok(helper.children.every((child) => child instanceof THREE.Mesh))
     const helperSize = new THREE.Box3().setFromObject(helper).getSize(new THREE.Vector3())
     const selectedSize = selectedBounds.getSize(new THREE.Vector3())
-    assert.ok(Math.abs(helperSize.x - selectedSize.x * 1.2) < 1e-5)
-    assert.ok(Math.abs(helperSize.y - selectedSize.y * 1.2) < 1e-5)
+    const referenceSize = 3 * composition.scale.x
+    const expectedPadding = referenceSize * 0.17
+    assert.ok(Math.abs(helperSize.x - (selectedSize.x + 2 * expectedPadding)) < 1e-5)
+    assert.ok(Math.abs(helperSize.y - (selectedSize.y + 2 * expectedPadding)) < 1e-5)
+    const leftStroke = helper.getObjectByName('LatexMarkLeftStroke')
+    assert.ok(leftStroke)
+    leftStroke.geometry.computeBoundingBox()
+    const strokeSize = leftStroke.geometry.boundingBox.getSize(new THREE.Vector3())
+    assert.ok(Math.abs(strokeSize.x - 3 * 0.055) < 1e-5)
 
     mark.updater(1, 1, true)
     assert.equal(root.getObjectByName('DefinedMotionLatexMark'), undefined)
+
+    selected.scale.y = 0.25
+    composition.updateMatrixWorld(true)
+    const compactMark = createLatexMarkController(root, 'energy', { scaleAmp: 0 })()
+    compactMark.updater(0.5, 0, false)
+    const compactHelper = root.getObjectByName('DefinedMotionLatexMark')
+    assert.ok(compactHelper)
+    const compactStroke = compactHelper.getObjectByName('LatexMarkLeftStroke')
+    assert.ok(compactStroke)
+    compactStroke.geometry.computeBoundingBox()
+    const compactStrokeSize = compactStroke.geometry.boundingBox.getSize(new THREE.Vector3())
+    assert.ok(
+      Math.abs(compactStrokeSize.x - strokeSize.x) < 1e-5,
+      `mark stroke changed with selection height: ${strokeSize.x} -> ${compactStrokeSize.x}`
+    )
+    compactMark.updater(1, 1, true)
   }
 
   // EFFECT-11: LaTeX particle transitions restore authored material state.

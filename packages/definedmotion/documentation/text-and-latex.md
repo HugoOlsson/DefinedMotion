@@ -12,7 +12,9 @@ const title = await createText({
   anchorX: 'left',
   anchorY: 'top',
   textAlign: 'left',
-  maxWidth: 700
+  maxWidth: 700,
+  outlineColor: '#050708',
+  outlineWidth: 2
 })
 const equation = await createLatex({
   latex: String.raw`P = \dmClass{power}{mc^2}`,
@@ -23,6 +25,8 @@ const equation = await createLatex({
 ```
 
 `anchorX` is `left | center | right`; `anchorY` is `top | middle | bottom`. The anchor is the predictable transform and scaling origin. `textAlign` controls lines inside a text block and is separate from the block anchor.
+
+`outlineColor` and `outlineWidth` add a measured glyph outline. This is useful for world-space labels that must remain readable over changing 3D geometry.
 
 `getLocalBounds()` returns measured anchored bounds. `await visual.setText()` and `await visual.setLatex()` preserve the root object and update those bounds.
 

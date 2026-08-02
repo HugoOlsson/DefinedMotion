@@ -50,7 +50,8 @@ export function createLatexMarkController(
   classNames: string | string[],
   cfg: {
     color?: THREE.ColorRepresentation;
-    padding?: number;     // fraction of width/height
+    padding?: number;     // fraction of the LaTeX visual's authored font size
+    strokeWidth?: number; // fraction of the LaTeX visual's authored font size
     pulses?: number;      // how many pulses over the duration
     scaleAmp?: number;    // how much the brackets grow/shrink
     maxOpacity?: number;
@@ -58,8 +59,9 @@ export function createLatexMarkController(
 ): () => ProgressUpdater {
   const {
     color = 0xffffff,
-    padding = 0.05,
-    pulses = 2,
+    padding = 0.17,
+    strokeWidth = 0.055,
+    pulses = 1,
     scaleAmp = 0.02,
     maxOpacity = 1.0,
   } = cfg;
@@ -69,8 +71,7 @@ export function createLatexMarkController(
   return () => {
     let initialized = false;
     let bracketGroup: THREE.Group | null = null;
-    let line: THREE.LineSegments | null = null;
-    let material: THREE.LineBasicMaterial | null = null;
+    let material: THREE.MeshBasicMaterial | null = null;
     let parent: THREE.Object3D | null = null;
 
     const tmpSize = new THREE.Vector3();
@@ -111,55 +112,60 @@ export function createLatexMarkController(
 
       parent = root;
 
-      const width  = tmpSize.x * (1 + 2 * padding);
-      const height = tmpSize.y * (1 + 2 * padding);
+      const authoredFontSize = root.userData.definedMotionLatexFontSize
+      const referenceSize =
+        typeof authoredFontSize === 'number' &&
+        Number.isFinite(authoredFontSize) &&
+        authoredFontSize > 0
+          ? authoredFontSize
+          : tmpSize.y
+      const paddingAmount = referenceSize * padding;
+      const width = tmpSize.x + 2 * paddingAmount;
+      const height = tmpSize.y + 2 * paddingAmount;
+      const thickness = Math.max(referenceSize * strokeWidth, 0.001);
 
       const halfW = width  * 0.5;
       const halfH = height * 0.5;
-      const hx    = width  * 0.08; // horizontal stub for brackets
+      const stubLength = Math.min(referenceSize * 0.42, width * 0.18);
 
-      // Brackets live in their own local space centered at (0,0,0)
-      const positions: number[] = [];
-
-      // Left bracket corners (local)
-      const TL = new THREE.Vector3(-halfW,  halfH, 0);
-      const BL = new THREE.Vector3(-halfW, -halfH, 0);
-
-      // Right bracket corners
-      const TR = new THREE.Vector3( halfW,  halfH, 0);
-      const BR = new THREE.Vector3( halfW, -halfH, 0);
-
-      // Helper to push a line segment (a -> b)
-      const seg = (a: THREE.Vector3, b: THREE.Vector3) => {
-        positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
-      };
-
-      // Left bracket: ┌| and |└
-      seg(TL.clone(), TL.clone().add(new THREE.Vector3( hx, 0, 0)));
-      seg(TL.clone(), BL.clone());
-      seg(BL.clone(), BL.clone().add(new THREE.Vector3( hx, 0, 0)));
-
-      // Right bracket: |┐ and ┘|
-      seg(TR.clone(), TR.clone().add(new THREE.Vector3(-hx, 0, 0)));
-      seg(TR.clone(), BR.clone());
-      seg(BR.clone(), BR.clone().add(new THREE.Vector3(-hx, 0, 0)));
-
-      const geom = new THREE.BufferGeometry();
-      geom.setAttribute(
-        'position',
-        new THREE.Float32BufferAttribute(positions, 3)
-      );
-
-      material = new THREE.LineBasicMaterial({
+      material = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
         opacity: 0,
       });
 
-      line = new THREE.LineSegments(geom, material);
       bracketGroup = new THREE.Group();
       bracketGroup.name = 'DefinedMotionLatexMark'
-      bracketGroup.add(line);
+
+      const addStroke = (
+        name: string,
+        strokeWidthValue: number,
+        strokeHeightValue: number,
+        x: number,
+        y: number
+      ) => {
+        const stroke = new THREE.Mesh(
+          new THREE.PlaneGeometry(strokeWidthValue, strokeHeightValue),
+          material!
+        )
+        stroke.name = name
+        stroke.position.set(x, y, 0)
+        bracketGroup!.add(stroke)
+      }
+
+      const leftX = -halfW + thickness * 0.5
+      const rightX = halfW - thickness * 0.5
+      const topY = halfH - thickness * 0.5
+      const bottomY = -halfH + thickness * 0.5
+      const leftStubX = -halfW + stubLength * 0.5
+      const rightStubX = halfW - stubLength * 0.5
+
+      addStroke('LatexMarkLeftStroke', thickness, height, leftX, 0)
+      addStroke('LatexMarkRightStroke', thickness, height, rightX, 0)
+      addStroke('LatexMarkTopLeftStub', stubLength, thickness, leftStubX, topY)
+      addStroke('LatexMarkBottomLeftStub', stubLength, thickness, leftStubX, bottomY)
+      addStroke('LatexMarkTopRightStub', stubLength, thickness, rightStubX, topY)
+      addStroke('LatexMarkBottomRightStub', stubLength, thickness, rightStubX, bottomY)
 
       bracketGroup.position.copy(tmpCenterLocal);
 
@@ -183,7 +189,6 @@ export function createLatexMarkController(
       });
 
       bracketGroup = null;
-      line = null;
       material = null;
     };
 

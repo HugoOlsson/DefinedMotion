@@ -104,6 +104,12 @@
       "source": "tests/assets/test_asset_references.scene.ts"
     },
     {
+      "id": "test-azimuthal-wavefunction-explainer",
+      "name": "Azimuthal Wavefunction Explainer Integration Contract",
+      "kind": "test",
+      "source": "tests/integration/azimuthal-wavefunction-explainer/azimuthal_wavefunction_explainer.scene.ts"
+    },
+    {
       "id": "test-basic-latex-query",
       "name": "Basic LaTeX Query",
       "kind": "test",
@@ -170,6 +176,12 @@
       "source": "tests/camera/test_fly_camera_waypoints_verifiable.scene.ts"
     },
     {
+      "id": "test-fourier-series-machine",
+      "name": "Fourier Series Machine Integration Contract",
+      "kind": "test",
+      "source": "tests/integration/fourier-series-machine/fourier_series_machine.scene.ts"
+    },
+    {
       "id": "test-hdri-performance",
       "name": "HDRI Performance",
       "kind": "test",
@@ -224,6 +236,12 @@
       "source": "tests/positioning/test_place_once_positioning.scene.ts"
     },
     {
+      "id": "test-polar-cartesian-explainer",
+      "name": "Polar versus Cartesian Explainer Integration Contract",
+      "kind": "test",
+      "source": "tests/integration/polar-cartesian-explainer/polar_cartesian_explainer.scene.ts"
+    },
+    {
       "id": "test-primitive-layout",
       "name": "Primitive Layout Contract",
       "kind": "test",
@@ -240,6 +258,12 @@
       "name": "Production Heat Flow Explainer Contract",
       "kind": "test",
       "source": "tests/rendering/test_production_heat_flow.scene.ts"
+    },
+    {
+      "id": "test-quadratic-formula-explainer",
+      "name": "Quadratic Formula Explainer Integration Contract",
+      "kind": "test",
+      "source": "tests/integration/quadratic-formula-explainer/quadratic_formula_explainer.scene.ts"
     },
     {
       "id": "test-regular-text-latex",
@@ -264,6 +288,12 @@
       "name": "Scene Verification Contract",
       "kind": "test",
       "source": "tests/inspection/test_scene_verifications.scene.ts"
+    },
+    {
+      "id": "test-spherical-triangle-explainer",
+      "name": "Spherical Triangle Explainer Integration Contract",
+      "kind": "test",
+      "source": "tests/integration/spherical-triangle-explainer/spherical_triangle_explainer.scene.ts"
     },
     {
       "id": "test-super-complex-latex-to-svg",

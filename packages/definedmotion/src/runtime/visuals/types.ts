@@ -15,6 +15,8 @@ export interface TextOptions {
   anchorY?: AnchorY
   maxWidth?: number
   lineHeight?: number
+  outlineColor?: THREE.ColorRepresentation
+  outlineWidth?: number
 }
 
 export interface LatexOptions {

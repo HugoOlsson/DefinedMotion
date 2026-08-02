@@ -22,7 +22,10 @@ interface LatexEffectOptions {
 
 export interface LatexMarkOptions extends LatexEffectOptions {
   color?: THREE.ColorRepresentation
+  /** Padding on every side as a fraction of the LaTeX visual's authored font size. */
   padding?: number
+  /** Bracket stroke thickness as a fraction of the LaTeX visual's authored font size. */
+  strokeWidth?: number
   pulses?: number
   scale?: number
   opacity?: number
@@ -237,11 +240,12 @@ const firstColor = (object: THREE.Object3D): THREE.Color => {
 
 export const mark = (target: LatexEffectTarget, options: LatexMarkOptions = {}): AnimationPlan => {
   const visual = targetVisual(target)
-  return controllerPlan(options.duration ?? 2, options.easing, () => {
+  return controllerPlan(options.duration ?? 2.4, options.easing, () => {
     assertPartExists(target)
     return createLatexMarkController(visual, targetClass(target), {
       color: options.color,
       padding: options.padding,
+      strokeWidth: options.strokeWidth,
       pulses: options.pulses,
       scaleAmp: options.scale,
       maxOpacity: options.opacity

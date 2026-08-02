@@ -20,6 +20,13 @@ const positive = (value: number, name: string): number => {
   return value
 }
 
+const nonNegative = (value: number, name: string): number => {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${name} must be a finite non-negative number, received ${value}`)
+  }
+  return value
+}
+
 const resolveTextAlign = (alignment: TextAlign | undefined): TextAlign => {
   const resolved = alignment ?? 'center'
   if (resolved !== 'left' && resolved !== 'center' && resolved !== 'right') {
@@ -49,6 +56,7 @@ export const createText = async (options: TextOptions): Promise<TextVisual> => {
       : positive(options.maxWidth, 'maxWidth')
   const lineHeight =
     options.lineHeight === undefined ? 'normal' : positive(options.lineHeight, 'lineHeight')
+  const outlineWidth = nonNegative(options.outlineWidth ?? 0, 'outlineWidth')
   const anchorX = resolveAnchorX(options.anchorX)
   const anchorY = resolveAnchorY(options.anchorY)
   const textAlign = resolveTextAlign(options.textAlign)
@@ -73,6 +81,8 @@ export const createText = async (options: TextOptions): Promise<TextVisual> => {
   textMesh.anchorY = anchorY
   textMesh.maxWidth = maxWidth
   textMesh.lineHeight = lineHeight
+  textMesh.outlineColor = options.outlineColor ?? 0x000000
+  textMesh.outlineWidth = outlineWidth
   root.add(textMesh)
 
   let currentText = ''
@@ -94,7 +104,7 @@ export const createText = async (options: TextOptions): Promise<TextVisual> => {
     localBounds = new THREE.Box2(
       new THREE.Vector2(blockBounds[0], blockBounds[1]),
       new THREE.Vector2(blockBounds[2], blockBounds[3])
-    )
+    ).expandByScalar(outlineWidth)
     currentText = value
     root.userData.boundsVersion = (root.userData.boundsVersion ?? 0) + 1
   }
