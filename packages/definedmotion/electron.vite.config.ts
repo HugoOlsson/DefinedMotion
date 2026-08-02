@@ -16,6 +16,11 @@ const projectSourceRoot = path.join(projectRoot, 'src')
 const projectConfigPath = path.join(projectRoot, 'definedmotion.config.ts')
 const referenceExamplesRoot = path.join(packageRoot, 'reference', 'examples')
 const referenceTestsRoot = path.join(packageRoot, 'reference', 'tests')
+const sceneRegistryRoots = [
+  path.join(projectSourceRoot, 'scenes'),
+  referenceExamplesRoot,
+  referenceTestsRoot
+]
 const buildRoot = path.join(projectRoot, '.definedmotion', 'build')
 
 if (!existsSync(projectConfigPath)) {
@@ -133,7 +138,7 @@ const sourceModuleExtensions = new Set([
 const projectSourceReloadPlugin = (): Plugin => ({
   name: 'definedmotion:project-source-reload',
   handleHotUpdate(context) {
-    if (isProjectSourcePath(context.file) || context.file === projectConfigPath) return []
+    if (isReloadSourcePath(context.file) || isProjectConfigPath(context.file)) return []
     return undefined
   },
   transformIndexHtml() {
@@ -148,13 +153,14 @@ const projectSourceReloadPlugin = (): Plugin => ({
     server.watcher.add([
       projectConfigPath,
       projectSourceRoot,
-      `${normalizePath(projectSourceRoot)}/**/*`
+      `${normalizePath(projectSourceRoot)}/**/*`,
+      ...sceneRegistryRoots.flatMap((root) => [root, `${normalizePath(root)}/**/*`])
     ])
     let reloadTimer: ReturnType<typeof setTimeout> | undefined
     let changeSequence = 0
     const changedFiles = new Set<string>()
     const reloadForSourceChange = (_event: string, file: string): void => {
-      if (!isProjectSourcePath(file) && file !== projectConfigPath) return
+      if (!isReloadSourcePath(file) && !isProjectConfigPath(file)) return
       changedFiles.add(file)
       const sequence = ++changeSequence
       if (reloadTimer) clearTimeout(reloadTimer)
@@ -173,7 +179,21 @@ const projectSourceReloadPlugin = (): Plugin => ({
 })
 
 const isProjectSourcePath = (file: string): boolean =>
-  file === projectSourceRoot || file.startsWith(`${projectSourceRoot}${path.sep}`)
+  isPathInside(file, projectSourceRoot)
+
+const isSceneRegistryPath = (file: string): boolean =>
+  sceneRegistryRoots.some((root) => isPathInside(file, root))
+
+const isReloadSourcePath = (file: string): boolean =>
+  isProjectSourcePath(file) || isSceneRegistryPath(file)
+
+const isProjectConfigPath = (file: string): boolean =>
+  path.resolve(file) === projectConfigPath
+
+const isPathInside = (file: string, root: string): boolean => {
+  const relative = path.relative(root, path.resolve(file))
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+}
 
 const validateAndReloadSource = async (
   server: ViteDevServer,
