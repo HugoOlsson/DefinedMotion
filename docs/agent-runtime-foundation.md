@@ -31,7 +31,7 @@ Scene modules may be imported during discovery, so media reads and substantial w
 ```bash
 npm run dm -- session start --json
 npm run dm -- scenes --json
-npm run dm -- timeline-grid my-scene --count 12 --json
+npm run dm -- timeline-grid my-scene --count 16 --json
 npm run dm -- still my-scene --frame 120 --json
 npm run dm -- inspect my-scene --frame 120 --json
 npm run dm -- verify --scene my-scene --json

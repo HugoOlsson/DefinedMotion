@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = resolve(packageRoot, '..', '..')
+const historicalDocumentationRoots = new Set([resolve(repositoryRoot, 'docs', 'releases')])
 const textExtensions = new Set(['.ts', '.js', '.mjs', '.svelte', '.md'])
 const forbiddenIdentifiers = [
   'HotReloadSetting',
@@ -37,6 +38,7 @@ const deletedFiles = [
 ]
 
 const collectFiles = async (path) => {
+  if (historicalDocumentationRoots.has(path)) return []
   const entries = await readdir(path, { withFileTypes: true })
   const files = []
   for (const entry of entries) {

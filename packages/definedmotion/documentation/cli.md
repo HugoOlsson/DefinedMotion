@@ -4,7 +4,7 @@ Use the project script (`npm run dm -- ...`) so commands resolve the installed r
 
 ```bash
 npm run dm -- scenes --json
-npm run dm -- timeline-grid my-scene --count 12 --json
+npm run dm -- timeline-grid my-scene --count 16 --json
 npm run dm -- inspect my-scene --frame 120 --json
 npm run dm -- still my-scene --frame 120 --json
 npm run dm -- verify --scene my-scene --json

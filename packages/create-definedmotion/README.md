@@ -1,5 +1,7 @@
 # create-definedmotion
 
+Requires Node.js 24.11 or newer.
+
 Create a thin DefinedMotion animation project:
 
 ```bash

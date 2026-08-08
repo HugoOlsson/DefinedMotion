@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "main": ".definedmotion/build/main/index.js",
+  "engines": {
+    "node": ">=24.11.0"
+  },
   "scripts": {
     "dev": "definedmotion dev",
     "build": "definedmotion build",
@@ -11,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "definedmotion": "0.4.0-alpha.14",
+    "definedmotion": "0.4.0",
     "three": "^0.175.0"
   },
   "devDependencies": {

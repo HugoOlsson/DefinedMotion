@@ -1,5 +1,7 @@
 # DefinedMotion project
 
+This project requires Node.js 24.11 or newer.
+
 Run the Studio with `npm run dev`. Create `*.scene.ts` files under `src/scenes` and place project
 media under `src/assets`.
 

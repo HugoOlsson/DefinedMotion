@@ -8,6 +8,8 @@ DefinedMotion is a TypeScript/Three.js system for deterministic 2D and 3D techni
 
 ## Start a project
 
+DefinedMotion requires Node.js 24.11 or newer.
+
 ```bash
 npx create-definedmotion my-video
 cd my-video

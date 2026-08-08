@@ -1,5 +1,7 @@
 # Getting started
 
+DefinedMotion requires Node.js 24.11 or newer.
+
 Create a project with `npx create-definedmotion my-video`, install dependencies, and run `npm run dev`.
 
 Put default-exported `*.scene.ts` files under `src/scenes`:

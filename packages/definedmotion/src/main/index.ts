@@ -58,11 +58,9 @@ let persistentRuntimeHost: PersistentRuntimeHost | undefined
 let pendingRendererFailure:
   | { sourceRevision: string; diagnostic: RuntimeSourceDiagnostic }
   | undefined
-let viewerIntegrationSmokeStarted = false
+let viewerIntegrationSmokeGeneration = 0
 
-const runViewerIntegrationSmoke = async (): Promise<void> => {
-  if (viewerIntegrationSmokeStarted) return
-  viewerIntegrationSmokeStarted = true
+const runViewerIntegrationSmoke = async (generation: number): Promise<void> => {
   try {
     const result = await mainWindow.webContents.executeJavaScript(`
       (async () => {
@@ -177,9 +175,11 @@ const runViewerIntegrationSmoke = async (): Promise<void> => {
         }
       })()
     `)
+    if (generation !== viewerIntegrationSmokeGeneration) return
     console.log(`DEFINEDMOTION_VIEWER_TEST_OK ${JSON.stringify(result)}`)
     app.exit(0)
   } catch (error) {
+    if (generation !== viewerIntegrationSmokeGeneration) return
     console.error('DEFINEDMOTION_VIEWER_TEST_FAILED', error)
     app.exit(1)
   }
@@ -227,7 +227,7 @@ function createWindow(): void {
       allowRunningInsecureContent: false,
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      backgroundThrottling: !isRuntimeMode
+      backgroundThrottling: !(isRuntimeMode || isViewerIntegrationSmoke)
     }
   })
 
@@ -256,7 +256,8 @@ function createWindow(): void {
     })
     mainWindow.webContents.on('did-finish-load', () => {
       if (isViewerIntegrationSmoke) {
-        void runViewerIntegrationSmoke()
+        const generation = ++viewerIntegrationSmokeGeneration
+        void runViewerIntegrationSmoke(generation)
         return
       }
       const deadline = Date.now() + 10_000

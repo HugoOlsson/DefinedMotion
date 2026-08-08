@@ -7,7 +7,7 @@ This is the compact operational reference for agents inspecting and validating D
 ```bash
 npm run dm -- session start --json
 npm run dm -- scenes --json
-npm run dm -- timeline-grid my-scene --count 12 --json
+npm run dm -- timeline-grid my-scene --count 16 --json
 npm run dm -- inspect my-scene --frame 120 --json
 npm run dm -- still my-scene --frame 120 --json
 npm run dm -- layout-check my-scene --json
@@ -16,7 +16,7 @@ npm run dm -- render my-scene --json
 npm run dm -- session stop --json
 ```
 
-Start broad with a timeline grid, then inspect and render stills at important frames. Use dense samples around motion; endpoints alone do not reveal easing or discontinuities. Use the audience camera for composition and exposed cameras for 3D structure.
+Start broad with a timeline grid, then inspect and render stills at important frames. Use dense samples around motion; endpoints alone do not reveal easing or discontinuities. When readable visual detail matters, `--cell-width 960` is often a useful resolution; choose a different width when a more compact grid better suits the task. Use the audience camera for composition and exposed cameras for 3D structure.
 
 ## Command choice
 
