@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "definedmotion": "0.4.0",
+    "definedmotion": "0.4.1",
     "three": "^0.175.0"
   },
   "devDependencies": {

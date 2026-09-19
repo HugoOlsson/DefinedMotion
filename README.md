@@ -4,6 +4,8 @@
 
 # DefinedMotion
 
+Current version: **0.4.1** — [dependency maintenance update](docs/releases/0.4.1.md).
+
 DefinedMotion is a TypeScript/Three.js system for deterministic 2D and 3D technical animation. This repository contains the runtime and viewer, project generator, packaged examples/tests, and automation tooling.
 
 ## Start a project

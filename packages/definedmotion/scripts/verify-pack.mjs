@@ -17,7 +17,6 @@ if (manifest.bin?.definedmotion !== 'cli/index.mjs') {
   throw new Error('definedmotion package must publish the cli/index.mjs binary')
 }
 const forbidden = [
-  /(^|\/)node_modules\//,
   /(^|\/)dist\//,
   /(^|\/)out\//,
   /^scripts\//,
@@ -26,6 +25,8 @@ const forbidden = [
   /(^|\/)(renders|rendered_videos|image_renders|audio_renders)\//
 ]
 for (const file of paths) {
+  if (file.startsWith('node_modules/mathjax-full/')) continue
+  if (file.includes('node_modules/')) throw new Error(`Unexpected bundled dependency: ${file}`)
   if (forbidden.some((pattern) => pattern.test(file))) {
     throw new Error(`Forbidden path in definedmotion package: ${file}`)
   }
@@ -34,6 +35,8 @@ for (const file of paths) {
 for (const required of [
   'AGENTS.md',
   'README.md',
+  'node_modules/mathjax-full/package.json',
+  'node_modules/mathjax-full/node_modules/speech-rule-engine/node_modules/@xmldom/xmldom/package.json',
   'cli/index.mjs',
   'src/public/index.ts',
   'types/public/index.d.ts',

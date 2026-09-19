@@ -1,5 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
+import assert from 'node:assert/strict'
 import {
   appendFileSync,
   existsSync,
@@ -154,6 +156,29 @@ try {
   writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`)
 
   run('npm', ['install', '--prefer-offline'], { cwd: consumerRoot })
+  const verifyXmlDependencies = () => {
+    const consumerLock = JSON.parse(readFileSync(join(consumerRoot, 'package-lock.json'), 'utf8'))
+    for (const [path, dependency] of Object.entries(consumerLock.packages)) {
+      if (path.endsWith('node_modules/@xmldom/xmldom')) {
+        assert.match(dependency.version, /^0\.9\./)
+        assert.ok(Number(dependency.version.split('.')[2]) >= 12,
+          `Consumer installed an outdated XML dependency at ${path}`)
+      }
+    }
+    const consumerRequire = createRequire(packagePath)
+    const runtimeRequire = createRequire(consumerRequire.resolve('definedmotion/package.json'))
+    const mathJaxRequire = createRequire(runtimeRequire.resolve('mathjax-full/package.json'))
+    const speechRequire = createRequire(mathJaxRequire.resolve('speech-rule-engine'))
+    const { DOMImplementation, XMLSerializer } = speechRequire('@xmldom/xmldom')
+    const xml = new DOMImplementation().createDocument(null, 'root', null)
+    xml.documentElement.appendChild(xml.createProcessingInstruction('a?><injected/><?b', ''))
+    assert.throws(
+      () => new XMLSerializer().serializeToString(xml, { requireWellFormed: true }),
+      { name: 'InvalidStateError' },
+      'Published dependencies must reject malformed processing-instruction targets'
+    )
+  }
+  verifyXmlDependencies()
   run('npm', ['run', 'typecheck'], { cwd: consumerRoot })
 
   for (const required of [
@@ -227,6 +252,7 @@ try {
   run('npm', ['install', `definedmotion@file:${tarball}`, '--prefer-offline'], {
     cwd: consumerRoot
   })
+  verifyXmlDependencies()
   if (hashFile(userScene) !== userSceneBeforeUpgrade) {
     throw new Error('Updating DefinedMotion modified the user scene')
   }

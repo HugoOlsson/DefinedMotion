@@ -1,5 +1,7 @@
 # DefinedMotion
 
+Version **0.4.1** includes refreshed math-rendering dependencies. The public animation API and scene format are unchanged.
+
 DefinedMotion is a TypeScript animation runtime and interactive viewer built on Three.js. It ships deterministic frame-based scheduling, measured text and LaTeX, 2D/3D rendering, scene verification, and an automation CLI for people and coding agents.
 
 DefinedMotion requires Node.js 24.11 or newer.

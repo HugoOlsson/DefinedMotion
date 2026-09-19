@@ -1,6 +1,6 @@
 {
   "name": "definedmotion",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Programmatic 2D and 3D animation runtime, Studio, and agent reference",
   "author": "Hugo Olsson",
   "license": "Apache-2.0",
@@ -84,10 +84,10 @@
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",
     "types:generate": "node ./scripts/generate-types.mjs",
-    "pack:check": "npm run test:positioning && npm run test:audio-mixer && npm run types:generate && node ./scripts/verify-pack.mjs",
+    "pack:check": "node ./scripts/prepare-math-dependencies.mjs && npm run test:positioning && npm run test:audio-mixer && npm run types:generate && node ./scripts/verify-pack.mjs",
     "reference:generate": "node ./scripts/generate-reference.mjs",
     "reference:verify": "node ./scripts/verify-reference.mjs",
-    "prepack": "npm run test:positioning && npm run reference:generate && npm run reference:verify && npm run types:generate",
+    "prepack": "node ./scripts/prepare-math-dependencies.mjs && npm run test:positioning && npm run reference:generate && npm run reference:verify && npm run types:generate",
     "test:automation": "node ./scripts/automation-smoke-test.mjs",
     "test:animation-plan": "node ./scripts/animation-plan-test.mjs",
     "test:core-effects": "node ./scripts/core-effects-test.mjs",
@@ -147,5 +147,8 @@
     "animation",
     "three.js",
     "motion-graphics"
+  ],
+  "bundleDependencies": [
+    "mathjax-full"
   ]
 }
