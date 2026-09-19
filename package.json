@@ -6,9 +6,13 @@
     "packages/*",
     "playground"
   ],
+  "overrides": {
+    "@xmldom/xmldom": "^0.9.12"
+  },
   "scripts": {
     "build": "npm run build --workspace definedmotion",
-    "test": "npm test --workspace definedmotion",
+    "test": "npm run test:security && npm test --workspace definedmotion",
+    "test:security": "node ./tests/xmldom-security-test.mjs",
     "test:unit": "npm run test:unit --workspace definedmotion",
     "test:scenes": "npm run test:scenes --workspace definedmotion",
     "test:viewer": "npm run test:viewer --workspace definedmotion",
